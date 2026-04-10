@@ -1,43 +1,31 @@
 #!/bin/bash
 # CineLink Bridge — macOS .app launcher
-# Finds the project directory relative to the .app bundle location
-# and opens a Terminal window to run the bridge.
+# Self-contained: Node.js runtime is embedded, nothing to install.
 
-# Path to the .app bundle → parent directory = project root
-APP_BUNDLE="${BASH_SOURCE[0]%/Contents/MacOS/*}"
-PROJECT_DIR="$(dirname "$APP_BUNDLE")"
+MACOS_DIR="${BASH_SOURCE[0]%/*}"
+BINARY="$MACOS_DIR/cinelink-bridge"
 
-# Resolve symlinks if any
-PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"
-
-COMMAND_FILE="$PROJECT_DIR/CineLink Bridge.command"
-
-# Verify the project is alongside the .app
-if [ ! -f "$COMMAND_FILE" ]; then
-    osascript -e 'display alert "CineLink Bridge" message "Не найден файл проекта.\n\nУбедитесь, что CineLink Bridge.app находится в папке проекта рядом с CineLink Bridge.command" as critical'
+if [ ! -f "$BINARY" ]; then
+    osascript -e 'display alert "CineLink Bridge" message "Бинарный файл не найден внутри .app.\nПожалуйста, скачайте приложение заново." as critical'
     exit 1
 fi
 
-# Check Node.js before opening Terminal
-if ! command -v node &>/dev/null; then
-    osascript <<'APPLESCRIPT'
-display alert "Node.js не установлен" message "CineLink Bridge требует Node.js 18 или новее.
+# Remove macOS quarantine flag if present (first launch after download)
+xattr -d com.apple.quarantine "$BINARY" 2>/dev/null || true
+xattr -d com.apple.quarantine "${BASH_SOURCE[0]}" 2>/dev/null || true
 
-Скачайте с https://nodejs.org (LTS версия)" as critical buttons {"Открыть nodejs.org", "Отмена"} default button 1
-set btn to button returned of result
-if btn is "Открыть nodejs.org" then
-    open location "https://nodejs.org"
-end if
-APPLESCRIPT
-    exit 1
-fi
-
-# Open a new Terminal window and run the bridge
+# Open a Terminal window running the server
 osascript <<APPLESCRIPT
 tell application "Terminal"
     activate
-    set newTab to do script "bash '$COMMAND_FILE'"
-    set current settings of newTab to settings set "Pro"
-    set custom title of newTab to "CineLink Bridge β2"
+    set newWin to do script "$BINARY"
+    set custom title of newWin to "CineLink Bridge β2"
+    try
+        set current settings of newWin to settings set "Pro"
+    end try
 end tell
 APPLESCRIPT
+
+# Wait for server to start, then open browser
+sleep 2
+open "http://localhost:7777"

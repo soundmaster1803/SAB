@@ -4,6 +4,10 @@ dist/
 .DS_Store
 logs.txt
 *.app/**/.DS_Store
+CineLink-Bridge-*.zip
+
+# Large binary inside .app (built locally via npm run bundle:app)
+CineLink Bridge.app/Contents/MacOS/cinelink-bridge
 *.log
 .claude/
 config.json
