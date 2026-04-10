@@ -8,6 +8,7 @@ CineLink-Bridge-*.zip
 
 # Large binary inside .app (built locally via npm run bundle:app)
 CineLink Bridge.app/Contents/MacOS/cinelink-bridge
+CineLink Bridge 2.app/Contents/MacOS/cinelink-bridge
 *.log
 .claude/
 config.json

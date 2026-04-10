@@ -1,0 +1,36 @@
+#!/bin/bash
+# CineLink Bridge — macOS .app launcher
+# Self-contained: Node.js runtime is embedded, nothing to install.
+
+MACOS_DIR="${BASH_SOURCE[0]%/*}"
+BINARY="$MACOS_DIR/cinelink-bridge"
+
+if [ ! -f "$BINARY" ]; then
+    osascript -e 'display alert "CineLink Bridge" message "Бинарный файл не найден внутри .app.\nПожалуйста, скачайте приложение заново." as critical'
+    exit 1
+fi
+
+# Remove quarantine flag (first launch after download)
+xattr -d com.apple.quarantine "$BINARY" 2>/dev/null || true
+
+# Pass the binary path as an argument to AppleScript.
+# "quoted form of" properly single-quotes the path for the shell,
+# handling spaces and special characters.
+osascript - "$BINARY" <<'APPLESCRIPT'
+on run argv
+    set binPath to item 1 of argv
+    set shellCmd to "exec " & quoted form of binPath
+    tell application "Terminal"
+        activate
+        set newWin to do script shellCmd
+        set custom title of newWin to "CineLink Bridge β2"
+        try
+            set current settings of newWin to settings set "Pro"
+        end try
+    end tell
+end run
+APPLESCRIPT
+
+# Wait for server to start, then open browser
+sleep 2
+open "http://localhost:7777"
