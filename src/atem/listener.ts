@@ -81,13 +81,15 @@ export class ATEMListener extends EventEmitter {
   connect(ip: string): void {
     log(`Connecting to ${ip}...`)
     this.readyAfter = Date.now() + 3000  // pre-set BEFORE connect to suppress initial state dump
-    this.atem.connect(ip)
+    this.atem.connect(ip).catch((e: any) => {
+      warn(`connect() error: ${e.message}`)
+    })
   }
 
   disconnect(): void {
     log('Disconnecting...')
     this.atem.removeAllListeners('disconnected')
-    this.atem.disconnect().then(() => {
+    Promise.resolve(this.atem.disconnect()).then(() => {
       this.connected = false
       log('Disconnected')
     }).catch(() => {
@@ -133,15 +135,15 @@ export class ATEMListener extends EventEmitter {
     const { CameraControlCommand, CameraControlDataType } = Commands
     const base = { boolData: [] as boolean[], bigintData: [] as bigint[], stringData: '', relative: false }
 
+    const safeSend = (cmd: InstanceType<typeof CameraControlCommand>) => {
+      try { Promise.resolve(this.atem.sendCommand(cmd)).catch(() => {}) } catch (_e) {}
+    }
+
     // ISO — category=1, param=14, SINT32 direct value
     if (state.iso > 0 && (state.iso & 0x00FFFFFF) !== 0x00FFFFFF) {
-      try {
-        this.atem.sendCommand(new CameraControlCommand(source, 1, 14, {
-          ...base,
-          type: CameraControlDataType.SINT32,
-          numberData: [state.iso],
-        }))
-      } catch (_e) {}
+      safeSend(new CameraControlCommand(source, 1, 14, {
+        ...base, type: CameraControlDataType.SINT32, numberData: [state.iso],
+      }))
     }
 
     // Iris — category=0, param=2, FLOAT normalized 0.0–1.0 (1.0 = wide open)
@@ -149,24 +151,16 @@ export class ATEMListener extends EventEmitter {
     if (state.fnumber > 0) {
       const fVal = state.fnumber / 100
       const iris = Math.max(0, Math.min(1, (22 - fVal) / 21))
-      try {
-        this.atem.sendCommand(new CameraControlCommand(source, 0, 2, {
-          ...base,
-          type: CameraControlDataType.FLOAT,
-          numberData: [iris],
-        }))
-      } catch (_e) {}
+      safeSend(new CameraControlCommand(source, 0, 2, {
+        ...base, type: CameraControlDataType.FLOAT, numberData: [iris],
+      }))
     }
 
     // White Balance — category=1, param=2, SINT16 (Kelvin)
     if (state.colorTemp > 0) {
-      try {
-        this.atem.sendCommand(new CameraControlCommand(source, 1, 2, {
-          ...base,
-          type: CameraControlDataType.SINT16,
-          numberData: [state.colorTemp],
-        }))
-      } catch (_e) {}
+      safeSend(new CameraControlCommand(source, 1, 2, {
+        ...base, type: CameraControlDataType.SINT16, numberData: [state.colorTemp],
+      }))
     }
 
     this.syncCooldowns.set(source, Date.now() + 500)

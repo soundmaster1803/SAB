@@ -48,7 +48,11 @@ export function loadConfig(): AppConfig {
 }
 
 export function saveConfig(config: AppConfig): void {
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');
+  try {
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');
+  } catch (e: any) {
+    console.error(`[Config] saveConfig failed (${CONFIG_PATH}): ${e.message}`);
+  }
 }
 
 export function addCamera(config: AppConfig, camera: CameraConfig): AppConfig {

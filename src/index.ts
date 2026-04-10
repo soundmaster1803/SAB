@@ -1,6 +1,17 @@
 // Identify this process immediately — helps detect zombie/duplicate instances
 console.log(`[SYSTEM] Starting CineLink Bridge (PID: ${process.pid})`);
 
+// Global crash guards — prevent Node 20 from exiting on unhandled rejections
+process.on('uncaughtException', (err) => {
+  console.error(`[FATAL] uncaughtException: ${err.message}`);
+  if (err.stack) console.error(err.stack);
+  // Don't exit — keep server running for diagnostics
+});
+process.on('unhandledRejection', (reason: any) => {
+  console.error(`[FATAL] unhandledRejection: ${reason?.message ?? reason}`);
+  if (reason?.stack) console.error(reason.stack);
+});
+
 import { loadConfig } from './config';
 import { CameraManager } from './sony/manager';
 import { ATEMListener, type ATEMCameraControl } from './atem/listener';

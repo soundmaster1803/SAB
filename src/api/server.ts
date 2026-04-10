@@ -165,7 +165,14 @@ export function startServer(manager: CameraManager, atemListener: ATEMListener, 
 
   // ── Camera: pair (blocking — waits for connect result) ────────────────────
   // UI calls POST /api/cameras/pair and waits up to 18s for response
-  app.post('/api/cameras/pair', async (req, res) => {
+  app.post('/api/cameras/pair', (req, res) => {
+    pairCamera(req, res).catch((e: any) => {
+      err(`/api/cameras/pair unhandled: ${e.message}`);
+      if (!res.headersSent) res.status(500).json({ error: e.message });
+    });
+  });
+
+  async function pairCamera(req: any, res: any): Promise<void> {
     const { name, ip, atemInput } = req.body as { name: string; ip: string; atemInput: number };
     if (!name || !ip || !atemInput) {
       res.status(400).json({ error: 'Required: name, ip, atemInput' }); return;
@@ -218,7 +225,7 @@ export function startServer(manager: CameraManager, atemListener: ATEMListener, 
       manager.removeCamera(id);
       res.status(503).json({ error: result.error });
     }
-  });
+  }
 
   // ── Camera: reconnect ──────────────────────────────────────────────────────
   app.post('/api/cameras/:id/connect', (req, res) => {
