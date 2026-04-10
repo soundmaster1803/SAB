@@ -9,7 +9,7 @@ cd "$DIR"
 
 echo ""
 echo "╔════════════════════════════════════════╗"
-echo "║       CineLink Bridge  Beta 3          ║"
+echo "║       CineLink Bridge  Beta 2          ║"
 echo "║   Sony PTP/IP ↔ ATEM Camera Control   ║"
 echo "╚════════════════════════════════════════╝"
 echo ""

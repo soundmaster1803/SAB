@@ -3,6 +3,7 @@ node_modules/
 dist/
 .DS_Store
 logs.txt
+*.app/**/.DS_Store
 *.log
 .claude/
 config.json
