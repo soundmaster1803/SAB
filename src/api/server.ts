@@ -66,8 +66,11 @@ export function startServer(manager: CameraManager, atemListener: ATEMListener, 
   const app = express();
   const server = http.createServer(app);
   app.use(express.json());
-  // Serve UI — public/ must be in the same directory as where the process is started
-  const publicDir = path.resolve(process.cwd(), 'public');
+  // Serve UI — prefer public/ next to bridge.cjs, fall back to cwd (dev mode)
+  const scriptDir = path.dirname(process.argv[1] ?? '');
+  const publicFromScript = path.join(scriptDir, 'public');
+  const publicFromCwd = path.join(process.cwd(), 'public');
+  const publicDir = fs.existsSync(publicFromScript) ? publicFromScript : publicFromCwd;
   app.use(express.static(publicDir));
 
   // Log every mutating API request to file (with >> prefix so they stand out)

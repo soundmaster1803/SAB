@@ -11,6 +11,7 @@ CineLink Bridge.app/Contents/MacOS/cinelink-bridge
 CineLink Bridge 2.app/Contents/MacOS/cinelink-bridge
 CineLink Bridge 2.app/Contents/Resources/node
 CineLink Bridge 2.app/Contents/Resources/bridge.cjs
+CineLink Bridge 2.app/Contents/Resources/public/
 *.log
 .claude/
 config.json
