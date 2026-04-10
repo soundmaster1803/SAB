@@ -49,7 +49,10 @@ export class ATEMListener extends EventEmitter {
 
   constructor() {
     super()
-    this.atem = new Atem()
+    // disableMultithreaded: true — prevents threadedClass from spawning a worker
+    // process via file path resolution, which breaks in esbuild bundles.
+    // Runs AtemSocket inline (same thread) instead — functionally identical.
+    this.atem = new Atem({ disableMultithreaded: true })
     this._wireAtem()
     log('ATEMListener ready')
   }
@@ -97,7 +100,7 @@ export class ATEMListener extends EventEmitter {
     })
     this.tallyBySource = {}
     // Recreate so a future connect() starts clean
-    this.atem = new Atem()
+    this.atem = new Atem({ disableMultithreaded: true })
     this._wireAtem()
     this.connected = false
     log('ATEM disconnected (new instance ready for reconnect)')
