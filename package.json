@@ -1,0 +1,9 @@
+{
+  "name": "cinelink-bridge",
+  "version": "1.0.0-beta.2",
+  "description": "Sony PTP/IP ↔ ATEM Camera Control Bridge",
+  "main": "dist/bridge.cjs",
+  "dependencies": {
+    "atem-connection": "3.9.0"
+  }
+}

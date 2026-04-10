@@ -1,0 +1,1677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>CineLink Bridge</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0a0a0a;
+      --accent:  #007AFF;
+      --red:     #FF3B30;
+      --green:   #34C759;
+      --orange:  #FF9500;
+      --card:    rgba(255,255,255,0.05);
+      --border:  rgba(255,255,255,0.08);
+      --t1: #ffffff;
+      --t2: rgba(255,255,255,0.5);
+      --t3: rgba(255,255,255,0.25);
+      --tally-h: 56px;
+    }
+
+    html { -webkit-tap-highlight-color: transparent; }
+
+    body {
+      background: var(--bg);
+      color: var(--t1);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+      min-height: 100dvh;
+      padding-bottom: calc(var(--tally-h) + 8px);
+    }
+
+    /* ── Header ───────────────────────────────────────────────────────── */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(10,10,10,0.9);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 16px;
+    }
+    .header-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 52px;
+    }
+    .header-row-2 {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding-bottom: 10px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.4px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .logo em { font-style: normal; color: var(--accent); }
+
+    .ver-badge {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--t3);
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px 6px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .h-spacer { flex: 1; min-width: 4px; }
+
+    /* ATEM panel */
+    .atem-panel {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 4px 5px 4px 11px;
+      border-radius: 20px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .atem-panel-label { font-size: 11px; color: var(--t2); white-space: nowrap; }
+    .atem-ip-field {
+      width: 110px;
+      background: transparent;
+      border: none;
+      color: var(--t1);
+      font-size: 12px;
+      font-weight: 500;
+      outline: none;
+      font-variant-numeric: tabular-nums;
+      min-width: 0;
+    }
+    .atem-ip-field::placeholder { color: var(--t3); }
+    .atem-ip-field:disabled { opacity: 0.4; cursor: default; }
+    .btn-atem {
+      padding: 4px 10px;
+      border-radius: 14px;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity 0.15s, background 0.2s;
+      flex-shrink: 0;
+    }
+    .btn-atem:hover { opacity: 0.85; }
+    .btn-atem.disconnect { background: rgba(255,59,48,0.22); color: var(--red); }
+    .btn-atem.disconnect:hover { background: rgba(255,59,48,0.35); }
+
+    /* Network access pill */
+    .iface-pill {
+      display: none;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 10px;
+      border-radius: 10px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--t2);
+      white-space: nowrap;
+      flex-shrink: 0;
+      cursor: pointer;
+      transition: background 0.15s;
+      position: relative;
+    }
+    .iface-pill:hover { background: rgba(255,255,255,0.09); }
+    .iface-pill-icon { font-size: 13px; }
+    .iface-count { font-weight: 700; color: var(--t1); }
+
+    /* IP dropdown */
+    .iface-dropdown {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      min-width: 220px;
+      background: rgba(28,28,30,0.97);
+      border: 1px solid rgba(255,255,255,0.13);
+      border-radius: 14px;
+      padding: 8px;
+      display: none;
+      flex-direction: column;
+      gap: 4px;
+      z-index: 200;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+    .iface-dropdown.open { display: flex; }
+    .iface-dropdown-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--t3);
+      padding: 2px 8px 4px;
+    }
+    .iface-entry {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 10px;
+      border-radius: 9px;
+      cursor: pointer;
+      transition: background 0.12s;
+      gap: 10px;
+    }
+    .iface-entry:hover { background: rgba(255,255,255,0.07); }
+    .iface-entry-name { font-size: 11px; color: var(--t3); }
+    .iface-entry-url { font-size: 13px; font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums; }
+
+    /* Dot indicators */
+    .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--t3);
+      flex-shrink: 0;
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    .dot.on { background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+    /* Header action buttons */
+    .header-actions { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 7px 13px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity 0.15s, transform 0.1s, background 0.15s;
+      touch-action: manipulation;
+    }
+    .btn:active { transform: scale(0.95); }
+    .btn-ghost   { background: rgba(255,255,255,0.07); border-color: var(--border); color: var(--t2); }
+    .btn-ghost:hover { color: var(--t1); background: rgba(255,255,255,0.12); }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { opacity: 0.88; }
+    .btn-rec-all  { background: var(--red);   color: #fff; }
+    .btn-rec-all:hover  { opacity: 0.88; }
+    .btn-stop-all { background: rgba(255,255,255,0.09); border-color: var(--border); color: var(--t1); }
+    .btn-stop-all:hover { background: rgba(255,255,255,0.14); }
+
+    /* ── Grid ─────────────────────────────────────────────────────────── */
+    #cameras-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+      gap: 14px;
+      padding: 16px;
+    }
+    .no-cameras {
+      grid-column: 1/-1;
+      text-align: center;
+      color: var(--t3);
+      font-size: 14px;
+      padding: 60px 0;
+    }
+
+    /* ── Camera Card ──────────────────────────────────────────────────── */
+    .camera-card {
+      position: relative;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: border-color 0.3s, box-shadow 0.3s;
+      overflow: hidden;
+    }
+    .camera-card.recording {
+      border-color: rgba(255,59,48,0.45);
+      box-shadow: 0 0 28px rgba(255,59,48,0.07);
+    }
+    .camera-card.tally-pgm {
+      border-color: rgba(255,59,48,0.85);
+      box-shadow: 0 0 0 2px rgba(255,59,48,0.4), 0 0 24px rgba(255,59,48,0.25);
+    }
+    .camera-card.tally-pvw {
+      border-color: rgba(52,199,89,0.85);
+      box-shadow: 0 0 0 2px rgba(52,199,89,0.4), 0 0 24px rgba(52,199,89,0.2);
+    }
+
+    /* Offline overlay */
+    .offline-overlay {
+      position: absolute;
+      inset: 0;
+      border-radius: 18px;
+      background: rgba(10,10,10,0.72);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+    .camera-card.offline .offline-overlay { opacity: 1; }
+    /* Card head stays above offline overlay so Reconnect/Edit buttons remain clickable */
+    .card-head { position: relative; z-index: 11; }
+    .offline-label {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.45);
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      padding: 7px 16px;
+      border-radius: 10px;
+    }
+
+    /* Card head */
+    .card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .cam-meta { flex: 1; min-width: 0; }
+    .cam-name {
+      font-size: 14px;
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .cam-ip {
+      font-size: 11px;
+      color: var(--t3);
+      margin-top: 2px;
+      font-variant-numeric: tabular-nums;
+    }
+    .card-head-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .conn-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--t3);
+      transition: all 0.3s;
+      flex-shrink: 0;
+    }
+    .conn-dot.connected { background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+    .btn-icon {
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.06);
+      color: var(--t2);
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, color 0.15s;
+      flex-shrink: 0;
+      touch-action: manipulation;
+    }
+    .btn-icon:hover { background: rgba(255,255,255,0.13); color: var(--t1); }
+    .btn-icon:active { transform: scale(0.9); }
+
+    /* Battery */
+    .bat-row { display: flex; align-items: center; gap: 7px; }
+    .bat-body {
+      position: relative;
+      width: 24px; height: 12px;
+      border: 1.5px solid rgba(255,255,255,0.35);
+      border-radius: 3px;
+      padding: 1.5px;
+      flex-shrink: 0;
+    }
+    .bat-body::after {
+      content: '';
+      position: absolute;
+      right: -5px; top: 50%;
+      transform: translateY(-50%);
+      width: 3px; height: 5px;
+      background: rgba(255,255,255,0.3);
+      border-radius: 0 2px 2px 0;
+    }
+    .bat-level {
+      height: 100%;
+      border-radius: 1.5px;
+      background: var(--green);
+      transition: width 0.5s ease, background 0.3s;
+    }
+    .bat-level.mid { background: var(--orange); }
+    .bat-level.low { background: var(--red); }
+    .bat-pct {
+      font-size: 11px;
+      color: var(--t2);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Rec timer */
+    .rec-timer {
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+      color: var(--red);
+      margin-left: auto;
+      display: none;
+    }
+    .recording .rec-timer { display: block; }
+
+    /* Params */
+    .params {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 7px;
+    }
+    .param-pill {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 9px 6px 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .param-label {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: var(--t3);
+    }
+    .param-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      gap: 2px;
+    }
+    .adj-btn {
+      width: 22px; height: 22px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.06);
+      color: var(--t2);
+      font-size: 15px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      padding: 0;
+      transition: background 0.12s, color 0.12s;
+      touch-action: manipulation;
+    }
+    .adj-btn:hover { background: rgba(255,255,255,0.14); color: var(--t1); }
+    .adj-btn:active { transform: scale(0.85); }
+    .param-value {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+      text-align: center;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Color temp + AF row */
+    .focus-row {
+      display: flex;
+      gap: 7px;
+      align-items: stretch;
+    }
+    .focus-row .param-pill { flex: 1; }
+    .btn-af {
+      padding: 8px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(0,122,255,0.35);
+      background: rgba(0,122,255,0.1);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: background 0.15s, border-color 0.15s;
+      touch-action: manipulation;
+    }
+    .btn-af:hover  { background: rgba(0,122,255,0.2); border-color: rgba(0,122,255,0.6); }
+    .btn-af:active { transform: scale(0.94); }
+
+    /* ATEM section */
+    .atem-section {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+    .atem-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .atem-row-label { font-size: 12px; color: var(--t2); }
+
+    /* Toggle */
+    .toggle-wrap { position: relative; width: 38px; height: 22px; flex-shrink: 0; }
+    .toggle-wrap input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-track {
+      position: absolute; inset: 0;
+      border-radius: 11px;
+      background: rgba(255,255,255,0.12);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .toggle-track::after {
+      content: '';
+      position: absolute;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      top: 3px; left: 3px;
+      transition: transform 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+    .toggle-wrap input:checked + .toggle-track { background: var(--accent); }
+    .toggle-wrap input:checked + .toggle-track::after { transform: translateX(16px); }
+
+    .atem-id-input {
+      width: 58px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 4px 6px;
+      color: var(--t1);
+      font-size: 13px;
+      text-align: center;
+      outline: none;
+      font-variant-numeric: tabular-nums;
+      transition: border-color 0.15s;
+    }
+    .atem-id-input:focus { border-color: var(--accent); }
+
+    /* Card bottom */
+    .card-bottom { display: flex; gap: 7px; align-items: stretch; }
+
+    .btn-rec {
+      flex: 1;
+      padding: 10px 8px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,59,48,0.3);
+      background: rgba(255,59,48,0.08);
+      color: rgba(255,59,48,0.75);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.3px;
+      transition: all 0.2s;
+      touch-action: manipulation;
+    }
+    .btn-rec:hover { background: rgba(255,59,48,0.16); border-color: rgba(255,59,48,0.5); color: var(--red); }
+    .btn-rec.recording {
+      background: var(--red);
+      border-color: var(--red);
+      color: #fff;
+      animation: pulse-rec 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse-rec {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255,59,48,0.5); }
+      50%       { box-shadow: 0 0 0 6px rgba(255,59,48,0); }
+    }
+
+    .btn-del {
+      width: 36px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.04);
+      color: rgba(255,59,48,0.4);
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s, color 0.15s;
+      touch-action: manipulation;
+    }
+    .btn-del:hover { background: rgba(255,59,48,0.1); color: var(--red); }
+
+    /* ── Edit mode ────────────────────────────────────────────────────── */
+    .card-edit-form {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(0,122,255,0.3);
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .card-edit-form.visible { display: flex; position: relative; z-index: 11; }
+    .edit-field { display: flex; flex-direction: column; gap: 4px; }
+    .edit-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--t3); }
+    .edit-input {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      color: var(--t1);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s;
+      width: 100%;
+    }
+    .edit-input:focus { border-color: var(--accent); }
+    .edit-actions { display: flex; gap: 7px; margin-top: 2px; }
+    .btn-edit-save {
+      flex: 1;
+      padding: 8px;
+      border-radius: 8px;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn-edit-save:hover { opacity: 0.85; }
+    .btn-edit-cancel {
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.06);
+      color: var(--t2);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-edit-cancel:hover { background: rgba(255,255,255,0.12); color: var(--t1); }
+
+    /* ── Tally Bar ────────────────────────────────────────────────────── */
+    .tally-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      z-index: 90;
+      height: var(--tally-h);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 16px;
+      background: rgba(10,10,10,0.94);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-top: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .tally-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--t3);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .tally-inputs {
+      display: flex;
+      gap: 5px;
+      flex: 1;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      padding: 4px 0;
+    }
+    .tally-inputs::-webkit-scrollbar { display: none; }
+    .tally-btn {
+      min-width: 32px; height: 32px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.05);
+      color: rgba(255,255,255,0.3);
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
+      cursor: default;
+      flex-shrink: 0;
+      padding: 0 6px;
+    }
+    .tally-btn.pgm {
+      background: rgba(255,59,48,0.25);
+      border-color: rgba(255,59,48,0.8);
+      color: #ff6b63;
+      box-shadow: 0 0 10px rgba(255,59,48,0.45);
+    }
+    .tally-btn.pvw {
+      background: rgba(52,199,89,0.2);
+      border-color: rgba(52,199,89,0.75);
+      color: #5dde7a;
+      box-shadow: 0 0 10px rgba(52,199,89,0.35);
+    }
+    .tally-btn.disconnected { opacity: 0.3; }
+
+    /* ── Log Terminal ─────────────────────────────────────────────────── */
+    .log-panel {
+      margin: 0 16px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.5);
+      overflow: hidden;
+    }
+    .log-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 10px;
+      background: rgba(255,255,255,0.03);
+      user-select: none;
+      flex-wrap: wrap;
+    }
+    .log-toggle {
+      width: 20px; height: 20px;
+      background: transparent;
+      border: none;
+      color: var(--t3);
+      font-size: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: transform 0.22s, color 0.15s;
+      padding: 0;
+    }
+    .log-toggle:hover { color: var(--t1); }
+    .log-panel.collapsed .log-toggle { transform: rotate(-90deg); }
+    .log-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--t3);
+      flex: 1;
+    }
+    .log-filter-btn {
+      padding: 2px 7px;
+      border-radius: 5px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--t3);
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+    .log-filter-btn:hover { color: var(--t2); background: rgba(255,255,255,0.07); }
+    .log-filter-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .log-clear-btn {
+      padding: 2px 7px;
+      border-radius: 5px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--t3);
+      font-size: 10px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: color 0.12s, background 0.12s;
+    }
+    .log-clear-btn:hover { color: var(--red); background: rgba(255,59,48,0.08); border-color: rgba(255,59,48,0.3); }
+    .log-body-wrap {
+      height: 150px;
+      overflow: hidden;
+      transition: height 0.22s ease;
+      border-top: 1px solid var(--border);
+    }
+    .log-panel.collapsed .log-body-wrap { height: 0; border-top-color: transparent; }
+    .log-scroll {
+      height: 150px;
+      overflow-y: auto;
+      padding: 7px 12px;
+      font-family: 'SF Mono', ui-monospace, monospace;
+      font-size: 10px;
+      line-height: 1.55;
+    }
+    .log-scroll::-webkit-scrollbar { width: 3px; }
+    .log-scroll::-webkit-scrollbar-track { background: transparent; }
+    .log-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+    .log-entry { display: flex; gap: 7px; }
+    .log-ts  { color: rgba(255,255,255,0.2); flex-shrink: 0; }
+    .log-cat { min-width: 46px; font-weight: 700; flex-shrink: 0; }
+    .log-cat.cat-ATEM   { color: #5AC8FA; }
+    .log-cat.cat-SONY   { color: #FF9F0A; }
+    .log-cat.cat-BRIDGE { color: #32D74B; }
+    .log-cat.cat-UI     { color: #BF5AF2; }
+    .log-cat.cat-Manager { color: #64D2FF; }
+    .log-cat.cat-SYSTEM { color: var(--t3); }
+    .log-text { color: rgba(255,255,255,0.6); word-break: break-all; }
+
+    /* ── Pairing status ───────────────────────────────────────────────── */
+    .pairing-status {
+      font-size: 12px;
+      line-height: 1.5;
+      padding: 9px 13px;
+      border-radius: 10px;
+      display: none;
+    }
+    .pairing-status.info {
+      display: block;
+      background: rgba(0,122,255,0.1);
+      border: 1px solid rgba(0,122,255,0.3);
+      color: #4da3ff;
+      animation: pulse-info 2s ease-in-out infinite;
+    }
+    .pairing-status.error {
+      display: block;
+      background: rgba(255,59,48,0.1);
+      border: 1px solid rgba(255,59,48,0.3);
+      color: var(--red);
+    }
+    @keyframes pulse-info { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+    /* ── Modal ────────────────────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 16px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .modal-overlay.visible { opacity: 1; pointer-events: auto; }
+    .modal {
+      backdrop-filter: blur(40px);
+      -webkit-backdrop-filter: blur(40px);
+      background: rgba(28,28,30,0.95);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 20px;
+      padding: 24px;
+      width: 100%;
+      max-width: 340px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transform: scale(0.94) translateY(8px);
+      transition: transform 0.22s;
+    }
+    .modal-overlay.visible .modal { transform: scale(1) translateY(0); }
+    .modal h2 { font-size: 16px; font-weight: 700; }
+    .modal-field { display: flex; flex-direction: column; gap: 5px; }
+    .modal-label { font-size: 11px; color: var(--t2); }
+    .modal-input {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      color: var(--t1);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s;
+      width: 100%;
+    }
+    .modal-input:focus { border-color: var(--accent); }
+    .modal-input::placeholder { color: var(--t3); }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+    /* ── Responsive ───────────────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .header-row { gap: 8px; }
+      .atem-ip-field { width: 90px; }
+      .iface-pill { display: none !important; }
+      .header-row-2 { display: flex; }
+      .header-row .header-actions { display: none; }
+      .header-row-2 .header-actions { display: flex; flex: 1; }
+      .header-row-2 .h-spacer { display: none; }
+      body { padding-bottom: calc(var(--tally-h) + 4px); }
+      #cameras-container { padding: 10px; gap: 10px; grid-template-columns: 1fr; }
+      .log-panel { margin: 0 10px 10px; }
+    }
+    @media (min-width: 601px) and (max-width: 900px) {
+      #cameras-container { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+    }
+    @media (min-width: 601px) {
+      .iface-pill { display: flex; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-row">
+      <div class="logo">
+        <div class="dot" id="ws-dot" title="Bridge connection"></div>
+        Cine<em>Link</em>
+      </div>
+      <div class="ver-badge" id="ver-badge">…</div>
+
+      <div class="h-spacer"></div>
+
+      <div class="atem-panel">
+        <div class="dot" id="atem-dot" title="ATEM"></div>
+        <span class="atem-panel-label">ATEM</span>
+        <input class="atem-ip-field" id="atem-ip-input" placeholder="192.168.1.240"
+               inputmode="decimal" autocomplete="off" maxlength="15">
+        <button class="btn-atem" id="btn-atem-connect">Connect</button>
+      </div>
+
+      <div class="iface-pill" id="iface-pill">
+        <span class="iface-pill-icon">📡</span>
+        <span id="iface-count-label">—</span>
+        <div class="iface-dropdown" id="iface-dropdown"></div>
+      </div>
+
+      <div class="h-spacer"></div>
+
+      <!-- Desktop actions -->
+      <div class="header-actions">
+        <button class="btn btn-ghost"     id="btn-add">+ Add Camera</button>
+        <button class="btn btn-stop-all"  id="btn-stop-all">■ Stop All</button>
+        <button class="btn btn-rec-all"   id="btn-rec-all">● REC ALL</button>
+      </div>
+    </div>
+
+    <!-- Mobile-only second row -->
+    <div class="header-row-2">
+      <div class="header-actions">
+        <button class="btn btn-ghost"    id="btn-add-m">+ Add</button>
+        <button class="btn btn-stop-all" id="btn-stop-all-m">■ Stop</button>
+        <button class="btn btn-rec-all"  id="btn-rec-all-m">● REC</button>
+      </div>
+    </div>
+  </header>
+
+  <div id="cameras-container">
+    <p class="no-cameras">Connecting…</p>
+  </div>
+
+  <!-- Log Terminal -->
+  <div class="log-panel" id="log-panel">
+    <div class="log-toolbar">
+      <button class="log-toggle" id="log-toggle">▼</button>
+      <span class="log-title">Log</span>
+      <button class="log-filter-btn active" data-cat="ALL">All</button>
+      <button class="log-filter-btn" data-cat="ATEM">ATEM</button>
+      <button class="log-filter-btn" data-cat="SONY">Sony</button>
+      <button class="log-filter-btn" data-cat="BRIDGE">Bridge</button>
+      <button class="log-filter-btn" data-cat="UI">UI</button>
+      <button class="log-clear-btn" id="log-clear">Clear</button>
+    </div>
+    <div class="log-body-wrap">
+      <div class="log-scroll" id="log-scroll"></div>
+    </div>
+  </div>
+
+  <!-- Tally Bar -->
+  <div class="tally-bar">
+    <span class="tally-label">TALLY</span>
+    <div class="tally-inputs" id="tally-inputs"></div>
+  </div>
+
+  <!-- Add Camera Modal -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal">
+      <h2>Add Camera</h2>
+      <div class="modal-field">
+        <label class="modal-label">Name</label>
+        <input class="modal-input" id="m-name" placeholder="Sony FX30 — A" autocomplete="off">
+      </div>
+      <div class="modal-field">
+        <label class="modal-label">IP Address</label>
+        <input class="modal-input" id="m-ip" placeholder="192.168.1.100" inputmode="decimal" autocomplete="off">
+      </div>
+      <div class="modal-field">
+        <label class="modal-label" id="m-atem-label">ATEM Input (1–20)</label>
+        <input class="modal-input" id="m-atem" type="number" min="1" max="20" value="1">
+      </div>
+      <div id="m-status" class="pairing-status"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost"   id="m-cancel">Cancel</button>
+        <button class="btn btn-primary" id="m-confirm">Add Camera</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── State ─────────────────────────────────────────────────────────────────
+    let cameras   = [];
+    let pairing   = false;
+    let logFilter = 'ALL';
+    const logEntries   = [];
+    const MAX_LOG      = 500;
+    const recStartTimes = new Map(); // camId → Date.now() when rec started
+    let ifaceList      = [];
+
+    // ── DOM ───────────────────────────────────────────────────────────────────
+    const container      = document.getElementById('cameras-container');
+    const wsDot          = document.getElementById('ws-dot');
+    const atemDot        = document.getElementById('atem-dot');
+    const atemIpInput    = document.getElementById('atem-ip-input');
+    const btnAtemConnect = document.getElementById('btn-atem-connect');
+    const modalEl        = document.getElementById('modal-overlay');
+    const confirmBtn     = document.getElementById('m-confirm');
+    const statusEl       = document.getElementById('m-status');
+    const ifacePill      = document.getElementById('iface-pill');
+    const ifaceDropdown  = document.getElementById('iface-dropdown');
+
+    // ── Utils ─────────────────────────────────────────────────────────────────
+    const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    const fmt = fn => fn ? 'f/' + (fn / 100).toFixed(1) : '—';
+
+    function fmtElapsed(ms) {
+      const s = Math.floor(ms / 1000);
+      const m = Math.floor(s / 60);
+      const ss = String(s % 60).padStart(2, '0');
+      return `${m}:${ss}`;
+    }
+
+    // ── Smart IP formatter ────────────────────────────────────────────────────
+    function applySmartIp(el) {
+      let v = el.value.replace(/[,/юб]/g, '.').replace(/[^0-9.]/g, '').replace(/\.{2,}/g, '.');
+      const segs = v.split('.');
+      for (let i = 0; i < segs.length - 1; i++) segs[i] = segs[i].slice(0, 3);
+      if (segs.length < 4 && segs[segs.length - 1].length === 3) segs.push('');
+      v = segs.slice(0, 4).map(s => s.slice(0, 3)).join('.');
+      if (el.value !== v) {
+        const pos = el.selectionStart;
+        const diff = v.length - el.value.length;
+        el.value = v;
+        el.setSelectionRange(pos + diff, pos + diff);
+      }
+    }
+    function wireSmartIp(el) {
+      if (!el) return;
+      el.addEventListener('input', () => applySmartIp(el));
+      el.addEventListener('keydown', e => {
+        if (e.ctrlKey || e.metaKey) return; // allow Ctrl/Cmd shortcuts (copy, paste, select-all…)
+        if (!/^[0-9.]$/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Home','End'].includes(e.key)) {
+          e.preventDefault();
+          if ([',','/',  'б','ю'].includes(e.key)) {
+            const s = el.selectionStart;
+            el.value = el.value.slice(0, s) + '.' + el.value.slice(el.selectionEnd);
+            el.setSelectionRange(s + 1, s + 1);
+            applySmartIp(el);
+          }
+        }
+      });
+    }
+    wireSmartIp(atemIpInput);
+    wireSmartIp(document.getElementById('m-ip'));
+
+    async function api(method, path, body) {
+      try {
+        const res = await fetch(path, {
+          method,
+          headers: body ? { 'Content-Type': 'application/json' } : {},
+          body: body ? JSON.stringify(body) : undefined,
+        });
+        return res.ok ? res.json() : null;
+      } catch (e) { console.error('[API]', e); return null; }
+    }
+
+    // ── Recording timer ───────────────────────────────────────────────────────
+    setInterval(() => {
+      const now = Date.now();
+      document.querySelectorAll('.camera-card.recording').forEach(card => {
+        const id = card.dataset.cam;
+        const timerEl = card.querySelector('.rec-timer');
+        if (!timerEl) return;
+        const start = recStartTimes.get(id);
+        if (start) timerEl.textContent = '⏺ ' + fmtElapsed(now - start);
+      });
+    }, 1000);
+
+    // ── Card HTML ─────────────────────────────────────────────────────────────
+    function makeCard(cam) {
+      const d = document.createElement('div');
+      d.className = 'camera-card'
+        + (cam.recState === 1 ? ' recording' : '')
+        + (!cam.connected ? ' offline' : '')
+        + (cam.tally === 1 ? ' tally-pgm' : cam.tally === 2 ? ' tally-pvw' : '');
+      d.dataset.cam = cam.id;
+      d.innerHTML = cardHTML(cam);
+      return d;
+    }
+
+    function cardHTML(cam) {
+      const rec = cam.recState === 1;
+      const bat = cam.battery ?? 0;
+      const id  = esc(cam.id);
+      return `
+        <div class="offline-overlay"><div class="offline-label">OFFLINE</div></div>
+
+        <div class="card-head">
+          <div class="cam-meta">
+            <div class="cam-name" data-f="name">${esc(cam.name)}</div>
+            <div class="cam-ip"   data-f="ip">${esc(cam.ip)}</div>
+          </div>
+          <div class="card-head-actions">
+            <div class="conn-dot${cam.connected ? ' connected' : ''}"></div>
+            <button class="btn-icon js-edit"      data-cam="${id}" title="Edit">✎</button>
+            <button class="btn-icon js-reconnect" data-cam="${id}" title="Reconnect">↻</button>
+          </div>
+        </div>
+
+        <div class="card-edit-form" id="edit-${id}">
+          <div class="edit-field">
+            <span class="edit-label">Name</span>
+            <input class="edit-input js-edit-name" data-cam="${id}" value="${esc(cam.name)}" autocomplete="off">
+          </div>
+          <div class="edit-field">
+            <span class="edit-label">IP Address</span>
+            <input class="edit-input js-edit-ip" data-cam="${id}" value="${esc(cam.ip)}" inputmode="decimal" autocomplete="off">
+          </div>
+          <div class="edit-actions">
+            <button class="btn-edit-cancel js-edit-cancel" data-cam="${id}">Cancel</button>
+            <button class="btn-edit-save   js-edit-save"   data-cam="${id}">Save</button>
+          </div>
+        </div>
+
+        <div class="bat-row">
+          <div class="bat-body" title="Battery ${bat}%">
+            <div class="bat-level${bat < 20 ? ' low' : bat < 50 ? ' mid' : ''}" style="width:${Math.min(100,bat)}%"></div>
+          </div>
+          <span class="bat-pct" data-f="battery">${bat < 20 ? '🔴 ' : ''}${bat}%</span>
+          <span class="rec-timer"></span>
+        </div>
+
+        <div class="params">
+          <div class="param-pill">
+            <span class="param-label">ISO</span>
+            <div class="param-controls">
+              <button class="adj-btn js-adj" data-cam="${id}" data-param="iso" data-delta="-1">‹</button>
+              <span class="param-value" data-f="iso">${cam.iso || '—'}</span>
+              <button class="adj-btn js-adj" data-cam="${id}" data-param="iso" data-delta="1">›</button>
+            </div>
+          </div>
+          <div class="param-pill">
+            <span class="param-label">Shutter</span>
+            <div class="param-controls">
+              <button class="adj-btn js-adj" data-cam="${id}" data-param="shutter" data-delta="-1">‹</button>
+              <span class="param-value" data-f="shutter">${esc(cam.shutter) || '—'}</span>
+              <button class="adj-btn js-adj" data-cam="${id}" data-param="shutter" data-delta="1">›</button>
+            </div>
+          </div>
+          <div class="param-pill">
+            <span class="param-label">Iris</span>
+            <div class="param-controls">
+              <button class="adj-btn js-adj" data-cam="${id}" data-param="fnumber" data-delta="-1">‹</button>
+              <span class="param-value" data-f="fnumber">${fmt(cam.fnumber)}</span>
+              <button class="adj-btn js-adj" data-cam="${id}" data-param="fnumber" data-delta="1">›</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="focus-row">
+          <div class="param-pill">
+            <span class="param-label">Color Temp</span>
+            <div class="param-controls">
+              <button class="adj-btn js-ct-adj" data-cam="${id}" data-delta="-1">‹</button>
+              <span class="param-value" data-f="colorTemp">${cam.colorTemp ? cam.colorTemp + 'K' : '—'}</span>
+              <button class="adj-btn js-ct-adj" data-cam="${id}" data-delta="1">›</button>
+            </div>
+          </div>
+          <button class="btn-af js-af" data-cam="${id}">PUSH AF</button>
+        </div>
+
+        <div class="atem-section">
+          <div class="atem-row">
+            <span class="atem-row-label">ATEM Control</span>
+            <label class="toggle-wrap">
+              <input type="checkbox" class="js-atem-toggle" data-cam="${id}" ${cam.atemControlEnabled ? 'checked' : ''}>
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+          <div class="atem-row">
+            <span class="atem-row-label">ATEM Input</span>
+            <input type="number" class="atem-id-input js-atem-id" data-cam="${id}" min="1" max="20" value="${cam.atemInput ?? 1}">
+          </div>
+        </div>
+
+        <div class="card-bottom">
+          <button class="btn-rec js-rec${rec ? ' recording' : ''}" data-cam="${id}">${rec ? '⏹ STOP' : '● REC'}</button>
+          <button class="btn-del js-del" data-cam="${id}" title="Remove camera">✕</button>
+        </div>`;
+    }
+
+    // ── Smart sync ────────────────────────────────────────────────────────────
+    function syncCameras(incoming) {
+      cameras = incoming;
+      const ids = new Set(incoming.map(c => c.id));
+
+      // Clean up start times for removed cameras
+      for (const [id] of recStartTimes) {
+        if (!ids.has(id)) recStartTimes.delete(id);
+      }
+
+      // Remove stale cards
+      container.querySelectorAll('.camera-card').forEach(el => {
+        if (!ids.has(el.dataset.cam)) el.remove();
+      });
+
+      const noEl = container.querySelector('.no-cameras');
+      if (incoming.length === 0) {
+        if (!noEl) container.innerHTML = '<p class="no-cameras">No cameras added. Click "+ Add Camera" to begin.</p>';
+        return;
+      }
+      if (noEl) noEl.remove();
+
+      incoming.forEach((cam, idx) => {
+        const existing = container.querySelector(`.camera-card[data-cam="${CSS.escape(cam.id)}"]`);
+
+        // Track recording start time
+        const wasRec = existing ? existing.classList.contains('recording') : false;
+        const isRec  = cam.recState === 1;
+        if (!wasRec && isRec)  recStartTimes.set(cam.id, Date.now());
+        if (wasRec  && !isRec) recStartTimes.delete(cam.id);
+
+        if (!existing) {
+          const card = makeCard(cam);
+          const cards = container.querySelectorAll('.camera-card');
+          cards[idx] ? container.insertBefore(card, cards[idx]) : container.appendChild(card);
+          wireSmartIp(card.querySelector('.js-edit-ip'));
+          return;
+        }
+
+        // Update classes
+        existing.classList.toggle('recording', isRec);
+        existing.classList.toggle('offline',   !cam.connected);
+        existing.classList.toggle('tally-pgm', (cam.tally ?? 0) === 1);
+        existing.classList.toggle('tally-pvw', (cam.tally ?? 0) === 2);
+
+        // Text fields (skip if edit form is open)
+        const editOpen = existing.querySelector('.card-edit-form.visible');
+        if (!editOpen) {
+          setTxt(existing, '[data-f="name"]', cam.name ?? '—');
+          setTxt(existing, '[data-f="ip"]',   cam.ip   ?? '—');
+        }
+        setTxt(existing, '[data-f="iso"]',     cam.iso  && cam.iso !== 0 ? cam.iso : '—');
+        setTxt(existing, '[data-f="shutter"]', cam.shutter && cam.shutter !== '0' ? cam.shutter : '—');
+        setTxt(existing, '[data-f="fnumber"]',   cam.fnumber   ? fmt(cam.fnumber)             : '—');
+        setTxt(existing, '[data-f="colorTemp"]', cam.colorTemp ? cam.colorTemp + 'K'          : '—');
+
+        // Battery
+        const bat = cam.battery ?? 0;
+        const batLevel = existing.querySelector('.bat-level');
+        const batPct   = existing.querySelector('.bat-pct');
+        if (batLevel) {
+          batLevel.style.width = Math.min(100, bat) + '%';
+          batLevel.classList.toggle('low', bat < 20);
+          batLevel.classList.toggle('mid', bat >= 20 && bat < 50);
+        }
+        if (batPct) {
+          const txt = (bat < 20 ? '🔴 ' : '') + bat + '%';
+          if (batPct.textContent !== txt) batPct.textContent = txt;
+        }
+
+        // Conn dot
+        const dot = existing.querySelector('.conn-dot');
+        if (dot) dot.classList.toggle('connected', !!cam.connected);
+
+        // REC button
+        const recBtn = existing.querySelector('.js-rec');
+        if (recBtn) {
+          recBtn.classList.toggle('recording', isRec);
+          const label = isRec ? '⏹ STOP' : '● REC';
+          if (recBtn.textContent !== label) recBtn.textContent = label;
+        }
+
+        // ATEM toggle (skip if focused)
+        const tog = existing.querySelector('.js-atem-toggle');
+        if (tog && document.activeElement !== tog) tog.checked = !!cam.atemControlEnabled;
+
+        // ATEM input (skip if focused)
+        const atemIn = existing.querySelector('.js-atem-id');
+        if (atemIn && document.activeElement !== atemIn) {
+          const v = String(cam.atemInput ?? 1);
+          if (atemIn.value !== v) atemIn.value = v;
+        }
+      });
+    }
+
+    function setTxt(parent, sel, val) {
+      const el = parent.querySelector(sel);
+      if (el && el.textContent !== String(val)) el.textContent = String(val);
+    }
+
+    // ── Event delegation ──────────────────────────────────────────────────────
+    container.addEventListener('click', async e => {
+      const btn = e.target.closest('button, .btn-icon');
+      if (!btn) return;
+      const id = btn.dataset.cam;
+      if (!id) return;
+
+      if (btn.classList.contains('js-reconnect')) {
+        await api('POST', `/api/cameras/${encodeURIComponent(id)}/connect`);
+        return;
+      }
+
+      if (btn.classList.contains('js-rec')) {
+        await api('POST', `/api/cameras/${encodeURIComponent(id)}/record`);
+        return;
+      }
+
+      if (btn.classList.contains('js-adj')) {
+        await api('POST', `/api/cameras/${encodeURIComponent(id)}/adjust`, {
+          param: btn.dataset.param,
+          delta: Number(btn.dataset.delta),
+        });
+        return;
+      }
+
+      if (btn.classList.contains('js-ct-adj')) {
+        await api('POST', `/api/cameras/${encodeURIComponent(id)}/color-temp`, {
+          direction: Number(btn.dataset.delta),
+        });
+        return;
+      }
+
+      if (btn.classList.contains('js-af')) {
+        await api('POST', `/api/cameras/${encodeURIComponent(id)}/af`);
+        return;
+      }
+
+      if (btn.classList.contains('js-del') && confirm('Remove this camera?')) {
+        await api('DELETE', `/api/cameras/${encodeURIComponent(id)}`);
+        return;
+      }
+
+      // Edit toggle
+      if (btn.classList.contains('js-edit')) {
+        const card = container.querySelector(`.camera-card[data-cam="${CSS.escape(id)}"]`);
+        if (!card) return;
+        const form = card.querySelector('.card-edit-form');
+        const isOpen = form.classList.contains('visible');
+        if (!isOpen) {
+          // Populate with current values
+          const cam = cameras.find(c => c.id === id);
+          if (cam) {
+            const nameIn = form.querySelector('.js-edit-name');
+            const ipIn   = form.querySelector('.js-edit-ip');
+            if (nameIn) nameIn.value = cam.name;
+            if (ipIn)   ipIn.value   = cam.ip;
+          }
+          form.classList.add('visible');
+          const nameInput = form.querySelector('.js-edit-name');
+          if (nameInput) nameInput.focus();
+        } else {
+          form.classList.remove('visible');
+        }
+        return;
+      }
+
+      if (btn.classList.contains('js-edit-cancel')) {
+        const card = container.querySelector(`.camera-card[data-cam="${CSS.escape(id)}"]`);
+        if (card) card.querySelector('.card-edit-form')?.classList.remove('visible');
+        return;
+      }
+
+      if (btn.classList.contains('js-edit-save')) {
+        const card = container.querySelector(`.camera-card[data-cam="${CSS.escape(id)}"]`);
+        if (!card) return;
+        const form   = card.querySelector('.card-edit-form');
+        const nameIn = form.querySelector('.js-edit-name');
+        const ipIn   = form.querySelector('.js-edit-ip');
+        const newName = nameIn?.value.trim();
+        const newIp   = ipIn?.value.trim();
+        if (!newName || !newIp) { alert('Name and IP are required.'); return; }
+
+        btn.textContent = 'Saving…';
+        btn.disabled = true;
+        const ok = await api('PATCH', `/api/cameras/${encodeURIComponent(id)}`, { name: newName, ip: newIp });
+        btn.textContent = 'Save';
+        btn.disabled = false;
+
+        if (ok) {
+          form.classList.remove('visible');
+        } else {
+          nameIn.style.borderColor = 'var(--red)';
+          setTimeout(() => { nameIn.style.borderColor = ''; }, 2000);
+        }
+        return;
+      }
+    });
+
+    container.addEventListener('change', async e => {
+      const el = e.target;
+      if (el.classList.contains('js-atem-toggle'))
+        await api('PATCH', `/api/cameras/${encodeURIComponent(el.dataset.cam)}`, { atemControlEnabled: el.checked });
+    });
+
+    let atemIdTimer;
+    container.addEventListener('input', e => {
+      const el = e.target;
+      if (!el.classList.contains('js-atem-id')) return;
+      const val = parseInt(el.value, 10);
+      if (isNaN(val) || val < 1 || val > 20) return;
+      clearTimeout(atemIdTimer);
+      atemIdTimer = setTimeout(() =>
+        api('PATCH', `/api/cameras/${encodeURIComponent(el.dataset.cam)}`, { atemInput: val }), 600);
+    });
+
+    // ── Modal ─────────────────────────────────────────────────────────────────
+    // Must be defined BEFORE wireAddCam so openModal is not in TDZ when called
+    const openModal  = () => { modalEl.classList.add('visible'); document.getElementById('m-name').focus(); };
+    const closeModal = () => { modalEl.classList.remove('visible'); if (!pairing) resetModal(); };
+
+    // ── Header buttons ────────────────────────────────────────────────────────
+    function wireRecAll(el)  { el?.addEventListener('click', () => api('POST', '/api/cameras/rec-all')); }
+    function wireStopAll(el) { el?.addEventListener('click', () => api('POST', '/api/cameras/stop-all')); }
+    function wireAddCam(el)  { el?.addEventListener('click', openModal); }
+
+    wireRecAll(document.getElementById('btn-rec-all'));
+    wireRecAll(document.getElementById('btn-rec-all-m'));
+    wireStopAll(document.getElementById('btn-stop-all'));
+    wireStopAll(document.getElementById('btn-stop-all-m'));
+    wireAddCam(document.getElementById('btn-add'));
+    wireAddCam(document.getElementById('btn-add-m'));
+
+    // ── ATEM ─────────────────────────────────────────────────────────────────
+    btnAtemConnect.addEventListener('click', async () => {
+      if (btnAtemConnect.classList.contains('disconnect')) {
+        await api('POST', '/api/atem/disconnect');
+      } else {
+        const ip = atemIpInput.value.trim();
+        if (!ip) { atemIpInput.focus(); return; }
+        await api('POST', '/api/atem/connect', { ip });
+      }
+    });
+
+    document.getElementById('m-cancel').addEventListener('click', () => { if (!pairing) closeModal(); });
+    modalEl.addEventListener('click', e => { if (e.target === modalEl && !pairing) closeModal(); });
+
+    function resetModal() {
+      pairing = false;
+      confirmBtn.textContent = 'Add Camera';
+      confirmBtn.disabled = false;
+      statusEl.className = 'pairing-status';
+      statusEl.textContent = '';
+      document.getElementById('m-name').value = '';
+      document.getElementById('m-ip').value   = '';
+      document.getElementById('m-atem').value = '1';
+    }
+
+    confirmBtn.addEventListener('click', async () => {
+      if (pairing) return;
+      const name = document.getElementById('m-name').value.trim();
+      const ip   = document.getElementById('m-ip').value.trim();
+      const atem = parseInt(document.getElementById('m-atem').value, 10) || 1;
+      if (!name || !ip) { alert('Name and IP are required.'); return; }
+
+      pairing = true;
+      confirmBtn.textContent = 'Connecting…';
+      confirmBtn.disabled = true;
+      statusEl.className = 'pairing-status';
+      statusEl.textContent = '';
+
+      const pairingTimer = setTimeout(() => {
+        confirmBtn.textContent = '→ Confirm on Camera';
+        statusEl.className = 'pairing-status info';
+        statusEl.textContent = 'Look at the camera screen and press OK to accept the connection.';
+      }, 2500);
+
+      try {
+        const res = await fetch('/api/cameras/pair', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, ip, atemInput: atem }),
+          signal: AbortSignal.timeout(18000),
+        });
+        clearTimeout(pairingTimer);
+        if (res.ok) { closeModal(); resetModal(); }
+        else {
+          const data = await res.json().catch(() => ({ error: 'Unknown error' }));
+          statusEl.className = 'pairing-status error';
+          statusEl.textContent = data.error || 'Pairing failed';
+          confirmBtn.textContent = 'Add Camera';
+          confirmBtn.disabled = false;
+          pairing = false;
+        }
+      } catch (e) {
+        clearTimeout(pairingTimer);
+        statusEl.className = 'pairing-status error';
+        statusEl.textContent = e.name === 'TimeoutError'
+          ? 'Camera did not respond. Check IP and try again.'
+          : 'Connection failed: ' + e.message;
+        confirmBtn.textContent = 'Add Camera';
+        confirmBtn.disabled = false;
+        pairing = false;
+      }
+    });
+
+    ['m-name','m-ip','m-atem'].forEach(i =>
+      document.getElementById(i)?.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !pairing) confirmBtn.click();
+      })
+    );
+
+    // ── Log terminal ──────────────────────────────────────────────────────────
+    const logScroll = document.getElementById('log-scroll');
+    const logPanel  = document.getElementById('log-panel');
+
+    (function initLog() {
+      if (localStorage.getItem('logCollapsed') === '1') logPanel.classList.add('collapsed');
+    })();
+
+    document.getElementById('log-toggle').addEventListener('click', () => {
+      const c = logPanel.classList.toggle('collapsed');
+      localStorage.setItem('logCollapsed', c ? '1' : '0');
+    });
+    document.getElementById('log-clear').addEventListener('click', () => {
+      logEntries.length = 0;
+      logScroll.innerHTML = '';
+    });
+    document.querySelectorAll('.log-filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        logFilter = btn.dataset.cat;
+        document.querySelectorAll('.log-filter-btn').forEach(b => b.classList.toggle('active', b === btn));
+        renderLog();
+      });
+    });
+
+    function renderLog() {
+      const visible = logFilter === 'ALL' ? logEntries : logEntries.filter(e => e.category === logFilter);
+      logScroll.innerHTML = visible.map(e => `<div class="log-entry">
+        <span class="log-ts">${esc(e.timestamp)}</span>
+        <span class="log-cat cat-${esc(e.category)}">[${esc(e.category)}]</span>
+        <span class="log-text">${esc(e.text)}</span></div>`).join('');
+      logScroll.scrollTop = logScroll.scrollHeight;
+    }
+
+    function pushLog(entry) {
+      logEntries.push(entry);
+      if (logEntries.length > MAX_LOG) logEntries.shift();
+      if (logFilter === 'ALL' || logFilter === entry.category) {
+        const row = document.createElement('div');
+        row.className = 'log-entry';
+        row.innerHTML = `<span class="log-ts">${esc(entry.timestamp)}</span>
+          <span class="log-cat cat-${esc(entry.category)}">[${esc(entry.category)}]</span>
+          <span class="log-text">${esc(entry.text)}</span>`;
+        logScroll.appendChild(row);
+        if (logScroll.children.length > MAX_LOG) logScroll.firstChild.remove();
+        logScroll.scrollTop = logScroll.scrollHeight;
+      }
+    }
+
+    // ── Tally bar ─────────────────────────────────────────────────────────────
+    const tallyInputsEl = document.getElementById('tally-inputs');
+    let tallyCount = 0;
+
+    function buildTallyButtons(count) {
+      if (count === tallyCount) return;
+      tallyCount = count;
+      tallyInputsEl.innerHTML = '';
+      for (let i = 1; i <= count; i++) {
+        const btn = document.createElement('div');
+        btn.className = 'tally-btn';
+        btn.id = `tally-${i}`;
+        btn.textContent = String(i);
+        tallyInputsEl.appendChild(btn);
+      }
+    }
+    buildTallyButtons(8);
+
+    let lastInputCount = 20;
+    function applyInputCount(n) {
+      if (!n || n === lastInputCount) return;
+      lastInputCount = n;
+      const mAtem  = document.getElementById('m-atem');
+      const mLabel = document.getElementById('m-atem-label');
+      if (mAtem)  mAtem.max = String(n);
+      if (mLabel) mLabel.textContent = `ATEM Input (1–${n})`;
+      document.querySelectorAll('.js-atem-id').forEach(el => { el.max = String(n); });
+    }
+
+    function syncTally(tally, topology, atemConnected, inputCount) {
+      const n = inputCount > 0 ? inputCount : 8;
+      applyInputCount(inputCount > 0 ? inputCount : lastInputCount);
+      buildTallyButtons(n);
+      for (let i = 1; i <= n; i++) {
+        const btn = document.getElementById(`tally-${i}`);
+        if (!btn) continue;
+        const idx = Array.isArray(topology) ? topology.indexOf(i) : i - 1;
+        const val = (idx >= 0 && tally) ? tally[idx] : 0;
+        btn.classList.toggle('disconnected', !atemConnected);
+        btn.classList.toggle('pgm', atemConnected && val === 1);
+        btn.classList.toggle('pvw', atemConnected && val === 2);
+      }
+    }
+
+    // ── Network interfaces ────────────────────────────────────────────────────
+    async function loadInterfaces() {
+      try {
+        const list = await api('GET', '/api/interfaces');
+        if (!Array.isArray(list) || list.length === 0) return;
+        ifaceList = list;
+
+        const countLabel = document.getElementById('iface-count-label');
+        if (countLabel) countLabel.textContent = list.length === 1
+          ? list[0].address
+          : `${list.length} IPs`;
+
+        ifaceDropdown.innerHTML = '<div class="iface-dropdown-title">Open in browser</div>'
+          + list.map(iface => `
+            <div class="iface-entry" data-url="http://${iface.address}:7777">
+              <span class="iface-entry-name">${esc(iface.name)}</span>
+              <span class="iface-entry-url">http://${esc(iface.address)}:7777</span>
+            </div>`).join('');
+
+        ifaceDropdown.querySelectorAll('.iface-entry').forEach(el => {
+          el.addEventListener('click', e => {
+            e.stopPropagation();
+            window.open(el.dataset.url, '_blank');
+            ifaceDropdown.classList.remove('open');
+          });
+        });
+
+        ifacePill.style.display = 'flex';
+      } catch (_e) {}
+    }
+
+    // Toggle dropdown
+    ifacePill.addEventListener('click', e => {
+      e.stopPropagation();
+      ifaceDropdown.classList.toggle('open');
+    });
+    document.addEventListener('click', () => ifaceDropdown.classList.remove('open'));
+
+    // ── WebSocket ─────────────────────────────────────────────────────────────
+    function connect() {
+      const ws = new WebSocket(`ws://${window.location.host}`);
+
+      ws.addEventListener('open', () => {
+        wsDot.classList.add('on');
+        loadInterfaces();
+      });
+
+      ws.addEventListener('message', e => {
+        try {
+          const msg = JSON.parse(e.data);
+          if (msg.type === 'state') {
+            // Version badge
+            if (msg.version) {
+              const badge = document.getElementById('ver-badge');
+              if (badge) badge.textContent = 'v' + msg.version;
+            }
+            // ATEM state
+            if (msg.atemIp && document.activeElement !== atemIpInput) atemIpInput.value = msg.atemIp;
+            const connected = !!msg.atemConnected;
+            atemDot.classList.toggle('on', connected);
+            atemIpInput.disabled = connected;
+            btnAtemConnect.textContent = connected ? 'Disconnect' : 'Connect';
+            btnAtemConnect.classList.toggle('disconnect', connected);
+            // Cameras + tally
+            syncCameras(msg.cameras || []);
+            syncTally(msg.tally, msg.topology, connected, msg.inputCount || 0);
+          } else if (msg.type === 'log') {
+            pushLog({ category: msg.category || 'SYSTEM', text: msg.text || '', timestamp: msg.timestamp || '' });
+          }
+        } catch (err) { console.error('[WS]', err); }
+      });
+
+      ws.addEventListener('close', () => {
+        wsDot.classList.remove('on');
+        ifacePill.style.display = 'none';
+        setTimeout(connect, 3000);
+      });
+
+      ws.addEventListener('error', () => ws.close());
+    }
+
+    connect();
+  </script>
+</body>
+</html>

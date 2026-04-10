@@ -1,0 +1,61 @@
+// Opcodes
+export const OPCODES = {
+  GET_DEVICE_INFO: 0x1001,
+  OPEN_SESSION: 0x1002,
+  CLOSE_SESSION: 0x1003,
+  SDIO_CONNECT: 0x9201,
+  SDIO_GET_EXT_DEVICE_INFO: 0x9202,
+  SDIO_SET_EXT_DEVICE_PROP_VALUE: 0x9205,
+  SDIO_CONTROL_DEVICE: 0x9207,
+  SDIO_GET_ALL_EXT_DEVICE_PROP_INFO: 0x9209,
+} as const;
+
+// Property Codes
+export const PROP_CODES = {
+  FNUMBER: 0x5007,
+  EXP_COMP: 0x5010,
+  FOCUS_MODE: 0x500A,
+  EXPOSURE_MODE: 0x500E,
+  WHITE_BALANCE: 0x5005,
+  FLASH_COMP: 0xD200,
+  SHUTTER_SPEED: 0xD20D,
+  ISO: 0xD21E,
+  BATTERY_REMAIN: 0xD218,
+  BATTERY_LEVEL: 0xD20E,
+  REC_STATE: 0xD21D,
+  MOVIE_REC_BUTTON: 0xD2C8,
+  NEAR_FAR: 0xD2D1,
+  COLOR_TEMP: 0xD20F,
+  WB_AB: 0xD21C,
+  WB_GM: 0xD210,
+  AF_STATUS: 0xD213,
+  S1_BUTTON: 0xD2C1,
+  S2_BUTTON: 0xD2C2,
+  AEL_BUTTON: 0xD2C3,
+  AFL_BUTTON: 0xD2C4,
+  FOCUS_MAGNIFIER: 0xD2CB,
+  FOCUS_MAGNIFIER_CANCEL: 0xD2CC,
+} as const;
+
+// SDIControlType
+export const SDI_CONTROL_TYPE = {
+  BUTTON: 0x81,
+  NOTCH: 0x82,
+  LOCK: 0x83,
+} as const;
+
+// Button values
+export const BUTTON = {
+  UP: 0x0001,
+  DOWN: 0x0002,
+} as const;
+
+// SDI Extension Version
+export const SDI_EXTENSION_VERSION = 0xC8;
+
+// Kelvin scale fallback for cameras that don't enumerate ColorTemp (e.g. FX30)
+export const KELVIN_SCALE: number[] = [
+  2500, 2600, 2700, 2800, 2900, 3000, 3200, 3400, 3600, 3800,
+  4000, 4200, 4500, 4800, 5000, 5200, 5500, 5600, 6000, 6500,
+  7000, 7500, 8000, 9000, 9900,
+];
