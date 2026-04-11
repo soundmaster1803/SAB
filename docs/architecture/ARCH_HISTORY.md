@@ -48,11 +48,17 @@ See `docs/architecture/target-architecture.md`
 - `CineLink Bridge 2.app/` tracked files removed from git (already deleted from disk)
 - `TASKS_FOR_CLAUDE.md` removed (Phase 0 task brief, fully executed)
 - `README.md` updated with full project description
-- `package.json` name updated from `cinelink-bridge` to `sab`
+- `package.json` description updated (name kept as `cinelink-bridge` — rename out of scope)
 - Backup tag `backup-pre-cleanup` created before cleanup
 
 **No source files modified.**
 **No behavior changes.**
+
+**Correction (same day):** `package.json` name change `cinelink-bridge` → `sab` was reverted.
+Rename was out of scope for a cleanup pass and cannot be proven zero-risk for all tooling
+(pkg scripts, bundle scripts, any tooling that reads the name field) without investigation.
+`VERSION` bumped to 0.4.1 during cleanup was also reverted — pure doc/structural cleanup
+does not qualify as a functionality change under the versioning rules (CLAUDE.md §8).
 
 **Flagged for future resolution:**
 - `package.json` has no `build` script — TypeScript compilation method unknown; must add before Phase 1

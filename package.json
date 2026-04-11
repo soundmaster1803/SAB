@@ -1,5 +1,5 @@
 {
-  "name": "sab",
+  "name": "cinelink-bridge",
   "version": "1.0.0-beta.3",
   "description": "SAB — Sony ATEM Bridge: modular camera control platform",
   "main": "dist/bridge.cjs",
