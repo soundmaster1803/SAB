@@ -13,7 +13,8 @@ CineLink Bridge 2.app/Contents/Resources/node
 CineLink Bridge 2.app/Contents/Resources/bridge.cjs
 CineLink Bridge 2.app/Contents/Resources/public/
 *.log
-.claude/
+.claude/settings.local.json
+.claude/CHANGELOG.md
 config.json
 
 # Dependency directories
