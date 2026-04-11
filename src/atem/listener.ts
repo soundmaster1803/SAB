@@ -1,6 +1,7 @@
 import { Atem, Commands } from 'atem-connection'
 import { EventEmitter } from 'events'
 import type { CameraState } from '../sony/ptp-client'
+import { enterCooldown, isInCooldown } from '../bridge/policies/anti-loop'
 
 function ts(): string { return new Date().toISOString().slice(11, 23); }
 function log(msg: string)  { console.log(`[${ts()}] [ATEM] ${msg}`); }
@@ -34,9 +35,6 @@ export class ATEMListener extends EventEmitter {
   // Suppress bridge commands for 2s after connect — ATEM dumps its full state
   // on every connect which contains stale/bogus values.
   private readyAfter = 0
-
-  // Anti-feedback: after we push a sync to ATEM, ignore incoming commands for that source for 500ms.
-  private syncCooldowns = new Map<number, number>()
 
   get atemModel(): string {
     return (this.atem.state as any)?.info?.deviceName ?? 'ATEM';
@@ -166,14 +164,13 @@ export class ATEMListener extends EventEmitter {
       }))
     }
 
-    this.syncCooldowns.set(source, Date.now() + 500)
+    enterCooldown(source)
     log(`Sync→ATEM src=${source} iso=${state.iso} fnumber=${state.fnumber} colorTemp=${state.colorTemp}`)
   }
 
   private handleCameraControl(cmd: Commands.CameraControlUpdateCommand): void {
     if (Date.now() < this.readyAfter) return  // suppress initial state dump on connect
-    const cooldown = this.syncCooldowns.get(cmd.source)
-    if (cooldown && Date.now() < cooldown) return  // suppress echo from our own sync push
+    if (isInCooldown(cmd.source)) return        // suppress echo from our own sync push
 
     const props = cmd.properties
 
