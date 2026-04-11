@@ -2,6 +2,21 @@
 
 ---
 
+## v0.10.0 — 2026-04-11 (Phase 6 Step 4 — Bridge registry skeletons)
+
+### Added
+- `src/bridge/actions/index.ts` — `BridgeActionId`, `BridgeActionDefinition`, `BRIDGE_ACTIONS` (2 actions: dispatchIntent, syncToAtem)
+- `src/bridge/variables/index.ts` — `BridgeVariableId`, `BridgeVariableDefinition`, `BRIDGE_VARIABLES` (2 variables: throttleWindowMs, syncCooldownMs)
+- `src/bridge/feedbacks/index.ts` — `BridgeFeedbackId`, `BridgeFeedbackDefinition`, `BRIDGE_FEEDBACKS` (4 feedbacks: bridgeReady, cameraControlEnabled, inSyncCooldown, commandThrottled)
+
+### Changed
+- Nothing — skeleton only; no runtime wiring
+
+### Migration notes
+- No runtime behavior change; registry files are not imported by any running module
+
+---
+
 ## v0.9.0 — 2026-04-11 (Phase 6 Step 3 — ATEM model spec skeletons)
 
 ### Added
