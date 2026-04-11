@@ -43,6 +43,16 @@ export interface CameraRouteDeps {
   setConfig: (cfg: AppConfig) => void;
 }
 
+function isValidIpv4(value: string): boolean {
+  const parts = value.trim().split('.');
+  if (parts.length !== 4) return false;
+  return parts.every(part => /^\d+$/.test(part) && Number(part) >= 0 && Number(part) <= 255);
+}
+
+function hasAtemInputConflict(config: AppConfig, atemInput: number, excludeId?: string): CameraConfig | undefined {
+  return config.cameras.find(c => c.atemInput === atemInput && c.id !== excludeId);
+}
+
 export function createCameraRoutes({ manager, atemListener, getConfig, setConfig }: CameraRouteDeps): Router {
   const router = Router();
 
@@ -83,10 +93,22 @@ export function createCameraRoutes({ manager, atemListener, getConfig, setConfig
     if (!name || !ip || !atemInput) {
       res.status(400).json({ error: 'Required: name, ip, atemInput' }); return;
     }
+    if (!isValidIpv4(ip)) {
+      res.status(400).json({ error: 'Invalid IPv4 address' }); return;
+    }
+    const inputNum = Number(atemInput);
+    if (!Number.isInteger(inputNum) || inputNum < 1 || inputNum > 20) {
+      res.status(400).json({ error: 'ATEM input must be an integer from 1 to 20' }); return;
+    }
+    const configBeforePair = getConfig();
+    const conflict = hasAtemInputConflict(configBeforePair, inputNum);
+    if (conflict) {
+      res.status(409).json({ error: `ATEM input ${inputNum} is already used by "${conflict.name}"` }); return;
+    }
     log(`Pairing camera "${name}" @ ${ip} atemInput=${atemInput}...`);
 
     const id  = `cam-${Date.now()}`;
-    const cam = { id, name, ip, atemInput: Number(atemInput), atemControlEnabled: true };
+    const cam = { id, name, ip, atemInput: inputNum, atemControlEnabled: true };
 
     // Save to config immediately
     setConfig(addCamera(getConfig(), cam));
@@ -97,28 +119,31 @@ export function createCameraRoutes({ manager, atemListener, getConfig, setConfig
     // Wait for connect to succeed or fail (up to 15s)
     const client = manager.getClient(id)!;
     const result = await new Promise<{ ok: boolean; error?: string }>((resolve) => {
-      const timer = setTimeout(() => resolve({ ok: false, error: 'Connection timeout (15s). Check camera IP and PTP/IP mode.' }), 15000);
+      let settled = false;
+      let poll: ReturnType<typeof setInterval> | null = null;
+      const finish = (value: { ok: boolean; error?: string }) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        if (poll) clearInterval(poll);
+        client.off('stateUpdate', onUpdate);
+        resolve(value);
+      };
+      const timer = setTimeout(() => finish({ ok: false, error: 'Connection timeout (15s). Check camera IP and PTP/IP mode.' }), 15000);
 
       const onUpdate = () => {
         if (client.state.connected) {
-          clearTimeout(timer);
-          client.off('stateUpdate', onUpdate);
-          resolve({ ok: true });
+          finish({ ok: true });
         }
       };
       client.on('stateUpdate', onUpdate);
 
       // Also catch immediate connection error via polling
-      const poll = setInterval(() => {
+      poll = setInterval(() => {
         if (client.state.connected) {
-          clearTimeout(timer);
-          clearInterval(poll);
-          client.off('stateUpdate', onUpdate);
-          resolve({ ok: true });
+          finish({ ok: true });
         }
       }, 200);
-
-      setTimeout(() => clearInterval(poll), 15000);
     });
 
     if (result.ok) {
@@ -174,8 +199,9 @@ export function createCameraRoutes({ manager, atemListener, getConfig, setConfig
     if (!client) { res.status(404).json({ error: 'camera not found' }); return; }
     if (!propCode) { res.status(400).json({ error: `unknown param "${param}"` }); return; }
     if (!client.state.connected) { res.status(503).json({ error: 'not connected' }); return; }
+    if (delta !== 1 && delta !== -1) { res.status(400).json({ error: 'delta must be 1 or -1' }); return; }
     try {
-      await client.stepProp(propCode, delta > 0 ? 1 : -1);
+      await client.stepProp(propCode, delta);
       res.json({ ok: true });
     } catch (e: any) {
       err(`Adjust failed: ${e.message}`);
@@ -233,14 +259,21 @@ export function createCameraRoutes({ manager, atemListener, getConfig, setConfig
       updates.name = String(req.body.name).trim();
     }
     if (req.body.ip !== undefined && String(req.body.ip).trim()) {
-      updates.ip = String(req.body.ip).trim();
+      const nextIp = String(req.body.ip).trim();
+      if (!isValidIpv4(nextIp)) {
+        res.status(400).json({ error: 'Invalid IPv4 address' }); return;
+      }
+      updates.ip = nextIp;
     }
     if (req.body.atemInput !== undefined) {
       const newInput = Number(req.body.atemInput);
-      const conflict = appConfig.cameras?.find((c: any) => c.atemInput === newInput && c.id !== id);
+      if (!Number.isInteger(newInput) || newInput < 1 || newInput > 20) {
+        res.status(400).json({ error: 'ATEM input must be an integer from 1 to 20' }); return;
+      }
+      const conflict = hasAtemInputConflict(appConfig, newInput, id);
       if (conflict) {
         appendLog(`UI PATCH CONFLICT: cam=${id} atemInput=${newInput} already used by "${conflict.name}" (${conflict.id})`);
-        res.status(409).json({ error: 'ID already in use' }); return;
+        res.status(409).json({ error: `ATEM input ${newInput} is already used by "${conflict.name}"` }); return;
       }
       updates.atemInput = newInput;
       // Clear stale tally — mapping changed
