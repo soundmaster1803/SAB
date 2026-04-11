@@ -1,7 +1,7 @@
 {
-  "name": "cinelink-bridge",
+  "name": "sab",
   "version": "1.0.0-beta.3",
-  "description": "Sony PTP/IP ↔ ATEM Camera Control Bridge",
+  "description": "SAB — Sony ATEM Bridge: modular camera control platform",
   "main": "dist/bridge.cjs",
   "scripts": {
     "pkg:arm64": "npx @yao-pkg/pkg dist/bridge.cjs --target node20-macos-arm64 --output dist/cinelink-bridge-arm64",

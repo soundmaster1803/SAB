@@ -487,7 +487,7 @@ export class SonyPTPClient extends EventEmitter {
     await this.sendCmdWithData(0x9205, [propCode], data);
   }
 
-  // MovieRec = Hold mode (rule 5): DOWN → 100ms → UP (per ref-sony.md)
+  // MovieRec = Hold mode (rule 5): DOWN → 100ms → UP (per docs/research/ref-sony.md)
   async toggleRecord(): Promise<void> {
     this.log(`REC toggle (recState=${this.state.recState})`);
     await this.controlDevice(0xD2C8, 0x81 /* BUTTON */, 0x0002 /* DOWN */);

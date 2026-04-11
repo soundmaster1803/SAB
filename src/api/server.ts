@@ -33,7 +33,7 @@ const PROP_MAP: Record<string, number> = {
   colorTemp: 0xD20F,
 };
 
-// Decode Sony raw shutter UINT32 → "1/100" string (from ref-sony.md)
+// Decode Sony raw shutter UINT32 → "1/100" string (from docs/research/ref-sony.md)
 function decodeShutter(raw: number): string {
   if (!raw || raw === 0xFFFFFFFF) return '—';
   const num = (raw >> 16) & 0xFFFF;

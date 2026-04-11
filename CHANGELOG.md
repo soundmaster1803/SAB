@@ -2,6 +2,34 @@
 
 ---
 
+## v0.4.1 — 2026-04-11
+
+### Changed
+- `README.md` — replaced placeholder with full project description
+- `package.json` — renamed package from `cinelink-bridge` to `sab`
+- `docs/research/` — created; moved all research reference docs from `docs/` root into `docs/research/`
+  - `docs/ref-atem.md` → `docs/research/ref-atem.md`
+  - `docs/ref-cameras.md` → `docs/research/ref-cameras.md`
+  - `docs/ref-sony.md` → `docs/research/ref-sony.md`
+  - `docs/ref-patterns.md` → `docs/research/ref-patterns.md`
+  - `docs/ref-map.md` → `docs/research/ref-map.md`
+  - `docs/mapping-table.md` → `docs/research/mapping-table.md`
+  - `docs/sony-ptp.md` → `docs/research/sony-ptp.md`
+- Added `docs/research/README.md` explaining research folder structure and critical protocol notes
+- Removed `CineLink Bridge 2.app/` tracked files from git (already deleted from disk)
+- Removed `TASKS_FOR_CLAUDE.md` (Phase 0 task brief, fully executed)
+- Updated `src/` code comments to reference new `docs/research/` paths
+
+### Fixed
+- Nothing
+
+### Migration notes
+- No API changes
+- No behavior changes
+- Research docs are at new paths — update any local bookmarks
+
+---
+
 ## v0.4.0 — 2026-04-11
 
 ### Added

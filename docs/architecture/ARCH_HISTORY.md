@@ -34,3 +34,27 @@ A chronological record of significant architectural decisions and transitions.
 
 **Target codebase:**
 See `docs/architecture/target-architecture.md`
+
+---
+
+## 2026-04-11 — Repository cleanup and normalization
+
+**Decision:** Pre-development cleanup pass to normalize the repository structure before Phase 1 begins.
+
+**Changes:**
+- Research reference documents moved from `docs/` root to `docs/research/` subfolder
+  - Files: `ref-atem.md`, `ref-cameras.md`, `ref-sony.md`, `ref-patterns.md`, `ref-map.md`, `mapping-table.md`, `sony-ptp.md`
+- `docs/research/README.md` created — explains folder purpose and critical protocol notes
+- `CineLink Bridge 2.app/` tracked files removed from git (already deleted from disk)
+- `TASKS_FOR_CLAUDE.md` removed (Phase 0 task brief, fully executed)
+- `README.md` updated with full project description
+- `package.json` name updated from `cinelink-bridge` to `sab`
+- Backup tag `backup-pre-cleanup` created before cleanup
+
+**No source files modified.**
+**No behavior changes.**
+
+**Flagged for future resolution:**
+- `package.json` has no `build` script — TypeScript compilation method unknown; must add before Phase 1
+- `scripts/pack.sh` references non-existent `release/CineLink Bridge.command` — script is broken; needs rewrite for SAB workflow
+- `scripts/launcher.swift` and `scripts/make-icon.swift` — CineLink Bridge .app source; evaluate for SAB repurposing
