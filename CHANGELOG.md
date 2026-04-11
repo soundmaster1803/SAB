@@ -4,6 +4,17 @@
 
 ## v0.4.0 — 2026-04-11
 
+### Build baseline (no version bump — 2026-04-11)
+Establishes reproducible terminal runtime build. No runtime behavior changed.
+
+- `package.json` — added `build`, `typecheck`, `dev` scripts
+- `package.json` — declared missing runtime deps: `express ^5.2.1`, `ws ^8.20.0`
+- `package.json` — declared missing devDependencies: `esbuild ^0.25.0`, `tsx ^4.21.0`, `typescript ^6.0.2`, `@types/express ^5.0.6`, `@types/node ^25.5.2`, `@types/ws ^8.18.1`
+- `package-lock.json` — synced root entry to match new declarations (no new packages installed)
+- `npm run build` — exits 0, produces `dist/bridge.cjs` (2.0MB) and `dist/atemSocketChild.js` (11KB)
+- `npm run typecheck` — exits 0, no type errors
+
+
 ### Added
 - `CLAUDE.md` — complete SAB operating manual (supersedes all previous versions)
 - `ARCHITECTURE_RULES.md` — core architecture principles and source-of-truth layers
