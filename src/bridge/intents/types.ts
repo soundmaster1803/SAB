@@ -36,6 +36,21 @@ export type BridgeProperty =
   | 'wb'
   | 'shutter';
 
+/**
+ * Minimal ATEM camera-control payload shape consumed by the bridge decoder.
+ *
+ * Kept in the bridge domain so decoder logic does not depend on the ATEM
+ * transport module directly.
+ */
+export interface AtemControlPayload {
+  source: number;
+  category: number;
+  parameter: number;
+  type: number;
+  numberData: number[];
+  boolData: boolean[];
+}
+
 // ─── Control Intent ───────────────────────────────────────────────────────────
 
 /**

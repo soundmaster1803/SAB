@@ -1,6 +1,6 @@
 # SAB — Current System
 
-Version: 0.8.0
+Version: 0.10.0
 Last updated: 2026-04-11 (Phase 6 Step 2 complete — ATEM state + registries)
 
 ---
@@ -13,7 +13,7 @@ src/
   config.ts             — config file I/O
   logger.ts             — logger + WS event bus
   api/
-    server.ts           — HTTP routes + WS + UI formatting                     [OVERFULL]
+    server.ts           — HTTP bootstrap + route/WS wiring                     [clean]
   atem/
     listener.ts         — ATEM transport + tally + syncCameraStateToAtem       [mixed]
     state/
@@ -70,37 +70,30 @@ src/
 All bridge logic extracted. Now contains only: bootstrap, tally sync, ATEM event wiring,
 and the three-line handleCameraControl pipeline (decode → intent → executor).
 
-### src/api/server.ts — OVERFULL (Phase 3 target)
-
-| Symbol | Correct domain |
-|--------|---------------|
-| `PROP_MAP` | api/viewmodels/camera |
-| `decodeShutter()` | api/viewmodels/camera |
-| `decodeISO()` | api/viewmodels/camera |
-| `uiState()` | api/viewmodels/camera |
-| WS setup and broadcast | api/ws/broadcaster |
-| Camera routes | api/routes/cameras |
-| ATEM routes | api/routes/atem |
-| Status/interfaces routes | api/routes/status |
+### src/api/server.ts — RESOLVED ✅
+HTTP bootstrap is now lean and delegates to:
+- `api/routes/cameras.ts`
+- `api/routes/atem.ts`
+- `api/routes/status.ts`
+- `api/ws/broadcaster.ts`
+- `api/viewmodels/camera.ts`
 
 ### src/atem/listener.ts — mixed (Phase 2 target)
 
 | Symbol | Correct domain |
 |--------|---------------|
-| `syncCameraStateToAtem()` | bridge/sync |
+| Initial connect suppression timestamp (`readyAfter`) surfaced to bridge | bridge/runtime policy |
 
-Note: `syncCooldowns` resolved — extracted to `bridge/policies/anti-loop.ts` in Phase 1.
+Note: `syncCameraStateToAtem()` and anti-loop policy are no longer owned by the listener.
 
 ---
 
 ## Known structural issues
 
 - Single polling tier at 200ms for all Sony properties (Phase 7 target)
-- `syncCameraStateToAtem()` remains in ATEM transport layer (Phase 2 target)
 - Model spec skeleton added (Phase 4 Step 1) — not yet wired to runtime (Phase 8 target)
-- No action, variable, feedback, or preset registry (Phase 6 target)
 - State layer skeletons added (Phase 5) — not yet wired to runtime (Phase 8 target)
-- Single flat camera state object still used at runtime (SonyRawState not yet wired)
+- Command path still uses flat `CameraState`; read path now derives `SonyRawState`/`SonyDerivedState`/`SonyAlertState`
 - Sony registry skeletons added (Phase 6 Step 1) — not yet wired to runtime (Phase 8 target)
 - ATEM state and registry skeletons added (Phase 6 Step 2) — not yet wired to runtime (Phase 8 target)
 - No action, variable, feedback, or preset execution wiring yet
@@ -112,7 +105,7 @@ Note: `syncCooldowns` resolved — extracted to `bridge/policies/anti-loop.ts` i
 | File | Lines | Status |
 |------|-------|--------|
 | src/index.ts | ~60 | Clean |
-| src/api/server.ts | ~500 | Overfull |
+| src/api/server.ts | ~75 | Clean |
 | src/atem/listener.ts | ~190 | Mixed |
 | src/bridge/policies/throttle.ts | ~13 | Clean |
 | src/bridge/policies/anti-loop.ts | ~22 | Clean |

@@ -1,7 +1,6 @@
 import { Atem, Commands } from 'atem-connection'
 import { EventEmitter } from 'events'
-import type { CameraState } from '../sony/ptp-client'
-import { enterCooldown, isInCooldown } from '../bridge/policies/anti-loop'
+import type { ATEMRawState } from './state/raw'
 
 function ts(): string { return new Date().toISOString().slice(11, 23); }
 function log(msg: string)  { console.log(`[${ts()}] [ATEM] ${msg}`); }
@@ -129,49 +128,20 @@ export class ATEMListener extends EventEmitter {
     }
   }
 
-  // Sync Sony camera state back to ATEM switcher (bi-directional).
-  // Uses CameraControlCommand (CCmd) — the writable counterpart of CCdP.
-  // Sets a 500ms cooldown to prevent the echo from triggering another Sony command.
-  syncCameraStateToAtem(source: number, state: CameraState): void {
-    const { CameraControlCommand, CameraControlDataType } = Commands
-    const base = { boolData: [] as boolean[], bigintData: [] as bigint[], stringData: '', relative: false }
-
-    const safeSend = (cmd: InstanceType<typeof CameraControlCommand>) => {
-      try { Promise.resolve(this.atem.sendCommand(cmd)).catch(() => {}) } catch (_e) {}
+  getRawState(): ATEMRawState {
+    return {
+      connected: this.connected,
+      model: this.atemModel,
+      knownInputIds: Object.keys(this.atem.state?.inputs ?? {})
+        .map(Number)
+        .filter(n => n >= 1 && n <= 20)
+        .sort((a, b) => a - b),
+      tallyBySource: { ...this.tallyBySource },
+      readyAfterMs: this.readyAfter,
     }
-
-    // ISO — category=1, param=14, SINT32 direct value
-    if (state.iso > 0 && (state.iso & 0x00FFFFFF) !== 0x00FFFFFF) {
-      safeSend(new CameraControlCommand(source, 1, 14, {
-        ...base, type: CameraControlDataType.SINT32, numberData: [state.iso],
-      }))
-    }
-
-    // Iris — category=0, param=2, FLOAT normalized 0.0–1.0 (1.0 = wide open)
-    // fnumber is f*100 (e.g., 280 = f/2.8). Assume range f/1.0–f/22.
-    if (state.fnumber > 0) {
-      const fVal = state.fnumber / 100
-      const iris = Math.max(0, Math.min(1, (22 - fVal) / 21))
-      safeSend(new CameraControlCommand(source, 0, 2, {
-        ...base, type: CameraControlDataType.FLOAT, numberData: [iris],
-      }))
-    }
-
-    // White Balance — category=1, param=2, SINT16 (Kelvin)
-    if (state.colorTemp > 0) {
-      safeSend(new CameraControlCommand(source, 1, 2, {
-        ...base, type: CameraControlDataType.SINT16, numberData: [state.colorTemp],
-      }))
-    }
-
-    enterCooldown(source)
-    log(`Sync→ATEM src=${source} iso=${state.iso} fnumber=${state.fnumber} colorTemp=${state.colorTemp}`)
   }
 
   private handleCameraControl(cmd: Commands.CameraControlUpdateCommand): void {
-    if (Date.now() < this.readyAfter) return  // suppress initial state dump on connect
-    if (isInCooldown(cmd.source)) return        // suppress echo from our own sync push
-
     const props = cmd.properties
 
     // Skip empty/status-only packets (no actual data)

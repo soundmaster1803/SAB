@@ -14,6 +14,7 @@ export interface CameraState {
   id: string;
   ip: string;
   name: string;
+  model?: string;
   connected: boolean;
   iso: number;
   fnumber: number;
@@ -175,6 +176,7 @@ export class SonyPTPClient extends EventEmitter {
     this.vlog(`[5] → GetDeviceInfo op=0x1001`);
     const infoData = await this.sendCmdReadData(0x1001, []);
     const model = this.parseModelName(infoData);
+    this.state.model = model;
     this.vlog(`[5] ← GetDeviceInfo ${infoData.length} bytes, model="${model}"`);
 
     // 6–9. PTP 3.00 four-step SDIO handshake (matches v60.py exactly)

@@ -9,9 +9,8 @@
  * Sony-specific conversion (isoToNotch, irisToNotch, etc.) is not touched.
  */
 
-import type { ATEMCameraControl } from '../../atem/listener';
 import { gainDbToISO } from '../mapper';
-import type { ControlIntent } from './types';
+import type { AtemControlPayload, ControlIntent } from './types';
 
 /**
  * Decode an ATEM camera-control command into a ControlIntent.
@@ -30,7 +29,7 @@ import type { ControlIntent } from './types';
  */
 export function decodeControlIntent(
   cameraId: string,
-  cmd: ATEMCameraControl,
+  cmd: AtemControlPayload,
 ): ControlIntent | null {
   const n0 = cmd.numberData[0] ?? 0;
   const b0 = cmd.boolData[0] ?? false;

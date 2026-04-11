@@ -33,8 +33,10 @@ export interface SonyRawState {
   id: string;
   /** Camera IP address. */
   ip: string;
-  /** Model name string as reported by GetDeviceInfo. */
+  /** Operator-facing camera name from config/pairing. */
   name: string;
+  /** Camera model string as reported by GetDeviceInfo, when known. */
+  model?: string;
   /** True while PTP/IP session is active and sockets are open. */
   connected: boolean;
 

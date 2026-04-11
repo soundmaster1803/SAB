@@ -17,16 +17,21 @@ import { CameraManager } from './sony/manager';
 import { ATEMListener, type ATEMCameraControl } from './atem/listener';
 import { startServer } from './api/server';
 import { initLogger, appendLog } from './logger';
-import { decodeSummary } from './bridge/atem-decoder';
 import { decodeControlIntent } from './bridge/intents/decoder';
 import { executeSonyIntent } from './bridge/executors/sony-command-executor';
+import { isInCooldown } from './bridge/policies/anti-loop';
+import { syncCameraStateToAtem as syncStateImpl } from './bridge/sync/atem-sync';
+import { APP_VERSION } from './version';
 
 function ts(): string { return new Date().toISOString().slice(11, 23); }
 function log(msg: string)  { console.log(`[${ts()}] [BRIDGE] ${msg}`); }
 function warn(msg: string) { console.warn(`[${ts()}] [BRIDGE] WARN: ${msg}`); }
 
-async function handleCameraControl(cmd: ATEMCameraControl, manager: CameraManager) {
-  const decoded = decodeSummary(cmd.category, cmd.parameter, cmd.type, cmd.numberData, 25);
+async function handleCameraControl(cmd: ATEMCameraControl, manager: CameraManager, atemListener: ATEMListener) {
+  const atemState = atemListener.getRawState();
+  if (Date.now() < atemState.readyAfterMs) return;
+  if (isInCooldown(cmd.source)) return;
+
   // cmd.source is already 1-indexed — matches atemInput in config
   const found = manager.findByAtemInput(cmd.source);
   if (!found) return; // no camera mapped to this input — silent
@@ -64,6 +69,7 @@ async function main(): Promise<void> {
   initLogger();
   appendLog('═══ CineLink Bridge starting ═══');
   console.log(`[${ts()}] ═══ CineLink Bridge starting ═══`);
+  console.log(`[${ts()}] SAB version: ${APP_VERSION}`);
 
   const appConfig = loadConfig();
   console.log(`[${ts()}] Config: atemIp="${appConfig.atemIp}" cameras=${appConfig.cameras.length}`);
@@ -87,7 +93,7 @@ async function main(): Promise<void> {
         log(`Syncing "${cfg.name}" state → ATEM input ${cfg.atemInput}`);
         // Use the live atemInput from manager config (may have changed via PATCH)
         const liveCfg = manager.getAllConfigs().find(c => c.id === cfg.id);
-        atemListener.syncCameraStateToAtem(liveCfg?.atemInput ?? cfg.atemInput, client.state);
+        syncStateImpl(atemListener.atem, liveCfg?.atemInput ?? cfg.atemInput, client.state);
       }
     };
     client.on('stateUpdate', onFirstPoll);
@@ -122,7 +128,7 @@ async function main(): Promise<void> {
 
   // Bridge: ATEM → Sony
   atemListener.on('cameraControl', (cmd: ATEMCameraControl) => {
-    handleCameraControl(cmd, manager).catch((e: any) => {
+    handleCameraControl(cmd, manager, atemListener).catch((e: any) => {
       warn(`Unhandled: ${e.message}`);
     });
   });
