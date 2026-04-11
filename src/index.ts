@@ -17,33 +17,9 @@ import { CameraManager } from './sony/manager';
 import { ATEMListener, type ATEMCameraControl } from './atem/listener';
 import { startServer } from './api/server';
 import { initLogger, appendLog } from './logger';
-import {
-  irisToNotch,
-  isoToNotch,
-  gainDbToISO,
-  shutterToNotch,
-  shutterUsToSpeed,
-  focusToNearFar,
-} from './bridge/mapper';
 import { decodeSummary } from './bridge/atem-decoder';
-import { PROP_CODES, SDI_CONTROL_TYPE, BUTTON } from './sony/constants';
-
-// Track previous ATEM focus position per camera (for delta calculation)
-const prevFocus = new Map<string, number>();
-
-
-// Throttle: one Sony command per camera per parameter per 200 ms.
-// Prevents overwhelming the camera when ATEM sends 25+ updates/sec.
-const lastCmdTime = new Map<string, number>();
-const CMD_THROTTLE_MS = 200;
-
-function canSend(camId: string, param: string): boolean {
-  const key = `${camId}:${param}`;
-  const now  = Date.now();
-  if (now - (lastCmdTime.get(key) ?? 0) < CMD_THROTTLE_MS) return false;
-  lastCmdTime.set(key, now);
-  return true;
-}
+import { decodeControlIntent } from './bridge/intents/decoder';
+import { executeSonyIntent } from './bridge/executors/sony-command-executor';
 
 function ts(): string { return new Date().toISOString().slice(11, 23); }
 function log(msg: string)  { console.log(`[${ts()}] [BRIDGE] ${msg}`); }
@@ -73,93 +49,13 @@ async function handleCameraControl(cmd: ATEMCameraControl, manager: CameraManage
     warn(`"${config.name}" — ignoring ATEM command before first poll (cat=${cmd.category} param=${cmd.parameter})`);
     return;
   }
-  const { category, parameter, numberData, boolData } = cmd;
-  const n0 = numberData[0] ?? 0;  // first numeric value (already parsed by atem-connection)
-  const b0 = boolData[0] ?? false;
+  const intent = decodeControlIntent(config.id, cmd);
+  if (intent === null) return;
 
   try {
-    switch (category) {
-      // ── Category 0: Lens ────────────────────────────────────────────────
-      case 0:
-        switch (parameter) {
-          // param 0: Focus — FLOAT (actual focus position, delta against previous)
-          case 0: {
-            const prev = prevFocus.get(config.id) ?? n0;
-            const notch = focusToNearFar(n0, prev);
-            prevFocus.set(config.id, n0);
-            if (notch !== 0 && canSend(config.id, 'focus')) {
-              log(`Focus "${config.name}" val=${n0.toFixed(3)} prev=${prev.toFixed(3)} notch=${notch}`);
-              await client.controlDevice(PROP_CODES.NEAR_FAR, SDI_CONTROL_TYPE.NOTCH, notch, true);
-            }
-            break;
-          }
-          // param 1: AutoFocus — BOOL or INT (trigger only on press=1, not release=0)
-          // ATEM may send boolData[0]=true or numberData[0]=1 depending on firmware
-          case 1:
-            if ((b0 || n0 === 1) && canSend(config.id, 'af')) {
-              log(`[BRIDGE] ATEM Push AF Triggered for "${config.name}"`);
-              await client.triggerAutoFocus();
-            }
-            break;
-          // param 2: Iris/Aperture — FLOAT (actual f-number, e.g. 3.345 = f/3.3)
-          case 2:
-            if (canSend(config.id, 'iris')) {
-              const fnList = client.getSupportedList(PROP_CODES.FNUMBER);
-              const notch = irisToNotch(n0, state.fnumber, fnList);
-              log(`Iris "${config.name}" val=${n0.toFixed(3)} fnumber=${state.fnumber} notch=${notch}`);
-              if (notch !== 0) await client.stepProp(PROP_CODES.FNUMBER, notch);
-            }
-            break;
-        }
-        break;
-
-      // ── Category 1: Video ───────────────────────────────────────────────
-      case 1:
-        switch (parameter) {
-          // param 13: Gain — SINT8 (dB). Confirmed from hardware logs.
-          // param 1 is intentionally ignored — ATEM sends it redundantly alongside param=13.
-          case 13:
-            if (canSend(config.id, 'iso')) {
-              const targetISO = gainDbToISO(n0);
-              const isoListG = client.getSupportedList(PROP_CODES.ISO);
-              const notch = isoToNotch(targetISO, state.iso, isoListG);
-              log(`Gain "${config.name}" db=${n0} targetISO=${targetISO} currentISO=${state.iso} notch=${notch}`);
-              if (notch !== 0) await client.stepProp(PROP_CODES.ISO, notch);
-            }
-            break;
-          // param 2: White Balance — SINT16 (Kelvin). ATEM sends absolute Kelvin, set directly.
-          // Sony ColorTemp (0xD20F) has no enumeration list on FX30 — use SetExtDevicePropValue.
-          case 2:
-            if (canSend(config.id, 'wb')) {
-              log(`WB "${config.name}" target=${n0}K (absolute set)`);
-              await client.setExtDeviceProp(PROP_CODES.COLOR_TEMP, n0);
-            }
-            break;
-          // param 5: Shutter Speed in MICROSECONDS (SINT32). Confirmed from hardware logs.
-          // Example: 10000 μs → 1/100, 6667 μs → 1/150.
-          case 5:
-            if (canSend(config.id, 'shutter')) {
-              const den5 = shutterUsToSpeed(n0);
-              const shutList5 = client.getSupportedList(PROP_CODES.SHUTTER_SPEED);
-              const notch5 = shutterToNotch(den5, state.shutter, shutList5);
-              log(`Shutter(μs) "${config.name}" ${n0}μs → 1/${den5} current=0x${state.shutter.toString(16)} notch=${notch5}`);
-              if (notch5 !== 0) await client.stepProp(PROP_CODES.SHUTTER_SPEED, notch5);
-            }
-            break;
-          // param 14: ISO — SINT32 (direct value, e.g. 800)
-          case 14:
-            if (canSend(config.id, 'iso')) {
-              const isoList14 = client.getSupportedList(PROP_CODES.ISO);
-              const notch = isoToNotch(n0, state.iso, isoList14);
-              log(`ISO "${config.name}" target=${n0} current=${state.iso} notch=${notch}`);
-              if (notch !== 0) await client.stepProp(PROP_CODES.ISO, notch);
-            }
-            break;
-        }
-        break;
-    }
+    await executeSonyIntent(intent, { client, config, state, log });
   } catch (e: any) {
-    warn(`Error cat=${category} param=${parameter} "${config.name}": ${e.message}`);
+    warn(`Error cat=${cmd.category} param=${cmd.parameter} "${config.name}": ${e.message}`);
     if (e.stack) warn(e.stack);
   }
 }
