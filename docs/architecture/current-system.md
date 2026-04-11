@@ -1,7 +1,7 @@
 # SAB — Current System
 
-Version: 0.6.0
-Last updated: 2026-04-11 (Phase 5 complete)
+Version: 0.7.0
+Last updated: 2026-04-11 (Phase 6 Step 1 complete — Sony registries)
 
 ---
 
@@ -43,6 +43,14 @@ src/
       raw.ts            — SonyRawState interface                                [skeleton]
       derived.ts        — SonyDerivedState + deriveSonyState()                  [skeleton]
       alerts.ts         — SonyAlertState + deriveSonyAlerts()                   [skeleton]
+    actions/
+      index.ts          — SonyActionId, SonyActionDefinition, SONY_ACTIONS      [skeleton]
+    variables/
+      index.ts          — SonyVariableId, SonyVariableDefinition, SONY_VARIABLES [skeleton]
+    feedbacks/
+      index.ts          — SonyFeedbackId, SonyFeedbackDefinition, SONY_FEEDBACKS [skeleton]
+    presets/
+      index.ts          — SonyPresetDefinition, SONY_PRESETS (empty)            [skeleton]
 ```
 
 ---
@@ -84,6 +92,8 @@ Note: `syncCooldowns` resolved — extracted to `bridge/policies/anti-loop.ts` i
 - No action, variable, feedback, or preset registry (Phase 6 target)
 - State layer skeletons added (Phase 5) — not yet wired to runtime (Phase 8 target)
 - Single flat camera state object still used at runtime (SonyRawState not yet wired)
+- Sony registry skeletons added (Phase 6 Step 1) — not yet wired to runtime (Phase 8 target)
+- No action, variable, feedback, or preset execution wiring yet
 
 ---
 

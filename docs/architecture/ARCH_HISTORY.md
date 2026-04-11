@@ -205,3 +205,37 @@ This is a skeleton phase — no runtime wiring. State files are referenced by no
 
 **Phase 6 next:** Registry skeletons — action, variable, feedback, preset index files
 for Sony, ATEM, and bridge domains.
+
+---
+
+## 2026-04-11 — Phase 6 Step 1: Sony registry skeletons introduced
+
+**Decision:** Introduce typed registry skeletons for Sony actions, variables, feedbacks,
+and presets. Skeleton phase — no runtime wiring.
+
+**Modules created:**
+
+| Module | What it defines |
+|--------|----------------|
+| `src/sony/actions/index.ts` | `SonyActionId`, `SonyActionDefinition`, `SONY_ACTIONS` (6 entries) |
+| `src/sony/variables/index.ts` | `SonyVariableId`, `SonyVariableDefinition`, `SONY_VARIABLES` (10 entries) |
+| `src/sony/feedbacks/index.ts` | `SonyFeedbackId`, `SonyFeedbackDefinition`, `SONY_FEEDBACKS` (7 entries) |
+| `src/sony/presets/index.ts` | `SonyPresetProperty`, `SonyPresetEntry`, `SonyPresetDefinition`, `SONY_PRESETS` (empty) |
+
+**Design decisions:**
+
+- Actions are typed with `requiredCapability: keyof SonyCapabilities` to enable Phase 8 gating
+  without changing the definition shape.
+- Action IDs are intentionally distinct from `BridgeProperty` — Sony actions and bridge
+  intents can evolve independently (e.g. a Sony action may have multiple ATEM intent mappings).
+- Variables include both raw (number) and display (string) concepts. `valueType` field
+  documents which JavaScript type the live value will have at runtime.
+- Feedbacks carry a `stateSource` field (`'raw' | 'alert'`) so Phase 8 evaluation
+  code knows which state layer to consult without ambiguity.
+- `SONY_PRESETS` is an empty array. No preset values are defined at skeleton phase because
+  preset values must encode raw Sony wire values — committing these without live-test
+  confirmation would violate the "no assumed capabilities" rule.
+- Preset applier rules (validate → refuse if missing capability → apply in order → fail
+  fast → update state) are documented in the preset definition JSDoc, not implemented.
+
+**No behavior change.** No existing source file imports from any new registry module.

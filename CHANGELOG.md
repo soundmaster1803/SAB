@@ -2,6 +2,22 @@
 
 ---
 
+## v0.7.0 — 2026-04-11 (Phase 6 Step 1 — Sony registry skeletons)
+
+### Added
+- `src/sony/actions/index.ts` — `SonyActionId`, `SonyActionDefinition`, `SONY_ACTIONS` (6 actions: iso, shutter, fnumber, colorTemp, af, record)
+- `src/sony/variables/index.ts` — `SonyVariableId`, `SonyVariableDefinition`, `SONY_VARIABLES` (10 variables grounded in SonyRawState + SonyDerivedState)
+- `src/sony/feedbacks/index.ts` — `SonyFeedbackId`, `SonyFeedbackDefinition`, `SONY_FEEDBACKS` (7 feedbacks: connected, recording, notRecording, lowBattery, criticalBattery, tallyProgram, tallyPreview)
+- `src/sony/presets/index.ts` — `SonyPresetProperty`, `SonyPresetEntry`, `SonyPresetDefinition`, `SONY_PRESETS` (empty; structure only)
+
+### Changed
+- Nothing — skeleton only; no runtime wiring
+
+### Migration notes
+- No runtime behavior change; registry files are not imported by any running module
+
+---
+
 ## v0.6.0 — 2026-04-11 (Phase 5 — Sony state layer skeletons)
 
 ### Added
