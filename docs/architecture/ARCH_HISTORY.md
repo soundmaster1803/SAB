@@ -239,3 +239,45 @@ and presets. Skeleton phase — no runtime wiring.
   fast → update state) are documented in the preset definition JSDoc, not implemented.
 
 **No behavior change.** No existing source file imports from any new registry module.
+
+---
+
+## 2026-04-11 — Phase 6 Step 2: ATEM state and registry skeletons introduced
+
+**Decision:** Introduce typed state layer and registry skeletons for the ATEM domain,
+mirroring the Sony skeleton pattern introduced in Phases 5 and 6 Step 1.
+Skeleton phase — no runtime wiring.
+
+**Modules created:**
+
+| Module | What it defines |
+|--------|----------------|
+| `src/atem/state/raw.ts` | `AtemTallyEntry`, `ATEMRawState` |
+| `src/atem/state/derived.ts` | `ATEMDerivedState` + `deriveATEMState()` |
+| `src/atem/actions/index.ts` | `AtemActionId` (2), `AtemActionDefinition`, `ATEM_ACTIONS` |
+| `src/atem/variables/index.ts` | `AtemVariableId` (4), `AtemVariableDefinition`, `ATEM_VARIABLES` |
+| `src/atem/feedbacks/index.ts` | `AtemFeedbackId` (3), `AtemFeedbackDefinition`, `ATEM_FEEDBACKS` |
+
+**Design decisions:**
+
+- `ATEMRawState` is grounded in actual `ATEMListener` fields: `connected`, `atemModel`,
+  `inputCount`, `tallyBySource`, and `readyAfter`. These are the only ATEM-side values
+  the current runtime stores.
+- `readyAfterMs` is included in raw state (not derived) because it is a transport-level
+  guard timestamp, not a computed value. It allows bridge policy code to evaluate command
+  eligibility without importing `ATEMListener` directly.
+- `isReady` (`connected && Date.now() >= readyAfterMs`) is intentionally excluded from
+  derived state — it depends on `Date.now()` and is therefore not a pure function of raw
+  state. The bridge layer checks `readyAfterMs` directly.
+- `ATEMDerivedState` adds `topology`, positional `tally[]`, `activeTallyInputs`,
+  `programInputs`, and `previewInputs`. These are the same computations already performed
+  in `broadcaster.ts` — making them derivation-layer first-class citizens.
+- ATEM actions are limited to `connect` and `disconnect` — the only ATEM operations
+  currently exposed by the API. Routing (cut/transition/macro) is not yet implemented.
+- Tally feedbacks (`inputOnProgram`, `inputOnPreview`) are marked with a `parameterHint`
+  field documenting the runtime `inputId` parameter they will require. This avoids
+  inventing a formal parameter schema at skeleton phase while documenting the intent.
+- `activeTallyCount` variable bridges raw count to the UI — already broadcast in the WS
+  state message (as `tally.filter(t => t !== 0).length`).
+
+**No behavior change.** No existing source file imports from any new ATEM state or registry module.

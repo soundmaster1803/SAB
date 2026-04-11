@@ -1,7 +1,7 @@
 # SAB — Current System
 
-Version: 0.7.0
-Last updated: 2026-04-11 (Phase 6 Step 1 complete — Sony registries)
+Version: 0.8.0
+Last updated: 2026-04-11 (Phase 6 Step 2 complete — ATEM state + registries)
 
 ---
 
@@ -16,6 +16,15 @@ src/
     server.ts           — HTTP routes + WS + UI formatting                     [OVERFULL]
   atem/
     listener.ts         — ATEM transport + tally + syncCameraStateToAtem       [mixed]
+    state/
+      raw.ts            — ATEMRawState, AtemTallyEntry                         [skeleton]
+      derived.ts        — ATEMDerivedState + deriveATEMState()                  [skeleton]
+    actions/
+      index.ts          — AtemActionId, AtemActionDefinition, ATEM_ACTIONS     [skeleton]
+    variables/
+      index.ts          — AtemVariableId, AtemVariableDefinition, ATEM_VARIABLES [skeleton]
+    feedbacks/
+      index.ts          — AtemFeedbackId, AtemFeedbackDefinition, ATEM_FEEDBACKS [skeleton]
   bridge/
     mapper.ts           — pure ATEM→Sony converters                            [clean]
     atem-decoder.ts     — ATEM command decoder                                 [clean]
@@ -93,6 +102,7 @@ Note: `syncCooldowns` resolved — extracted to `bridge/policies/anti-loop.ts` i
 - State layer skeletons added (Phase 5) — not yet wired to runtime (Phase 8 target)
 - Single flat camera state object still used at runtime (SonyRawState not yet wired)
 - Sony registry skeletons added (Phase 6 Step 1) — not yet wired to runtime (Phase 8 target)
+- ATEM state and registry skeletons added (Phase 6 Step 2) — not yet wired to runtime (Phase 8 target)
 - No action, variable, feedback, or preset execution wiring yet
 
 ---

@@ -2,6 +2,23 @@
 
 ---
 
+## v0.8.0 — 2026-04-11 (Phase 6 Step 2 — ATEM state and registry skeletons)
+
+### Added
+- `src/atem/state/raw.ts` — `AtemTallyEntry`, `ATEMRawState` (connected, model, knownInputIds, tallyBySource, readyAfterMs)
+- `src/atem/state/derived.ts` — `ATEMDerivedState` + `deriveATEMState()` (topology, tally[], activeTallyInputs, programInputs, previewInputs)
+- `src/atem/actions/index.ts` — `AtemActionId`, `AtemActionDefinition`, `ATEM_ACTIONS` (2 actions: connect, disconnect)
+- `src/atem/variables/index.ts` — `AtemVariableId`, `AtemVariableDefinition`, `ATEM_VARIABLES` (4 variables: connected, model, inputCount, activeTallyCount)
+- `src/atem/feedbacks/index.ts` — `AtemFeedbackId`, `AtemFeedbackDefinition`, `ATEM_FEEDBACKS` (3 feedbacks: connected, inputOnProgram, inputOnPreview)
+
+### Changed
+- Nothing — skeleton only; no runtime wiring
+
+### Migration notes
+- No runtime behavior change; ATEM state and registry files are not imported by any running module
+
+---
+
 ## v0.7.0 — 2026-04-11 (Phase 6 Step 1 — Sony registry skeletons)
 
 ### Added
