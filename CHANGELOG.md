@@ -2,6 +2,20 @@
 
 ---
 
+## v0.9.0 — 2026-04-11 (Phase 6 Step 3 — ATEM model spec skeletons)
+
+### Added
+- `src/atem/models/types.ts` — `ATEMCapabilities` (5 flags: cameraControl, reverseCameraControlSync, tallyBySource, modelDiscovery, inputTopology), `ATEMModelSpec` (name, modelNamePatterns, status, capabilities, notes)
+- `src/atem/models/index.ts` — `GENERIC_ATEM_SPEC` (conservative fallback with all confirmed flags true), `getATEMModelSpec(modelName)` (substring match → fallback to generic), `getAllATEMModelSpecs()` (named specs only, currently empty)
+
+### Changed
+- Nothing — skeleton only; no runtime wiring
+
+### Migration notes
+- No runtime behavior change; model spec files are not imported by any running module
+
+---
+
 ## v0.8.0 — 2026-04-11 (Phase 6 Step 2 — ATEM state and registry skeletons)
 
 ### Added
