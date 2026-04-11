@@ -2,6 +2,21 @@
 
 ---
 
+## v0.6.0 — 2026-04-11 (Phase 5 — Sony state layer skeletons)
+
+### Added
+- `src/sony/state/raw.ts` — `SonyRawState` interface; mirrors all fields polled by PTP transport today
+- `src/sony/state/derived.ts` — `SonyDerivedState` interface + `deriveSonyState(raw)` helper (ISO/shutter/fnumber display strings, EV float)
+- `src/sony/state/alerts.ts` — `SonyAlertState` interface + `deriveSonyAlerts(raw, derived)` helper; `BatterySeverity`, `RecRemainingSeverity` enums
+
+### Changed
+- Nothing — skeleton only; no runtime wiring
+
+### Migration notes
+- No runtime behavior change; state files are not imported by any running module
+
+---
+
 ## v0.5.0 — 2026-04-11 (Phase 4, Step 1 — Sony model spec skeletons)
 
 ### Added

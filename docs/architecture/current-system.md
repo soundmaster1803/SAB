@@ -1,7 +1,7 @@
 # SAB — Current System
 
-Version: 0.5.0
-Last updated: 2026-04-11 (Phase 4, Step 1 complete)
+Version: 0.6.0
+Last updated: 2026-04-11 (Phase 5 complete)
 
 ---
 
@@ -39,6 +39,10 @@ src/
       fx6.ts            — FX6 stub spec (PTP3 v1.0, unverified)                [stub]
       z200.ts           — PXW-Z200 stub spec (PTP3 v1.3, unverified)           [stub]
       index.ts          — getSonyModelSpec() / getAllSonyModelSpecs()           [skeleton]
+    state/
+      raw.ts            — SonyRawState interface                                [skeleton]
+      derived.ts        — SonyDerivedState + deriveSonyState()                  [skeleton]
+      alerts.ts         — SonyAlertState + deriveSonyAlerts()                   [skeleton]
 ```
 
 ---
@@ -78,7 +82,8 @@ Note: `syncCooldowns` resolved — extracted to `bridge/policies/anti-loop.ts` i
 - `syncCameraStateToAtem()` remains in ATEM transport layer (Phase 2 target)
 - Model spec skeleton added (Phase 4 Step 1) — not yet wired to runtime (Phase 8 target)
 - No action, variable, feedback, or preset registry (Phase 6 target)
-- No state layers — single flat camera state object (Phase 5 target)
+- State layer skeletons added (Phase 5) — not yet wired to runtime (Phase 8 target)
+- Single flat camera state object still used at runtime (SonyRawState not yet wired)
 
 ---
 

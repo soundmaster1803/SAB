@@ -168,3 +168,40 @@ This is a skeleton phase — no runtime wiring. Model specs are referenced by no
 
 **Phase 4 continuation:** Populate `knowledge/model-specs/sony/` knowledge files as the
 authoritative source of truth for these specs.
+
+---
+
+## 2026-04-11 — Phase 5: Sony state layer skeletons introduced
+
+**Decision:** Introduce a three-layer state model for Sony cameras (raw, derived, alerts).
+This is a skeleton phase — no runtime wiring. State files are referenced by nothing at runtime.
+
+**Modules created:**
+
+| Module | What it does |
+|--------|--------------|
+| `src/sony/state/raw.ts` | `SonyRawState` — raw values exactly as polled from PTP transport |
+| `src/sony/state/derived.ts` | `SonyDerivedState` + `deriveSonyState(raw)` — display strings and EV |
+| `src/sony/state/alerts.ts` | `SonyAlertState` + `deriveSonyAlerts(raw, derived)` — operator warnings |
+
+**Design decisions:**
+
+- `SonyRawState` intentionally mirrors `CameraState` from `ptp-client.ts` field-for-field.
+  This ensures the types are grounded in actual runtime data and makes Phase 8 wiring trivial.
+- `SonyDerivedState` contains only unambiguously useful derived values: ISO/shutter/fnumber
+  display strings (already used by `api/viewmodels/camera.ts`) and EV float/string.
+  No speculative fields added.
+- `deriveSonyAlerts` accepts `_derived` as a second parameter even though it is currently
+  unused. This establishes a stable function signature for Phase 8 when derived state may
+  inform alerts (e.g. EV out-of-range warnings).
+- Battery and record-remaining use severity enums (`BatterySeverity`, `RecRemainingSeverity`)
+  rather than raw booleans. This makes the alert contract richer and avoids multiple
+  overlapping booleans for the same concern.
+- Thresholds: `BATTERY_LOW_PCT = 20`, `BATTERY_CRITICAL_PCT = 10`,
+  `REC_REMAIN_LOW_SEC = 300` (5 min), `REC_REMAIN_CRITICAL_SEC = 60` (1 min).
+  These are production-appropriate values for live broadcast use.
+
+**No behavior change.** No existing source file imports from `src/sony/state/`.
+
+**Phase 6 next:** Registry skeletons — action, variable, feedback, preset index files
+for Sony, ATEM, and bridge domains.
