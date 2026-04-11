@@ -130,3 +130,41 @@ suppression are identical. Only code location changed.
 
 **Phase 2 next:** Extract `syncCameraStateToAtem()` from `src/atem/listener.ts`
 into `src/bridge/sync/atem-sync.ts`.
+
+---
+
+## 2026-04-11 — Phase 4 Step 1: Sony model spec skeleton introduced
+
+**Decision:** Introduce a static model specification layer for Sony cameras.
+This is a skeleton phase — no runtime wiring. Model specs are referenced by nothing at runtime.
+
+**Modules created:**
+
+| Module | Status | What it does |
+|--------|--------|--------------|
+| `src/sony/models/types.ts` | Confirmed | `SonyModelSpec`, `SonyCapabilities`, `SonyPtpVersion` types |
+| `src/sony/models/fx30.ts` | Confirmed | FX30 / ILME-FX30B spec — PTP3 v1.0+, confirmed capabilities |
+| `src/sony/models/zve10m2.ts` | Confirmed | ZV-E10 II / ILCE-ZV-E10M2 spec — PTP3 v1.2, confirmed capabilities |
+| `src/sony/models/fx6.ts` | Stub | FX6 / ILME-FX6 spec — PTP3 v1.0, all capabilities unverified |
+| `src/sony/models/z200.ts` | Stub | PXW-Z200 spec — PTP3 v1.3, all capabilities unverified |
+| `src/sony/models/index.ts` | Skeleton | `getSonyModelSpec()` / `getAllSonyModelSpecs()` registry |
+
+**Design decisions:**
+
+- `SonyCapabilities` uses flat boolean flags per capability, not a version check. This
+  allows individual capabilities on the same camera to be confirmed/unconfirmed independently.
+- `status: 'confirmed' | 'stub'` field guards against stub specs being used for gating.
+  Runtime capability-gate code (Phase 8) must refuse to act on stub specs.
+- FX30 `tallyLamps: true` is marked with a note: tally requires firmware ≥ 3.0. The flag
+  may be overridden at runtime by prop-presence check after SDIOGetExtDeviceInfo.
+- ZV-E10 II `hdmiTimecodeRecControl: false` — conservative default; not confirmed by live test.
+- FX6 and Z200 are all-false stubs; they exist to register the model ID so the lookup
+  does not return null for these cameras.
+
+**Evidence standard applied:** Capabilities set to true only if confirmed by Sony SDK source
+(PTPDef.h, DevicePropItemList.h) or explicitly noted in ref-cameras.md research docs.
+
+**No behavior change.** No existing source file imports from `src/sony/models/`.
+
+**Phase 4 continuation:** Populate `knowledge/model-specs/sony/` knowledge files as the
+authoritative source of truth for these specs.

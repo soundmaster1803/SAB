@@ -1,7 +1,7 @@
 # SAB — Current System
 
-Version: 0.4.0
-Last updated: 2026-04-11 (Phase 1 complete)
+Version: 0.5.0
+Last updated: 2026-04-11 (Phase 4, Step 1 complete)
 
 ---
 
@@ -32,6 +32,13 @@ src/
     manager.ts          — camera lifecycle                                     [clean]
     constants.ts        — prop codes, opcodes, button values                   [clean]
     packet-builder.ts   — PTP packet construction                              [clean]
+    models/
+      types.ts          — SonyModelSpec, SonyCapabilities, SonyPtpVersion      [skeleton]
+      fx30.ts           — FX30 confirmed spec (PTP3 v1.0+)                     [skeleton]
+      zve10m2.ts        — ZV-E10 II confirmed spec (PTP3 v1.2)                 [skeleton]
+      fx6.ts            — FX6 stub spec (PTP3 v1.0, unverified)                [stub]
+      z200.ts           — PXW-Z200 stub spec (PTP3 v1.3, unverified)           [stub]
+      index.ts          — getSonyModelSpec() / getAllSonyModelSpecs()           [skeleton]
 ```
 
 ---
@@ -69,7 +76,7 @@ Note: `syncCooldowns` resolved — extracted to `bridge/policies/anti-loop.ts` i
 
 - Single polling tier at 200ms for all Sony properties (Phase 7 target)
 - `syncCameraStateToAtem()` remains in ATEM transport layer (Phase 2 target)
-- No model spec system — capabilities assumed, not declared (Phase 4 target)
+- Model spec skeleton added (Phase 4 Step 1) — not yet wired to runtime (Phase 8 target)
 - No action, variable, feedback, or preset registry (Phase 6 target)
 - No state layers — single flat camera state object (Phase 5 target)
 

@@ -2,6 +2,24 @@
 
 ---
 
+## v0.5.0 — 2026-04-11 (Phase 4, Step 1 — Sony model spec skeletons)
+
+### Added
+- `src/sony/models/types.ts` — `SonyModelSpec`, `SonyCapabilities`, `SonyPtpVersion` interfaces
+- `src/sony/models/fx30.ts` — FX30 confirmed spec (PTP3 v1.0+)
+- `src/sony/models/zve10m2.ts` — ZV-E10 II confirmed spec (PTP3 v1.2)
+- `src/sony/models/fx6.ts` — FX6 stub spec (PTP3 v1.0, unverified)
+- `src/sony/models/z200.ts` — PXW-Z200 stub spec (PTP3 v1.3, unverified)
+- `src/sony/models/index.ts` — `getSonyModelSpec()` and `getAllSonyModelSpecs()` registry
+
+### Changed
+- Nothing — skeleton only; no runtime wiring
+
+### Migration notes
+- No runtime behavior change; model specs are not imported by any running module
+
+---
+
 ## v0.4.0 — 2026-04-11 (Phase 1 complete)
 
 ### Phase 1 — Bridge extraction (no version bump — 2026-04-11)
