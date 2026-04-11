@@ -2,6 +2,27 @@
 
 ---
 
+## v0.4.0 — 2026-04-11 (Phase 1 complete)
+
+### Phase 1 — Bridge extraction (no version bump — 2026-04-11)
+All bridge domain logic extracted from `src/index.ts` and `src/atem/listener.ts`.
+No behavior change. Build and typecheck pass clean.
+
+**New modules:**
+- `src/bridge/policies/throttle.ts` — `canSend()`, 200ms per-camera/property throttle
+- `src/bridge/policies/anti-loop.ts` — `enterCooldown()` / `isInCooldown()`, 500ms sync echo guard
+- `src/bridge/intents/types.ts` — `BridgeProperty`, `ControlIntent` types
+- `src/bridge/intents/decoder.ts` — `decodeControlIntent()`, ATEM command → ControlIntent
+- `src/bridge/executors/sony-command-executor.ts` — `executeSonyIntent()`, intent → Sony PTP
+
+**Updated:**
+- `src/index.ts` — bridge dispatch replaced by `decodeControlIntent` + `executeSonyIntent` calls; now lean bootstrap only
+- `src/atem/listener.ts` — `syncCooldowns` replaced by `enterCooldown` / `isInCooldown` imports
+- `docs/architecture/current-system.md` — source tree and violation table updated
+- `docs/architecture/ARCH_HISTORY.md` — Phase 1 decision recorded
+
+---
+
 ## v0.4.0 — 2026-04-11
 
 ### Build baseline (no version bump — 2026-04-11)

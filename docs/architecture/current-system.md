@@ -1,7 +1,7 @@
 # SAB — Current System
 
 Version: 0.4.0
-Last updated: 2026-04-11
+Last updated: 2026-04-11 (Phase 1 complete)
 
 ---
 
@@ -9,7 +9,7 @@ Last updated: 2026-04-11
 
 ```
 src/
-  index.ts              — bootstrap + bridge dispatch + throttle + tally sync  [OVERFULL]
+  index.ts              — bootstrap + tally sync (lean)                        [clean]
   config.ts             — config file I/O
   logger.ts             — logger + WS event bus
   api/
@@ -19,6 +19,14 @@ src/
   bridge/
     mapper.ts           — pure ATEM→Sony converters                            [clean]
     atem-decoder.ts     — ATEM command decoder                                 [clean]
+    policies/
+      throttle.ts       — canSend() — 200ms per camera/property                [clean]
+      anti-loop.ts      — enterCooldown() / isInCooldown() — 500ms sync guard  [clean]
+    intents/
+      types.ts          — BridgeProperty, ControlIntent                        [clean]
+      decoder.ts        — decodeControlIntent() — ATEM cmd → ControlIntent     [clean]
+    executors/
+      sony-command-executor.ts — executeSonyIntent() — intent → Sony PTP       [clean]
   sony/
     ptp-client.ts       — PTP/IP transport, handshake, polling, control        [clean]
     manager.ts          — camera lifecycle                                     [clean]
@@ -28,18 +36,13 @@ src/
 
 ---
 
-## Domain violations (as of 2026-04-11)
+## Domain violations (as of Phase 1 complete)
 
-### src/index.ts — OVERFULL
+### src/index.ts — RESOLVED ✅
+All bridge logic extracted. Now contains only: bootstrap, tally sync, ATEM event wiring,
+and the three-line handleCameraControl pipeline (decode → intent → executor).
 
-| Symbol | Correct domain |
-|--------|---------------|
-| `handleCameraControl()` | bridge/executors |
-| `canSend()` / `lastCmdTime` | bridge/policies/throttle |
-| `prevFocus` state | bridge/policies/anti-loop |
-| ATEM → Sony direct dispatch | bridge/intents |
-
-### src/api/server.ts — OVERFULL
+### src/api/server.ts — OVERFULL (Phase 3 target)
 
 | Symbol | Correct domain |
 |--------|---------------|
@@ -52,33 +55,38 @@ src/
 | ATEM routes | api/routes/atem |
 | Status/interfaces routes | api/routes/status |
 
-### src/atem/listener.ts — mixed
+### src/atem/listener.ts — mixed (Phase 2 target)
 
 | Symbol | Correct domain |
 |--------|---------------|
 | `syncCameraStateToAtem()` | bridge/sync |
-| `syncCooldowns` | bridge/policies/anti-loop |
+
+Note: `syncCooldowns` resolved — extracted to `bridge/policies/anti-loop.ts` in Phase 1.
 
 ---
 
 ## Known structural issues
 
-- Single polling tier at 200ms for all Sony properties
-- No intent layer — ATEM events map directly to Sony PTP commands in index.ts
-- Throttle (`canSend`) and anti-loop (`syncCooldowns`) scattered across index.ts and listener.ts
-- No model spec system — capabilities assumed, not declared
-- No action, variable, feedback, or preset registry
-- No state layers — single flat camera state object
+- Single polling tier at 200ms for all Sony properties (Phase 7 target)
+- `syncCameraStateToAtem()` remains in ATEM transport layer (Phase 2 target)
+- No model spec system — capabilities assumed, not declared (Phase 4 target)
+- No action, variable, feedback, or preset registry (Phase 6 target)
+- No state layers — single flat camera state object (Phase 5 target)
 
 ---
 
-## File sizes (approximate, 2026-04-11)
+## File sizes (approximate, post Phase 1)
 
 | File | Lines | Status |
 |------|-------|--------|
-| src/index.ts | ~350 | Overfull |
+| src/index.ts | ~60 | Clean |
 | src/api/server.ts | ~500 | Overfull |
-| src/atem/listener.ts | ~250 | Mixed |
+| src/atem/listener.ts | ~190 | Mixed |
+| src/bridge/policies/throttle.ts | ~13 | Clean |
+| src/bridge/policies/anti-loop.ts | ~22 | Clean |
+| src/bridge/intents/types.ts | ~78 | Clean |
+| src/bridge/intents/decoder.ts | ~70 | Clean |
+| src/bridge/executors/sony-command-executor.ts | ~115 | Clean |
 | src/sony/ptp-client.ts | ~600 | Clean |
 | src/sony/manager.ts | ~150 | Clean |
 | src/bridge/mapper.ts | ~80 | Clean |

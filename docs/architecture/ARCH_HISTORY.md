@@ -100,3 +100,33 @@ Platform modules wrap the runtime. Runtime modules must never import from `src/p
 - `docs/architecture/edit-rules.md` — cross-platform rules section added
 
 **No source files modified.**
+
+---
+
+## 2026-04-11 — Phase 1 complete: bridge logic extracted from runtime entrypoint
+
+**Decision:** All bridge domain logic extracted from `src/index.ts` and
+`src/atem/listener.ts` into dedicated bridge modules. `src/index.ts` is now lean.
+
+**Modules created:**
+
+| Module | Extracted from | What it does |
+|--------|---------------|--------------|
+| `src/bridge/policies/throttle.ts` | `src/index.ts` | `canSend()` — 200ms per-camera/property throttle |
+| `src/bridge/policies/anti-loop.ts` | `src/atem/listener.ts` | `enterCooldown()` / `isInCooldown()` — 500ms sync echo suppression |
+| `src/bridge/intents/types.ts` | (new) | `BridgeProperty`, `ControlIntent` — normalized intent contract |
+| `src/bridge/intents/decoder.ts` | `src/index.ts` | `decodeControlIntent()` — ATEM command → ControlIntent |
+| `src/bridge/executors/sony-command-executor.ts` | `src/index.ts` | `executeSonyIntent()` — intent → Sony PTP command |
+
+**`src/index.ts` handleCameraControl pipeline after Phase 1:**
+```
+ATEM event → findByAtemInput → guard checks
+  → decodeControlIntent()
+  → executeSonyIntent()
+```
+
+**No behavior change.** All Sony PTP commands, throttle decisions, and anti-loop
+suppression are identical. Only code location changed.
+
+**Phase 2 next:** Extract `syncCameraStateToAtem()` from `src/atem/listener.ts`
+into `src/bridge/sync/atem-sync.ts`.
