@@ -43,6 +43,20 @@
 - No behavior changes
 - This baseline marks the start of the modular migration
 
+### Cross-platform strategy (no version bump — 2026-04-11)
+Architecture rule addition. No source files modified.
+
+- `CLAUDE.md` §3 — `src/platform/` added to target tree as deferred domain
+- `CLAUDE.md` §13 — new Cross-Platform Strategy section: 10 binding rules, deferred scope, frozen files
+- `docs/architecture/target-architecture.md` — platform layer added to target tree; cross-platform section added
+- `docs/architecture/edit-rules.md` — cross-platform rules section added (portability requirements, frozen artifacts, import direction rule)
+- `docs/architecture/ARCH_HISTORY.md` — decision recorded
+
+Key decisions:
+- Authoritative execution model during Phases 1–8: `node dist/bridge.cjs` from terminal
+- `scripts/launcher.swift`, `scripts/make-icon.swift`, `scripts/pack.sh` frozen and out of scope
+- `src/platform/` is a post-Phase-8 deferred domain; platform must never be imported by runtime
+
 ### Repository cleanup (no version bump — 2026-04-11)
 Pure structural/doc changes. No functionality affected. No version increment.
 

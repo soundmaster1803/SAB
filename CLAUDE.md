@@ -148,6 +148,12 @@ src/
     ws/
     viewmodels/
 
+  platform/                   — LATER PHASE — OS-specific wrappers only
+    macos/                    — macOS launcher, tray, .app integration
+    windows/                  — Windows launcher, system tray
+    linux/                    — Linux launcher, systemd, desktop
+    index.ts                  — platform detection and loader
+
 frontend/
   src/
     pages/
@@ -162,6 +168,9 @@ frontend/
       presets/
       logs/
 ```
+
+`src/platform/` is a deferred domain. It does not exist during Phases 1–8.
+The runtime must be fully functional from terminal before platform wrappers are added.
 
 ---
 
@@ -589,6 +598,94 @@ A phase is complete only when all of the following are true:
 | `src/bridge/atem-decoder.ts` | Clean — do not disturb |
 | `src/config.ts` | Config I/O — do not disturb |
 | `src/logger.ts` | Logger — do not disturb |
+
+---
+
+## 13. Cross-Platform Strategy
+
+### Principle: Runtime first, packaging later
+
+SAB is a cross-platform target. During the current architecture migration (Phases 1–8),
+all OS-specific launcher, app bundle, and installer work is explicitly out of scope.
+
+The authoritative execution model during migration is:
+
+```
+node dist/bridge.cjs
+```
+
+Terminal launch. No launcher dependency. No bundle assumption. No OS-specific path.
+
+---
+
+### Cross-platform rules (binding)
+
+1. **Cross-platform is a target architecture requirement.** The runtime must eventually run on macOS, Windows, and Linux without modification.
+2. **Current migration must avoid platform-specific launcher work.** Phases 1–8 are runtime-only phases.
+3. **macOS-only launcher logic must not influence runtime architecture.** The runtime must not assume it is running inside a `.app` bundle.
+4. **`.app`, Swift launcher, packaging scripts, installers, and release wrappers are deferred.** They are not touched during Phases 1–8.
+5. **Runtime must be executable from terminal first.** `node dist/bridge.cjs` must be the primary execution model.
+6. **All new architecture decisions must prefer platform-neutral paths and abstractions.** Use `process.cwd()`, relative paths, and Node.js built-ins — not macOS-specific APIs.
+7. **Any OS-specific behavior must be isolated behind a future `src/platform/` layer.** Never spread OS detection into domain modules.
+8. **Do not optimize anything for macOS packaging during Phases 1–3.** Config loading, path resolution, and file I/O must be portable.
+9. **Do not rewrite launcher or installer scripts during architecture extraction.** `scripts/launcher.swift`, `scripts/make-icon.swift`, and `scripts/pack.sh` are frozen as deferred artifacts.
+10. **Packaging becomes a dedicated phase after the modular runtime is stable.** Not before.
+
+---
+
+### Out of scope during Phases 1–8
+
+- macOS `.app` bundle creation or modification
+- `scripts/launcher.swift` redesign or refactor
+- `scripts/make-icon.swift` updates
+- `scripts/pack.sh` repair or replacement
+- Installer generation (dmg, pkg, exe, deb, rpm)
+- Package signing and notarization
+- Windows installer work
+- Linux packaging work
+- System tray and native shell integration
+- Any `CineLink Bridge.app` or successor app bundle work
+
+---
+
+### In scope now (Phases 1–8)
+
+- Terminal-based startup and runtime
+- Modular runtime architecture (all eight phases)
+- Clean config loading (platform-neutral `config.json` path resolution)
+- Portable path handling (no hardcoded macOS paths)
+- Platform-neutral module boundaries
+- Runtime that can later be wrapped by platform launchers without modification
+
+---
+
+### Future platform layer
+
+When the modular runtime is stable, a dedicated packaging phase will create `src/platform/`:
+
+```
+src/
+  platform/
+    macos/     — .app integration, tray, bundle path resolution
+    windows/   — Windows launcher, system tray
+    linux/     — systemd, desktop integration
+    index.ts   — platform detection and loader
+```
+
+Platform modules wrap the runtime. They do not modify it.
+Runtime modules must never import from `src/platform/`.
+
+---
+
+### Deferred files (do not modify during Phases 1–8)
+
+| File | Status | Reason |
+|------|--------|--------|
+| `scripts/launcher.swift` | Frozen | macOS-specific; deferred to platform phase |
+| `scripts/make-icon.swift` | Frozen | macOS-specific; deferred to platform phase |
+| `scripts/pack.sh` | Frozen | Broken + out of scope; deferred to platform phase |
+| `package.json` `bundle:app` | Frozen | References non-existent CineLink Bridge.app |
+| `package.json` `release:zip` | Frozen | References outdated app path |
 
 ---
 

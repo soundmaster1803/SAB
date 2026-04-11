@@ -100,6 +100,12 @@ src/
     viewmodels/
       camera.ts               — uiState(), decodeShutter(), decodeISO(), PROP_MAP
 
+  platform/                   — DEFERRED — created after runtime is stable
+    macos/                    — .app bundle path resolution, tray, launcher integration
+    windows/                  — Windows tray, launcher
+    linux/                    — systemd, desktop
+    index.ts                  — platform detection, capability loader
+
 frontend/
   src/
     pages/
@@ -114,6 +120,9 @@ frontend/
       presets/
       logs/
 ```
+
+`src/platform/` does not exist during Phases 1–8. It is created in a dedicated packaging phase
+after the modular runtime is verified stable across all core domains.
 
 ---
 
@@ -195,6 +204,46 @@ Both live exclusively in `src/bridge/policies/`.
 
 Neither module may be imported by Sony transport or ATEM transport directly.
 Both are bridge domain concerns.
+
+---
+
+## Cross-platform strategy
+
+### Authoritative execution model (Phases 1–8)
+
+```
+node dist/bridge.cjs
+```
+
+Terminal launch. No launcher dependency. No bundle assumption.
+The runtime must work from a terminal on any OS before packaging is considered.
+
+### Platform layer (deferred)
+
+`src/platform/` is not created until after all core domains are stable.
+When it is created, it wraps the runtime — it does not modify it.
+
+**Isolation rule:** Runtime modules (`src/core`, `src/sony`, `src/atem`, `src/bridge`, `src/api`)
+must never import from `src/platform/`. The dependency is one-way: platform → runtime, never the reverse.
+
+### What this means for current development
+
+- Config loading must use portable paths (no hardcoded `/Applications/` or bundle paths)
+- File I/O must use `process.cwd()` or explicit config-provided paths
+- No `process.platform === 'darwin'` checks inside domain modules
+- No assumptions about being inside a `.app` bundle or a `pkg`-packaged binary
+- Any path that currently branches on `import.meta.url` vs `process.argv[1]` is acceptable as a temporary
+  workaround but must be documented and moved to `src/platform/` when that layer is created
+
+### Deferred packaging artifacts
+
+| Artifact | Status |
+|----------|--------|
+| `scripts/launcher.swift` | Frozen — deferred to platform phase |
+| `scripts/make-icon.swift` | Frozen — deferred to platform phase |
+| `scripts/pack.sh` | Frozen — broken and out of scope |
+| `package.json bundle:app` | Frozen — stale reference |
+| `package.json release:zip` | Frozen — stale reference |
 
 ---
 

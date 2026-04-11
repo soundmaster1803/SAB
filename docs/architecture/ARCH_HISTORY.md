@@ -62,5 +62,41 @@ does not qualify as a functionality change under the versioning rules (CLAUDE.md
 
 **Flagged for future resolution:**
 - `package.json` has no `build` script — TypeScript compilation method unknown; must add before Phase 1
-- `scripts/pack.sh` references non-existent `release/CineLink Bridge.command` — script is broken; needs rewrite for SAB workflow
-- `scripts/launcher.swift` and `scripts/make-icon.swift` — CineLink Bridge .app source; evaluate for SAB repurposing
+- `scripts/pack.sh` references non-existent `release/CineLink Bridge.command` — script is broken; deferred to platform phase
+- `scripts/launcher.swift` and `scripts/make-icon.swift` — macOS launcher source; deferred to platform phase
+
+---
+
+## 2026-04-11 — Cross-platform strategy established
+
+**Decision:** SAB adopts an explicit "runtime first, packaging later" strategy.
+Cross-platform support is a target architecture requirement, but all OS-specific
+launcher, bundle, and installer work is deferred until after the modular runtime
+is stable (after Phase 8).
+
+**Rules added:**
+1. Authoritative execution model during Phases 1–8 is `node dist/bridge.cjs` from terminal.
+2. Runtime must not assume it runs inside a `.app` bundle or `pkg` binary.
+3. All new architecture decisions must prefer platform-neutral abstractions.
+4. Any OS-specific behavior must be isolated behind `src/platform/` — a deferred domain.
+5. `scripts/launcher.swift`, `scripts/make-icon.swift`, and `scripts/pack.sh` are frozen.
+6. `src/platform/` is added to the target architecture tree as a deferred, post-Phase-8 domain.
+
+**Future `src/platform/` structure:**
+```
+src/platform/
+  macos/     — .app integration, tray, bundle paths
+  windows/   — Windows tray, launcher
+  linux/     — systemd, desktop integration
+  index.ts   — platform detection and loader
+```
+
+Platform modules wrap the runtime. Runtime modules must never import from `src/platform/`.
+
+**Docs updated:**
+- `CLAUDE.md` §3 — `src/platform/` added to target tree
+- `CLAUDE.md` §13 — Cross-Platform Strategy section added
+- `docs/architecture/target-architecture.md` — platform layer + cross-platform section added
+- `docs/architecture/edit-rules.md` — cross-platform rules section added
+
+**No source files modified.**

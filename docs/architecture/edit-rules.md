@@ -166,6 +166,46 @@ Forbidden commit messages: `"update"`, `"fix stuff"`, `"misc"`, `"changes"`
 
 ---
 
+## Cross-platform rules
+
+### Execution model during Phases 1–8
+
+The authoritative way to run SAB is:
+
+```
+node dist/bridge.cjs
+```
+
+Do not write code that assumes any other execution model during this phase.
+Do not write code that assumes the process is running inside a `.app` bundle or a `pkg` binary.
+
+### Portability requirements for new code
+
+- Use `process.cwd()` for working-directory resolution, not bundle-relative paths
+- Use `path.resolve()` and `path.join()` — never hardcoded OS-specific separators
+- Do not call `process.platform` inside domain modules (`src/sony/`, `src/atem/`, `src/bridge/`, `src/api/`)
+- Do not import `child_process`, `applescript`, or macOS-only APIs in domain modules
+- Any OS-specific behavior must be documented and flagged for future `src/platform/` extraction
+
+### Frozen packaging artifacts (do not modify during Phases 1–8)
+
+| File | Frozen reason |
+|------|--------------|
+| `scripts/launcher.swift` | macOS-specific; deferred to platform phase |
+| `scripts/make-icon.swift` | macOS-specific; deferred to platform phase |
+| `scripts/pack.sh` | Broken reference to `release/`; out of scope |
+| `package.json bundle:app` | Stale; references non-existent .app path |
+| `package.json release:zip` | Stale; out of scope |
+
+### Import direction rule for platform layer
+
+When `src/platform/` is eventually created:
+- Platform modules MAY import from runtime modules
+- Runtime modules MUST NOT import from `src/platform/`
+- This rule applies immediately — do not write platform imports into runtime code as "temporary" wiring
+
+---
+
 ## Phase completion gate
 
 A migration phase is complete only when ALL of the following are true:
