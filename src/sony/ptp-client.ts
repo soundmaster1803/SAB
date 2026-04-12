@@ -55,6 +55,13 @@ export class SonyPTPClient extends EventEmitter {
   private guid: Buffer;
   private supportedLists = new Map<number, number[]>();  // propCode → enumeration list
 
+  // Diagnostic fields — populated during connect() and polling.
+  // Exposed for the debug endpoint; not used in the control path.
+  public lastPollBlob: Buffer | null = null;
+  public deviceManufacturer = '';
+  public deviceFirmware = '';
+  public deviceSerial = '';
+
   // Serial command queue — guarantees strict transactionId sequencing.
   // Each enqueued fn is chained onto the tail; a failed task doesn't poison the chain.
   private commandQueue: Promise<any> = Promise.resolve();
@@ -172,12 +179,16 @@ export class SonyPTPClient extends EventEmitter {
     this.transactionId = 1;
     this.vlog(`[4] ← OpenSession OK`);
 
-    // 5. GetDeviceInfo
+    // 5. GetDeviceInfo — extracts model, manufacturer, firmware version, serial number
     this.vlog(`[5] → GetDeviceInfo op=0x1001`);
     const infoData = await this.sendCmdReadData(0x1001, []);
-    const model = this.parseModelName(infoData);
-    this.state.model = model;
-    this.vlog(`[5] ← GetDeviceInfo ${infoData.length} bytes, model="${model}"`);
+    const devInfo = this.parseDeviceInfoBlob(infoData);
+    this.state.model       = devInfo.model;
+    this.deviceManufacturer = devInfo.manufacturer;
+    this.deviceFirmware    = devInfo.firmware;
+    this.deviceSerial      = devInfo.serial;
+    this.vlog(`[5] ← GetDeviceInfo ${infoData.length} bytes, model="${devInfo.model}" fw="${devInfo.firmware}" sn="${devInfo.serial}"`);
+    this.vlog(`[5] DeviceInfo hex (first 64): ${infoData.slice(0, 64).toString('hex')}`);
 
     // 6–9. PTP 3.00 four-step SDIO handshake (matches v60.py exactly)
     //   Phase 1 → Phase 2 → GetExtDeviceInfo(v=0x012C, 1 param) → Phase 3
@@ -203,7 +214,7 @@ export class SonyPTPClient extends EventEmitter {
     this.vlog(`[9] ← Phase 3 done — PTP 3.00 handshake complete`);
 
     this.state.connected = true;
-    this.log(`✓ Connected — ${model} (handshake ${Date.now() - t0}ms total)`);
+    this.log(`✓ Connected — ${devInfo.model} fw=${devInfo.firmware || '?'} sn=${devInfo.serial || '?'} (handshake ${Date.now() - t0}ms total)`);
   }
 
   // ─── Polling ───────────────────────────────────────────────────────────────
@@ -308,9 +319,20 @@ export class SonyPTPClient extends EventEmitter {
     return [null, []];
   }
 
+  /**
+   * Scan a single property code from the last poll blob.
+   * Returns [currentValue | null, enumerationList].
+   * Used by the debug endpoint to read any prop without modifying the main poll path.
+   */
+  public scanProp(propCode: number): [number | null, number[]] {
+    if (!this.lastPollBlob) return [null, []];
+    return this.hunterExtractWithList(this.lastPollBlob, propCode);
+  }
+
   private parsedOnce = false;
 
   private parseSonyProps(blob: Buffer): void {
+    this.lastPollBlob = blob;
     const [iso,       isoList]     = this.hunterExtractWithList(blob, 0xD21E);
     const [fnumber,   fnList]      = this.hunterExtractWithList(blob, 0x5007);
     const [shutter,   shutList]    = this.hunterExtractWithList(blob, 0xD20D);
@@ -643,8 +665,9 @@ export class SonyPTPClient extends EventEmitter {
     return new Promise(r => setTimeout(r, ms));
   }
 
-  private parseModelName(data: Buffer): string {
-    if (!data || data.length < 10) return 'Sony Camera';
+  private parseDeviceInfoBlob(data: Buffer): { model: string; manufacturer: string; firmware: string; serial: string } {
+    const result = { model: 'Sony Camera', manufacturer: '', firmware: '', serial: '' };
+    if (!data || data.length < 10) return result;
     try {
       let offset = 8;
       const readStr = (off: number): [string, number] => {
@@ -655,21 +678,30 @@ export class SonyPTPClient extends EventEmitter {
         if (end > data.length) return ['', end];
         return [data.slice(off + 1, end).toString('utf16le').replace(/\0/g, ''), end];
       };
+      // PTP arrays are UINT32 count + count × UINT16 elements
       const skipArr = (off: number): number => {
-        if (off + 2 > data.length) return off;
-        return off + 2 + data.readUInt16LE(off) * 2;
+        if (off + 4 > data.length) return off;
+        return off + 4 + data.readUInt32LE(off) * 2;
       };
-      [, offset] = readStr(offset);
-      offset += 2;
-      offset = skipArr(offset);
-      offset = skipArr(offset);
-      offset = skipArr(offset);
-      offset = skipArr(offset);
-      offset = skipArr(offset);
-      [, offset] = readStr(offset);
-      const [model] = readStr(offset);
-      return model || 'Sony Camera';
-    } catch (_e) { return 'Sony Camera'; }
+      [, offset] = readStr(offset);    // VendorExtensionDesc
+      offset += 2;                      // FunctionalMode (UINT16)
+      offset = skipArr(offset);         // OperationsSupported
+      offset = skipArr(offset);         // EventsSupported
+      offset = skipArr(offset);         // DevicePropertiesSupported
+      offset = skipArr(offset);         // CaptureFormats
+      offset = skipArr(offset);         // ImageFormats
+      [result.manufacturer, offset] = readStr(offset);  // Manufacturer
+      [result.model,        offset] = readStr(offset);  // Model
+      [result.firmware,     offset] = readStr(offset);  // DeviceVersion (firmware)
+      [result.serial]               = readStr(offset);  // SerialNumber
+      if (!result.model) result.model = 'Sony Camera';
+    } catch (_e) {}
+    return result;
+  }
+
+  /** @deprecated Use parseDeviceInfoBlob — kept to avoid breaking callers if any */
+  private parseModelName(data: Buffer): string {
+    return this.parseDeviceInfoBlob(data).model;
   }
 
   disconnect(): void {
