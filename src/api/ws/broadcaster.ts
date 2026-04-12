@@ -21,7 +21,7 @@ import type { CameraManager } from '../../sony/manager';
 import type { ATEMListener } from '../../atem/listener';
 import type { AppConfig } from '../../config';
 import { logBus } from '../../logger';
-import { deriveATEMState } from '../../atem/state/derived';
+import { uiAtemState } from '../viewmodels/atem';
 import { uiState } from '../viewmodels/camera';
 
 function ts(): string { return new Date().toISOString().slice(11, 23); }
@@ -88,8 +88,7 @@ export function createBroadcaster({
   // ── State broadcast — every 500ms ─────────────────────────────────────────
   setInterval(() => {
     const appConfig = getAppConfig();
-    const atemRaw = atemListener.getRawState();
-    const atemDerived = deriveATEMState(atemRaw);
+    const atem = uiAtemState(atemListener);
 
     // O(1) per camera — build lookup map once per broadcast instead of O(n²) find()
     const cfgMap = new Map<string, any>(appConfig.cameras?.map((c: any) => [c.id, c]) ?? []);
@@ -102,11 +101,11 @@ export function createBroadcaster({
         return { ...uiState(state), atemInput: cfg?.atemInput ?? 0, atemControlEnabled: cfg?.atemControlEnabled ?? false };
       }),
       atemIp: appConfig.atemIp,
-      atemConnected: atemRaw.connected,
-      atemModel: atemRaw.model,
-      inputCount: atemRaw.knownInputIds.length,
-      tally: atemDerived.tally,
-      topology: atemDerived.topology,
+      atemConnected: atem.connected,
+      atemModel: atem.model,
+      inputCount: atem.inputCount,
+      tally: atem.tally,
+      topology: atem.topology,
     });
     wss.clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(msg); });
   }, 500);

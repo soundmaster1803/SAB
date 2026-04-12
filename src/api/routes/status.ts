@@ -9,16 +9,13 @@
  */
 
 import { Router } from 'express';
-import os from 'os';
 import type { CameraManager } from '../../sony/manager';
 import type { ATEMListener } from '../../atem/listener';
 import type { AppConfig } from '../../config';
+import { listLanInterfaces } from '../services/network';
+import { uiAtemState } from '../viewmodels/atem';
 import { uiState } from '../viewmodels/camera';
 import { APP_VERSION } from '../../version';
-
-// Exclude tunnels, virtual, and link-local interfaces; keep LAN only
-const LAN_IFACE     = /^(en|eth|wlan|wlp|ens|enp|eno)\d/;
-const EXCLUDE_IFACE = /^(utun|awdl|llw|bridge|vmnet|veth|lo|docker|tun|tap)/;
 
 export interface StatusRouteDeps {
   manager: CameraManager;
@@ -32,28 +29,23 @@ export function createStatusRoutes({ manager, atemListener, getConfig }: StatusR
   // ── Status / health ────────────────────────────────────────────────────────
   router.get('/api/status', (_req, res) => {
     const appConfig = getConfig();
+    const atem = uiAtemState(atemListener);
     res.json({
       version: APP_VERSION,
       cameras: manager.getAllStates().map(uiState),
       atemIp: appConfig.atemIp,
-      atemConnected: atemListener.connected,
+      atemConnected: atem.connected,
+      atemModel: atem.model,
+      inputCount: atem.inputCount,
+      topology: atem.topology,
+      tally: atem.tally,
       time: new Date().toISOString(),
     });
   });
 
   // ── Network interfaces ─────────────────────────────────────────────────────
   router.get('/api/interfaces', (_req, res) => {
-    const ifaces = os.networkInterfaces();
-    const result: { name: string; address: string }[] = [];
-    for (const [name, addrs] of Object.entries(ifaces)) {
-      if (EXCLUDE_IFACE.test(name)) continue;
-      for (const addr of addrs ?? []) {
-        if (addr.family === 'IPv4' && !addr.internal) {
-          result.push({ name, address: addr.address });
-        }
-      }
-    }
-    res.json(result);
+    res.json(listLanInterfaces());
   });
 
   return router;

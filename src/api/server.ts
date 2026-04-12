@@ -1,12 +1,12 @@
 import express from 'express';
 import http from 'http';
-import os from 'os';
 import path from 'path';
 import fs from 'fs';
 import { CameraManager } from '../sony/manager';
 import type { ATEMListener } from '../atem/listener';
 import type { AppConfig } from '../config';
 import { appendLog } from '../logger';
+import { listLanInterfaces } from './services/network';
 import { createBroadcaster } from './ws/broadcaster';
 import { createStatusRoutes } from './routes/status';
 import { createCameraRoutes } from './routes/cameras';
@@ -59,15 +59,8 @@ export function startServer(manager: CameraManager, atemListener: ATEMListener, 
   app.use(createStatusRoutes({ manager, atemListener, getConfig }));
 
   server.listen(7777, () => {
-    const ifaces = os.networkInterfaces();
-    const ips: string[] = [];
-    for (const addrs of Object.values(ifaces)) {
-      for (const a of addrs ?? []) {
-        if (a.family === 'IPv4' && !a.internal) ips.push(a.address);
-      }
-    }
     log(`UI ready → http://localhost:7777`);
-    ips.forEach(ip => log(`           http://${ip}:7777`));
+    listLanInterfaces().forEach(({ address }) => log(`           http://${address}:7777`));
   });
   server.on('error', (e) => err(`HTTP server error: ${e.message}`));
 
