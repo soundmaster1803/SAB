@@ -1,0 +1,93 @@
+{
+  "HIGH": {
+    "intervalMs": 200,
+    "reason": "Frequently changes during operation, UI-critical, or needed for recording safety",
+    "properties": [
+      {"id": "iso", "propCode": "0xD21E", "reason": "Changes with exposure adjustments; displayed in real-time"},
+      {"id": "fnumber", "propCode": "0x5007", "reason": "Changes with aperture adjustments; displayed in real-time"},
+      {"id": "shutter_speed", "propCode": "0xD20D", "reason": "Changes with shutter adjustments; displayed in real-time"},
+      {"id": "exp_comp", "propCode": "0x5010", "reason": "Changes with exposure compensation; displayed in real-time"},
+      {"id": "color_temperature", "propCode": "0xD20F", "reason": "Changes when WB is adjusted"},
+      {"id": "battery_remaining", "propCode": "0xD218", "reason": "Critical alert source; must detect battery critical quickly"},
+      {"id": "battery_level_indicator", "propCode": "0xD20E", "reason": "Alert icon source"},
+      {"id": "movie_rec_state", "propCode": "0xD21D", "reason": "Recording state changes must be detected immediately for tally sync"},
+      {"id": "media_slot1_remaining_time", "propCode": "0xD24A", "reason": "Remaining time alert; must warn before card full during recording"},
+      {"id": "focus_indication", "propCode": "0xD213", "reason": "AF status needed for focus feedback"},
+      {"id": "ae_lock_indication", "propCode": "0xD217", "reason": "AE lock state feedback"}
+    ]
+  },
+  "MEDIUM": {
+    "intervalMs": 1000,
+    "reason": "Changes occasionally during normal operation but not every frame",
+    "properties": [
+      {"id": "focus_mode", "propCode": "0x500A", "reason": "Changed by user, not frame-by-frame"},
+      {"id": "exposure_program_mode", "propCode": "0x500E", "reason": "Changed by user"},
+      {"id": "white_balance", "propCode": "0x5005", "reason": "Changed by user"},
+      {"id": "near_far_enable_status", "propCode": "0xD235", "reason": "Must know if near/far control is available"},
+      {"id": "media_slot1_status", "propCode": "0xD248", "reason": "Card insert/remove detection"},
+      {"id": "media_slot1_remaining_shots", "propCode": "0xD249", "reason": "Remaining shots tracking"},
+      {"id": "device_overheating_state", "propCode": "0xD251", "reason": "Thermal alert"},
+      {"id": "media_slot2_status", "propCode": "0xD256", "reason": "Card insert/remove detection (PTP3)"},
+      {"id": "media_slot2_remaining_shots", "propCode": "0xD257", "reason": "Remaining shots tracking (PTP3)"},
+      {"id": "media_slot2_remaining_time", "propCode": "0xD258", "reason": "Remaining time (PTP3)"},
+      {"id": "total_battery_remaining", "propCode": "0xD204", "reason": "Total battery % (PTP3)"},
+      {"id": "total_battery_level_indicator", "propCode": "0xD205", "reason": "Total battery icon (PTP3)"},
+      {"id": "camera_error_caution_status", "propCode": "0xD1BB", "reason": "Error state monitoring (PTP3)"},
+      {"id": "system_error_caution_status", "propCode": "0xD1BC", "reason": "System error monitoring (PTP3)"},
+      {"id": "recording_duration", "propCode": "0xD120", "reason": "Current clip duration display (PTP3)"},
+      {"id": "shutter_angle", "propCode": "0xD00E", "reason": "Shutter angle display on cinema cameras (PTP3)"},
+      {"id": "nd_filter", "propCode": "0xD018", "reason": "ND filter state (PTP3)"},
+      {"id": "gain_db_current_value", "propCode": "0xD01F", "reason": "Current gain display (PTP3)"},
+      {"id": "iso_current_sensitivity", "propCode": "0xD023", "reason": "Current actual ISO on cinema cameras (PTP3)"},
+      {"id": "exposure_index", "propCode": "0xD022", "reason": "EI display on cinema cameras (PTP3)"}
+    ]
+  },
+  "LOW": {
+    "intervalMs": 5000,
+    "reason": "Rarely changes; checking frequently wastes bandwidth",
+    "properties": [
+      {"id": "picture_profile", "propCode": "0xD23F", "reason": "Set infrequently by user"},
+      {"id": "focus_area", "propCode": "0xD22C", "reason": "Changed infrequently"},
+      {"id": "live_view_status", "propCode": "0xD221", "reason": "Rarely changes after initial connection"},
+      {"id": "shooting_file_info", "propCode": "0xD215", "reason": "Only needed when capturing stills"},
+      {"id": "wb_ab", "propCode": "0xD21C", "reason": "Fine-tuning; changes rarely"},
+      {"id": "wb_gm", "propCode": "0xD210", "reason": "Fine-tuning; changes rarely"},
+      {"id": "awb_lock_indication", "propCode": "0xD24E", "reason": "Lock state changes infrequently"},
+      {"id": "lens_model_name", "propCode": "0xD07B", "reason": "Lens rarely changes (PTP3)"},
+      {"id": "camera_system_error_info", "propCode": "0xD07A", "reason": "Error monitoring (PTP3)"},
+      {"id": "shutter_mode", "propCode": "0xD010", "reason": "Rarely changed by user (PTP3)"},
+      {"id": "time_code_format", "propCode": "0xD0D5", "reason": "Rarely changed (PTP3)"},
+      {"id": "time_code_run", "propCode": "0xD0D6", "reason": "Rarely changed (PTP3)"},
+      {"id": "audio_recording", "propCode": "0xD0D2", "reason": "Rarely changed (PTP3)"}
+    ]
+  },
+  "ON_DEMAND": {
+    "intervalMs": null,
+    "reason": "Only fetch when needed for specific operations",
+    "properties": [
+      {"id": "time_code_preset", "propCode": "0xD0D3", "reason": "Only needed when displaying or setting TC (PTP3)"},
+      {"id": "recording_frame_rate_movie", "propCode": "0xD286", "reason": "Only needed when changing recording settings (PTP3)"},
+      {"id": "file_format_movie", "propCode": "0xD241", "reason": "Only needed when changing format settings"},
+      {"id": "recording_setting_movie", "propCode": "0xD242", "reason": "Only needed when changing recording settings"},
+      {"id": "zoom_position_current_value", "propCode": "0xE041", "reason": "Only needed when operating zoom (PTP3)"},
+      {"id": "focus_position_current_value", "propCode": "0xE043", "reason": "Only needed when operating focus (PTP3)"},
+      {"id": "pan_position_current_value", "propCode": "0xE0B6", "reason": "Only on PTZ cameras (PTP3)"},
+      {"id": "tilt_position_current_value", "propCode": "0xE0B8", "reason": "Only on PTZ cameras (PTP3)"},
+      {"id": "live_view_url", "propCode": "0xD278", "reason": "Only on PTZ cameras (PTP3)"},
+      {"id": "contents_transfer_enable_status", "propCode": "0xD295", "reason": "Only when entering content transfer mode (PTP3)"},
+      {"id": "gain_control_setting", "propCode": "0xD01C", "reason": "Cinema camera setup only (PTP3)"},
+      {"id": "gain_unit_setting", "propCode": "0xD01D", "reason": "Cinema camera setup only (PTP3)"},
+      {"id": "gain_base_iso", "propCode": "0xD020", "reason": "Cinema camera setup only (PTP3)"},
+      {"id": "audio_input_ch1_level", "propCode": "0xE04C", "reason": "Cinema camera audio setup (PTP3)"},
+      {"id": "audio_input_ch2_level", "propCode": "0xE04D", "reason": "Cinema camera audio setup (PTP3)"}
+    ]
+  },
+  "notes": [
+    "All standard polling uses SDIO_GetAllExtDevicePropInfo (0x9209) which returns ALL available properties in one blob.",
+    "The polling groups here define which property values to EXTRACT and act on from the blob, not separate poll requests.",
+    "High priority props are extracted every poll cycle (200ms).",
+    "Medium and Low priority props are extracted less frequently even though they appear in every blob.",
+    "ON_DEMAND props are queried individually via SDIO_GetExtDeviceProp (0x9251, PTP3) or parsed from a full poll blob when needed.",
+    "SAB currently extracts only: iso, fnumber, shutter_speed, exp_comp, color_temperature, battery_remaining, movie_rec_state, and inferred remaining_time (0xD3C2/0xD3C4 which are NOT in official docs)."
+  ]
+}
