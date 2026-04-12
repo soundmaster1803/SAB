@@ -1,0 +1,155 @@
+[
+  {
+    "code": "0x5007",
+    "name": "F-Number",
+    "issue": "encoding",
+    "status": "verified",
+    "confidence": "confirmed",
+    "detail": "Value = aperture * 100. Example: f/2.8 -> 280.",
+    "source": "v2 p.21, v3 p.56"
+  },
+  {
+    "code": "0x5010",
+    "name": "Exposure Bias Compensation",
+    "issue": "encoding",
+    "status": "verified",
+    "confidence": "confirmed",
+    "detail": "Units are 1/1000 EV. Example: +1 EV -> 1000.",
+    "source": "v2 p.22, v3 p.57"
+  },
+  {
+    "code": "0xD016",
+    "name": "Shutter Speed Value",
+    "issue": "encoding",
+    "status": "verified",
+    "confidence": "confirmed",
+    "detail": "4-byte little-endian ratio: uint16 numerator + uint16 denominator. Auto/Bulb use sentinels.",
+    "source": "v3 p.66"
+  },
+  {
+    "code": "0xD017",
+    "name": "Shutter Speed Current Value",
+    "issue": "encoding",
+    "status": "verified",
+    "confidence": "confirmed",
+    "detail": "Same ratio encoding as 0xD016. Reflects actual value under auto behavior.",
+    "source": "v3 command list"
+  },
+  {
+    "code": "0xD01E",
+    "name": "Gain dB Value",
+    "issue": "encoding",
+    "status": "verified",
+    "confidence": "confirmed",
+    "detail": "Signed integer in 1/10 dB units. Example: +12dB -> 120.",
+    "source": "v3 command list"
+  },
+  {
+    "code": "0xD023",
+    "name": "ISO Current Sensitivity",
+    "issue": "layout",
+    "status": "needs_verification",
+    "confidence": "inferred",
+    "detail": "Research suggests a compound ISO/Gain-related field in at least one interpretation path; exact layout still needs detail-page verification.",
+    "source": "v3 command list"
+  },
+  {
+    "code": "0xD20D",
+    "name": "Shutter Speed Setting",
+    "issue": "encoding",
+    "status": "verified",
+    "confidence": "confirmed",
+    "detail": "Same ratio encoding as 0xD016. Primary shutter-speed property on v3.",
+    "source": "v3 command list"
+  },
+  {
+    "code": "0xD21D",
+    "name": "Movie Recording State",
+    "issue": "enum",
+    "status": "verified",
+    "confidence": "confirmed",
+    "detail": "Known states include idle, recording, standby; use as tally/record-state source of truth.",
+    "source": "v3 command list"
+  },
+  {
+    "code": "0xD218",
+    "name": "Battery Remaining",
+    "issue": "range",
+    "status": "needs_verification",
+    "confidence": "inferred",
+    "detail": "Expected as 0-100 percent; 255 may mean AC power rather than battery percentage.",
+    "source": "v3 command list"
+  },
+  {
+    "code": "0xD24C",
+    "name": "Focus Position",
+    "issue": "unit",
+    "status": "verified",
+    "confidence": "confirmed",
+    "detail": "Absolute focus position in lens-dependent device units. Not portable across lens changes.",
+    "source": "v3 command list"
+  },
+  {
+    "code": "0xE042",
+    "name": "Focus Position Setting",
+    "issue": "unit",
+    "status": "verified",
+    "confidence": "confirmed",
+    "detail": "Same device-internal unit semantics as 0xD24C.",
+    "source": "v3 p.76"
+  },
+  {
+    "code": "0xE043",
+    "name": "Focus Position Current Value",
+    "issue": "unit",
+    "status": "verified",
+    "confidence": "confirmed",
+    "detail": "Read-back in the same device-internal unit.",
+    "source": "v3 p.76"
+  },
+  {
+    "code": "0xE088",
+    "name": "Follow Focus Position Setting",
+    "issue": "unit",
+    "status": "verified",
+    "confidence": "confirmed",
+    "detail": "Absolute follow-focus target in the same internal focus-unit family.",
+    "source": "v3 p.76"
+  },
+  {
+    "code": "0xE089",
+    "name": "Follow Focus Position Current Value",
+    "issue": "unit",
+    "status": "verified",
+    "confidence": "confirmed",
+    "detail": "Read-back of follow-focus actual position.",
+    "source": "v3 p.76"
+  },
+  {
+    "code": "0xD04C",
+    "name": "Image ID String",
+    "issue": "payload",
+    "status": "verified",
+    "confidence": "confirmed",
+    "detail": "UTF-8 string payload. Max length is defined separately by 0xE0FE.",
+    "source": "v3 p.78"
+  },
+  {
+    "code": "0xD223",
+    "name": "Date/Time Setting",
+    "issue": "payload",
+    "status": "verified",
+    "confidence": "confirmed",
+    "detail": "String payload in YYYYMMDDThhmmss format.",
+    "source": "v3 command list"
+  },
+  {
+    "code": "0xD2B0",
+    "name": "Collision candidate",
+    "issue": "ambiguity",
+    "status": "ambiguous",
+    "confidence": "unclear",
+    "detail": "Possible code-name collision in the compacted research output. Keep out of working catalogs pending detail-page verification.",
+    "source": "v3 p.72 area"
+  }
+]

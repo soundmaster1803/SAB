@@ -190,5 +190,65 @@
     "requiresMode": "Camera must not be recording",
     "uiWidget": "dropdown",
     "notes": "PTP3 only. Must not be changed during recording. Changing may reset recording_setting_movie."
+  },
+  {
+    "id": "focus_position",
+    "propCode": "0xD24C",
+    "controlType": "absolute",
+    "stepDirection": null,
+    "absoluteSettable": true,
+    "stepSize": null,
+    "safeToSetDirectly": true,
+    "requiresMode": "Prefer MF mode. Value is lens-dependent and should only be reused on the same lens/session context.",
+    "uiWidget": "slider",
+    "notes": "PTP3 only. Absolute focus position in device-internal units."
+  },
+  {
+    "id": "datetime_setting",
+    "propCode": "0xD223",
+    "controlType": "absolute",
+    "stepDirection": null,
+    "absoluteSettable": true,
+    "stepSize": null,
+    "safeToSetDirectly": true,
+    "requiresMode": "Set once during session initialization using camera-local time.",
+    "uiWidget": "text",
+    "notes": "PTP3 only. String payload in YYYYMMDDThhmmss format."
+  },
+  {
+    "id": "streaming_destination",
+    "propCode": "0xD232",
+    "controlType": "enum",
+    "stepDirection": null,
+    "absoluteSettable": true,
+    "stepSize": null,
+    "safeToSetDirectly": true,
+    "requiresMode": "Camera should be idle / not actively streaming when changed.",
+    "uiWidget": "dropdown",
+    "notes": "PTP3 only. Set destination before stream start."
+  },
+  {
+    "id": "nd_filter_position_setting",
+    "propCode": "0xE0E5",
+    "controlType": "absolute",
+    "stepDirection": null,
+    "absoluteSettable": true,
+    "stepSize": null,
+    "safeToSetDirectly": true,
+    "requiresMode": "Variable-ND camera and manual ND mode required.",
+    "uiWidget": "slider",
+    "notes": "PTP3 only. Absolute ND position for variable-ND models."
+  },
+  {
+    "id": "digital_extender_magnification_setting",
+    "propCode": "0xE100",
+    "controlType": "enum",
+    "stepDirection": null,
+    "absoluteSettable": true,
+    "stepSize": null,
+    "safeToSetDirectly": true,
+    "requiresMode": "Valid enum set is model-dependent.",
+    "uiWidget": "dropdown",
+    "notes": "PTP3 only. Digital extender magnification steps."
   }
 ]

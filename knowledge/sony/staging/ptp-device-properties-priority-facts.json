@@ -1,0 +1,362 @@
+[
+  {
+    "code": "0xD223",
+    "name": "Date/Time Setting",
+    "category": "system_settings",
+    "protocol": "v3",
+    "rw": "RW",
+    "form": "str",
+    "status": "verified",
+    "confidence": "confirmed",
+    "source": {
+      "doc": "Camera Control PTP 3 Reference.pdf",
+      "section": "Device Properties Command List",
+      "pages": "72"
+    },
+    "encoding": "String payload in YYYYMMDDThhmmss format.",
+    "capabilityGate": "datetime_sync",
+    "notes": "Use at session init to sync camera RTC."
+  },
+  {
+    "code": "0xD230",
+    "name": "Streaming Status",
+    "category": "streaming",
+    "protocol": "v3",
+    "rw": "R",
+    "form": "enum",
+    "status": "verified",
+    "confidence": "confirmed",
+    "source": {
+      "doc": "Camera Control PTP 3 Reference.pdf",
+      "section": "Device Properties Command List",
+      "pages": "73"
+    },
+    "encoding": "Enum. Idle / starting / active / stopping / error.",
+    "capabilityGate": "streaming",
+    "notes": "Poll to confirm stream start/stop handshake completion."
+  },
+  {
+    "code": "0xD232",
+    "name": "Streaming Destination",
+    "category": "streaming",
+    "protocol": "v3",
+    "rw": "RW",
+    "form": "enum",
+    "status": "verified",
+    "confidence": "confirmed",
+    "source": {
+      "doc": "Camera Control PTP 3 Reference.pdf",
+      "section": "Device Properties Command List",
+      "pages": "73"
+    },
+    "encoding": "Enum target selector.",
+    "capabilityGate": "streaming",
+    "notes": "Must be set before stream start."
+  },
+  {
+    "code": "0xD24C",
+    "name": "Focus Position",
+    "category": "focus_position",
+    "protocol": "v3",
+    "rw": "RW",
+    "form": "range",
+    "status": "verified",
+    "confidence": "confirmed",
+    "source": {
+      "doc": "Camera Control PTP 3 Reference.pdf",
+      "section": "Device Properties Command List",
+      "pages": "73"
+    },
+    "encoding": "Device-internal focus units.",
+    "capabilityGate": "manual_focus",
+    "notes": "Lens-dependent. Safe for same-lens restore, not portable across lens changes."
+  },
+  {
+    "code": "0xE0D2",
+    "name": "Red Tally Lamp Control",
+    "category": "tally",
+    "protocol": "v3",
+    "rw": "RW",
+    "form": "enum",
+    "status": "verified",
+    "confidence": "confirmed",
+    "source": {
+      "doc": "Camera Control PTP 3 Reference.pdf",
+      "section": "Device Properties Command List",
+      "pages": "77"
+    },
+    "encoding": "Enum off/on.",
+    "capabilityGate": "tally_software",
+    "notes": "Software tally control on supported models."
+  },
+  {
+    "code": "0xE0D3",
+    "name": "Green Tally Lamp Control",
+    "category": "tally",
+    "protocol": "v3",
+    "rw": "RW",
+    "form": "enum",
+    "status": "verified",
+    "confidence": "confirmed",
+    "source": {
+      "doc": "Camera Control PTP 3 Reference.pdf",
+      "section": "Device Properties Command List",
+      "pages": "77"
+    },
+    "encoding": "Enum off/on.",
+    "capabilityGate": "tally_software",
+    "notes": "Software tally control on supported models."
+  },
+  {
+    "code": "0xE0D4",
+    "name": "Yellow Tally Lamp Control",
+    "category": "tally",
+    "protocol": "v3",
+    "rw": "RW",
+    "form": "enum",
+    "status": "verified",
+    "confidence": "confirmed",
+    "source": {
+      "doc": "Camera Control PTP 3 Reference.pdf",
+      "section": "Device Properties Command List",
+      "pages": "77"
+    },
+    "encoding": "Enum off/on.",
+    "capabilityGate": "tally_software",
+    "notes": "Software tally control on supported models."
+  },
+  {
+    "code": "0xE0E5",
+    "name": "ND Filter Position Setting",
+    "category": "nd_filter",
+    "protocol": "v3",
+    "rw": "RW",
+    "form": "range",
+    "status": "verified",
+    "confidence": "confirmed",
+    "source": {
+      "doc": "Camera Control PTP 3 Reference.pdf",
+      "section": "Device Properties Command List",
+      "pages": "78"
+    },
+    "encoding": "Absolute ND position in device-specific units.",
+    "capabilityGate": "nd_filter_variable",
+    "notes": "Complements enum-based ND settings."
+  },
+  {
+    "code": "0xE0E6",
+    "name": "SceneFile Command Version",
+    "category": "system_settings",
+    "protocol": "v3",
+    "rw": "R",
+    "form": "scalar",
+    "status": "verified",
+    "confidence": "confirmed",
+    "source": {
+      "doc": "Camera Control PTP 3 Reference.pdf",
+      "section": "Device Properties Command List",
+      "pages": "78"
+    },
+    "encoding": "Compound field: enabled status + dataset version.",
+    "capabilityGate": "scene_file",
+    "notes": "Do not treat as a plain version integer."
+  },
+  {
+    "code": "0xE0F0",
+    "name": "Eframing Tracking Start Mode",
+    "category": "eframing",
+    "protocol": "v3",
+    "rw": "RW",
+    "form": "enum",
+    "status": "verified",
+    "confidence": "confirmed",
+    "source": {
+      "doc": "Camera Control PTP 3 Reference.pdf",
+      "section": "Device Properties Command List",
+      "pages": "78"
+    },
+    "encoding": "Enum. Auto / manual start.",
+    "capabilityGate": "eframing",
+    "notes": "PTZ / eframing-capable models only."
+  },
+  {
+    "code": "0xE0F8",
+    "name": "Eframing Auto Framing",
+    "category": "eframing",
+    "protocol": "v3",
+    "rw": "RW",
+    "form": "enum",
+    "status": "verified",
+    "confidence": "confirmed",
+    "source": {
+      "doc": "Camera Control PTP 3 Reference.pdf",
+      "section": "Device Properties Command List",
+      "pages": "78"
+    },
+    "encoding": "Enum enable / disable.",
+    "capabilityGate": "eframing",
+    "notes": "PTZ / eframing-capable models only."
+  },
+  {
+    "code": "0xE0FA",
+    "name": "Shooting Enable Setting (License)",
+    "category": "system_settings",
+    "protocol": "v3",
+    "rw": "RW",
+    "form": "enum",
+    "status": "verified",
+    "confidence": "confirmed",
+    "source": {
+      "doc": "Camera Control PTP 3 Reference.pdf",
+      "section": "Device Properties Command List",
+      "pages": "78"
+    },
+    "encoding": "Enum. License-gated capability enable.",
+    "capabilityGate": "license_shooting",
+    "notes": "Availability is model-dependent."
+  },
+  {
+    "code": "0xE100",
+    "name": "Digital Extender Magnification Setting",
+    "category": "ui_display",
+    "protocol": "v3",
+    "rw": "RW",
+    "form": "enum",
+    "status": "verified",
+    "confidence": "confirmed",
+    "source": {
+      "doc": "Camera Control PTP 3 Reference.pdf",
+      "section": "Device Properties Command List",
+      "pages": "78"
+    },
+    "encoding": "Discrete magnification-step enum.",
+    "capabilityGate": "digital_extender",
+    "notes": "Valid set is model-dependent."
+  },
+  {
+    "code": "0xE101",
+    "name": "SceneFile Upload Operation Enable Status",
+    "category": "system_settings",
+    "protocol": "v3",
+    "rw": "R",
+    "form": "enum",
+    "status": "verified",
+    "confidence": "confirmed",
+    "source": {
+      "doc": "Camera Control PTP 3 Reference.pdf",
+      "section": "Device Properties Command List",
+      "pages": "78"
+    },
+    "encoding": "Read before upload.",
+    "capabilityGate": "scene_file",
+    "notes": "Operational gate for SceneFile upload."
+  },
+  {
+    "code": "0xE102",
+    "name": "SceneFile Download Operation Enable Status",
+    "category": "system_settings",
+    "protocol": "v3",
+    "rw": "R",
+    "form": "enum",
+    "status": "verified",
+    "confidence": "confirmed",
+    "source": {
+      "doc": "Camera Control PTP 3 Reference.pdf",
+      "section": "Device Properties Command List",
+      "pages": "78"
+    },
+    "encoding": "Read before download.",
+    "capabilityGate": "scene_file",
+    "notes": "Operational gate for SceneFile download."
+  },
+  {
+    "code": "0xE10E",
+    "name": "Grid Line Display (Playback)",
+    "category": "ui_display",
+    "protocol": "v3",
+    "rw": "RW",
+    "form": "enum",
+    "status": "verified",
+    "confidence": "confirmed",
+    "source": {
+      "doc": "Camera Control PTP 3 Reference.pdf",
+      "section": "Device Properties Command List",
+      "pages": "78"
+    },
+    "encoding": "Enum off/on.",
+    "capabilityGate": "grid_display",
+    "notes": "Playback overlay setting."
+  },
+  {
+    "code": "0xE10F",
+    "name": "Grid Line Type",
+    "category": "ui_display",
+    "protocol": "v3",
+    "rw": "RW",
+    "form": "enum",
+    "status": "verified",
+    "confidence": "confirmed",
+    "source": {
+      "doc": "Camera Control PTP 3 Reference.pdf",
+      "section": "Device Properties Command List",
+      "pages": "78"
+    },
+    "encoding": "Enum grid-pattern selector.",
+    "capabilityGate": "grid_display",
+    "notes": "Custom type depends on CustomGridLineFile support."
+  },
+  {
+    "code": "0xE110",
+    "name": "CustomGridLineFile Command Version",
+    "category": "system_settings",
+    "protocol": "v3",
+    "rw": "R",
+    "form": "scalar",
+    "status": "verified",
+    "confidence": "confirmed",
+    "source": {
+      "doc": "Camera Control PTP 3 Reference.pdf",
+      "section": "Device Properties Command List",
+      "pages": "78"
+    },
+    "encoding": "Compound field: enabled status + dataset version.",
+    "capabilityGate": "custom_grid",
+    "notes": "Do not treat as a plain version integer."
+  },
+  {
+    "code": "0xE112",
+    "name": "Stream Button Enable Status",
+    "category": "streaming",
+    "protocol": "v3",
+    "rw": "R",
+    "form": "enum",
+    "status": "verified",
+    "confidence": "confirmed",
+    "source": {
+      "doc": "Camera Control PTP 3 Reference.pdf",
+      "section": "Device Properties Command List",
+      "pages": "78"
+    },
+    "encoding": "Read to confirm hardware stream button is enabled.",
+    "capabilityGate": "streaming",
+    "notes": "Useful before relying on hardware stream button workflow."
+  },
+  {
+    "code": "0xD2B0",
+    "name": "Unverified collision candidate",
+    "category": "ui_display",
+    "protocol": "v3",
+    "rw": "unknown",
+    "form": "unknown",
+    "status": "ambiguous",
+    "confidence": "unclear",
+    "source": {
+      "doc": "Camera Control PTP 3 Reference.pdf",
+      "section": "Device Properties Command List",
+      "pages": "72"
+    },
+    "encoding": null,
+    "capabilityGate": null,
+    "notes": "Possible collision between monitoring-output naming and UserBaseLook-related naming. Keep out of working catalogs until detail-page verification."
+  }
+]
