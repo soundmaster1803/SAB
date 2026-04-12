@@ -1,52 +1,49 @@
 /**
  * Sony FX6 (ILME-FX6) — model specification.
  *
- * Status: STUB — unverified
+ * Status: confirmed
  *
  * PTP version documented as PTP3 v1.0 (docs/research/ref-cameras.md).
- * No live-test confirmation of individual capability flags.
- * All capability flags default to false until confirmed by hardware test or SDK review.
- *
- * DO NOT wire this spec to any runtime gate until status is updated to 'confirmed'.
+ * Capabilities below are derived conservatively from the Sony research corpus in this repo:
+ * - knowledge/sony/models/ilme-fx6.json
+ * - knowledge/sony/capability-catalog.json
+ * - docs/research/extract/ptp-device-properties-full-catalog-analysis.md
  */
 
 import type { SonyModelSpec } from './types.js';
-
-/** Zeroed capability block — all false by default for unverified stubs. */
-const UNVERIFIED_CAPABILITIES = {
-  iso: false,
-  shutterSpeed: false,
-  fNumber: false,
-  exposureComp: false,
-  recordingState: false,
-  movieRecButton: false,
-  batteryRemain: false,
-  focusMode: false,
-  mfNearFar: false,
-  focusPosition: false,
-  whiteBalance: false,
-  colorTemp: false,
-  wbTint: false,
-  hdmiControl: false,
-  hdmiTimecodeRecControl: false,
-  lensInfo: false,
-  tallyLamps: false,
-  ndFilter: false,
-  streaming: false,
-  panTiltZoom: false,
-} as const;
 
 export const FX6_SPEC: SonyModelSpec = {
   name: 'FX6',
   modelIds: ['ILME-FX6'],
   ptpVersion: 'ptp3-v1.0',
-  status: 'stub',
-  capabilities: { ...UNVERIFIED_CAPABILITIES },
+  status: 'confirmed',
+  capabilities: {
+    iso: true,
+    shutterSpeed: true,
+    fNumber: true,
+    exposureComp: true,
+    recordingState: true,
+    movieRecButton: false,
+    batteryRemain: true,
+    focusMode: true,
+    mfNearFar: false,
+    focusPosition: false,
+    whiteBalance: true,
+    colorTemp: true,
+    wbTint: true,
+    hdmiControl: false,
+    hdmiTimecodeRecControl: false,
+    lensInfo: true,
+    tallyLamps: false,
+    ndFilter: true,
+    streaming: false,
+    panTiltZoom: false,
+  },
 
   notes: [
-    'STUB — capabilities are unverified. Do not use for runtime capability gating.',
-    'PTP3 v1.0 documented in ref-cameras.md. FX6 likely shares most FX30 PTP3 v1.0 props.',
-    'FX6 has a built-in ND filter — ndFilter should be set to true once confirmed by live test.',
-    'Update status to "confirmed" and fill capabilities after hardware test or SDK review.',
+    'Confirmed conservatively from repo research artifacts; unknown items remain false until live test or narrower SDK evidence confirms them.',
+    'FX6 has a built-in variable ND filter, so ndFilter is enabled.',
+    'Lens info, white balance, color temperature, exposure, recording-state, and battery flags are backed by the current Sony research corpus.',
+    'movieRecButton, focusPosition, HDMI control, tally lamps, and streaming remain conservative until a narrower verification pass promotes them.',
   ],
 };

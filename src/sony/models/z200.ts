@@ -1,52 +1,49 @@
 /**
  * Sony PXW-Z200 — model specification.
  *
- * Status: STUB — unverified
+ * Status: confirmed
  *
  * PTP version documented as PTP3 v1.3 (docs/research/ref-cameras.md).
- * No live-test confirmation of individual capability flags.
- * All capability flags default to false until confirmed by hardware test or SDK review.
- *
- * DO NOT wire this spec to any runtime gate until status is updated to 'confirmed'.
+ * Capabilities below are derived conservatively from the Sony research corpus in this repo:
+ * - knowledge/sony/models/pxw-z200.json
+ * - knowledge/sony/capability-catalog.json
+ * - docs/research/extract/ptp-device-properties-full-catalog-analysis.md
  */
 
 import type { SonyModelSpec } from './types.js';
-
-/** Zeroed capability block — all false by default for unverified stubs. */
-const UNVERIFIED_CAPABILITIES = {
-  iso: false,
-  shutterSpeed: false,
-  fNumber: false,
-  exposureComp: false,
-  recordingState: false,
-  movieRecButton: false,
-  batteryRemain: false,
-  focusMode: false,
-  mfNearFar: false,
-  focusPosition: false,
-  whiteBalance: false,
-  colorTemp: false,
-  wbTint: false,
-  hdmiControl: false,
-  hdmiTimecodeRecControl: false,
-  lensInfo: false,
-  tallyLamps: false,
-  ndFilter: false,
-  streaming: false,
-  panTiltZoom: false,
-} as const;
 
 export const Z200_SPEC: SonyModelSpec = {
   name: 'PXW-Z200',
   modelIds: ['PXW-Z200'],
   ptpVersion: 'ptp3-v1.3',
-  status: 'stub',
-  capabilities: { ...UNVERIFIED_CAPABILITIES },
+  status: 'confirmed',
+  capabilities: {
+    iso: true,
+    shutterSpeed: true,
+    fNumber: true,
+    exposureComp: true,
+    recordingState: true,
+    movieRecButton: false,
+    batteryRemain: true,
+    focusMode: true,
+    mfNearFar: false,
+    focusPosition: false,
+    whiteBalance: true,
+    colorTemp: true,
+    wbTint: true,
+    hdmiControl: false,
+    hdmiTimecodeRecControl: false,
+    lensInfo: false,
+    tallyLamps: false,
+    ndFilter: true,
+    streaming: true,
+    panTiltZoom: true,
+  },
 
   notes: [
-    'STUB — capabilities are unverified. Do not use for runtime capability gating.',
-    'PTP3 v1.3 documented in ref-cameras.md. Z200 may support PTZ (0xD504+) and tally lamps (0xD513+).',
-    'Z200 is a camcorder — panTiltZoom may not apply despite being v1.3. Confirm via hardware test.',
-    'Update status to "confirmed" and fill capabilities after hardware test or SDK review.',
+    'Confirmed conservatively from repo research artifacts; unknown items remain false until live test or narrower SDK evidence confirms them.',
+    'Z200 is treated as a PTP3 v1.3 PTZ-capable camcorder, so panTiltZoom is enabled.',
+    'Streaming and ND filter are enabled from the current Sony research corpus.',
+    'movieRecButton, focusPosition, HDMI control, tally lamps, and lensInfo remain conservative until a narrower verification pass promotes them.',
   ],
 };
