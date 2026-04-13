@@ -566,6 +566,23 @@ export class SonyPTPClient extends EventEmitter {
     } else if (this.runtimeModel && liveProps.length > 0) {
       updateRuntimeModel(this.runtimeModel, liveProps);
     }
+
+    // ── Charging / AC power sync ───────────────────────────────────────────────
+    // The hunter parser can produce false positives for battery props (e.g. 0xD218).
+    // 0xD150 (USB Power Supply) is a more reliable AC indicator: value=1 when the
+    // camera is powered from USB/AC, value=0 when on battery only.
+    // We read it from the runtime model (uses sequential scanner — no false positives).
+    if (this.runtimeModel) {
+      const usbProp = this.runtimeModel.knownProps.get(0xD150);
+      if (usbProp !== undefined) {
+        const usbPowerOn = usbProp.currentValue === 1;
+        if (usbPowerOn !== this.state.charging) {
+          this.state.charging = usbPowerOn;
+          this.state.lastUpdate = Date.now();
+          this.emit('stateUpdate', this.state);
+        }
+      }
+    }
   }
 
   // ─── Device control ────────────────────────────────────────────────────────

@@ -1356,9 +1356,10 @@ const RAW_ENTRIES: PropKnowledgeEntry[] = [
   {
     propCode: 0xD150, semanticId: 'usb_power_supply', name: 'USB Power Supply',
     category: 'system', dataType: 'UINT8', writable: true, safeToWrite: true,
-    pollPriority: 'on-demand', safety: 'advanced', confidence: 'high', uiWidget: 'toggle',
-    enumDecoding: { 1: 'Off', 2: 'On' },
+    pollPriority: 'high', safety: 'advanced', confidence: 'high', uiWidget: 'toggle',
+    enumDecoding: { 0: 'Off', 1: 'On' },
     alertRelevant: false,
+    notes: 'value=1 when camera is powered from USB/AC; used for charging indicator',
   },
 
   // --- Touch functionality ---
