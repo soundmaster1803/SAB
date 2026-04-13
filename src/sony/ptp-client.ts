@@ -9,6 +9,12 @@ import {
   DATA_PHASE_READ,
 } from './packet-builder';
 import { SDI_CONTROL_TYPE, KELVIN_SCALE, OPCODES } from './constants';
+import { isVendorMarker } from './protocol/prop-knowledge.js';
+import {
+  buildRuntimeCameraModel,
+  updateRuntimeModel,
+} from './runtime/builder.js';
+import type { RuntimeCameraModel } from './runtime/types.js';
 
 export interface CameraState {
   id: string;
@@ -39,6 +45,16 @@ const TYPE_SIZE: Record<number, number> = {
 
 const PACKET_TIMEOUT_MS = 5000;
 
+export interface SonyLivePropEntry {
+  propCode: number;
+  dataType: number;
+  currentValue: number;
+  defaultValue: number;
+  formFlag: number;
+  enumValues: number[];
+  range?: { min: number; max: number; step: number };
+}
+
 function ts(): string {
   return new Date().toISOString().slice(11, 23); // HH:MM:SS.mmm
 }
@@ -61,6 +77,16 @@ export class SonyPTPClient extends EventEmitter {
   public deviceManufacturer = '';
   public deviceFirmware = '';
   public deviceSerial = '';
+
+  /**
+   * Runtime-discovered camera model.
+   * Built after the first successful poll cycle using live device data.
+   * Null until the first complete poll succeeds.
+   * Use this as the primary source of truth for what the camera supports.
+   */
+  public runtimeModel: RuntimeCameraModel | null = null;
+
+  private runtimeModelBuilt = false;
 
   // Serial command queue — guarantees strict transactionId sequencing.
   // Each enqueued fn is chained onto the tail; a failed task doesn't poison the chain.
@@ -137,6 +163,8 @@ export class SonyPTPClient extends EventEmitter {
         this.warn('Connection lost — disconnected');
         this.state.connected = false;
         this.stopPolling();
+        this.runtimeModelBuilt = false;
+        this.runtimeModel = null;
         // Close evtSocket too — camera must see both sockets gone to free the session
         if (this.evtSocket) {
           this.evtSocket.removeAllListeners();
@@ -329,6 +357,126 @@ export class SonyPTPClient extends EventEmitter {
     return this.hunterExtractWithList(this.lastPollBlob, propCode);
   }
 
+  /**
+   * Parse all property records currently present in the last Sony poll blob.
+   * This is used for diagnostics/debug UI only and must not affect the control path.
+   */
+  public scanAllProps(): SonyLivePropEntry[] {
+    const blob = this.lastPollBlob;
+    if (!blob || blob.length < 8) return [];
+    const anchorCodes = [0x5005, 0x5007, 0x500A, 0x500E, 0xD20D, 0xD21D, 0xD21E, 0xD218];
+
+    const readValue = (dtype: number, off: number): number => {
+      switch (dtype) {
+        case 0x0001: return blob.readInt8(off);
+        case 0x0002: return blob.readUInt8(off);
+        case 0x0003: return blob.readInt16LE(off);
+        case 0x0004: return blob.readUInt16LE(off);
+        case 0x0005: return blob.readUInt32LE(off);
+        case 0x0006: return blob.readInt32LE(off);
+        default: return blob.readUInt8(off);
+      }
+    };
+
+    const results = new Map<number, SonyLivePropEntry>();
+    const isPlausibleAt = (offset: number): boolean => {
+      if (offset < 0 || offset + 8 >= blob.length) return false;
+      const dataType = blob.readUInt16LE(offset + 2);
+      const size = TYPE_SIZE[dataType];
+      if (!size) return false;
+      const formFlagOff = offset + 4 + size + size;
+      if (formFlagOff >= blob.length) return false;
+      const formFlag = blob.readUInt8(formFlagOff);
+      if (formFlag !== 0x00 && formFlag !== 0x01 && formFlag !== 0x02) return false;
+      if (formFlag === 0x02) {
+        if (formFlagOff + 3 > blob.length) return false;
+        const count = blob.readUInt16LE(formFlagOff + 1);
+        if (count > 128) return false;
+      }
+      return true;
+    };
+
+    let startOffset = 0;
+    const candidateStarts: number[] = [];
+    for (const code of anchorCodes) {
+      const needle = Buffer.alloc(2);
+      needle.writeUInt16LE(code, 0);
+      const idx = blob.indexOf(needle);
+      if (idx !== -1 && isPlausibleAt(idx)) candidateStarts.push(idx);
+    }
+    if (candidateStarts.length) startOffset = Math.min(...candidateStarts);
+
+    for (let offset = startOffset; offset < blob.length - 8; offset++) {
+      const propCode = blob.readUInt16LE(offset);
+      const dataType = blob.readUInt16LE(offset + 2);
+      const size = TYPE_SIZE[dataType];
+      if (!size) continue;
+      if (propCode < 0x5000 || propCode > 0xEFFF) continue;
+
+      const defaultOff = offset + 4;
+      const currentOff = defaultOff + size;
+      const formFlagOff = currentOff + size;
+      if (formFlagOff >= blob.length) continue;
+
+      const formFlag = blob.readUInt8(formFlagOff);
+      if (formFlag !== 0x00 && formFlag !== 0x01 && formFlag !== 0x02) continue;
+
+      // Exclude vendor extension base markers — they are not camera properties
+      if (isVendorMarker(propCode)) continue;
+
+      if (currentOff + size > blob.length) continue;
+      const defaultValue = readValue(dataType, defaultOff);
+      const currentValue = readValue(dataType, currentOff);
+
+      let nextOffset = formFlagOff + 1;
+      const enumValues: number[] = [];
+      let range: SonyLivePropEntry['range'];
+
+      if (formFlag === 0x02) {
+        if (nextOffset + 2 > blob.length) continue;
+        const count = blob.readUInt16LE(nextOffset);
+        if (count > 128) continue;
+        nextOffset += 2;
+        if (nextOffset + count * size > blob.length) continue;
+        for (let i = 0; i < count; i++) {
+          enumValues.push(readValue(dataType, nextOffset + i * size));
+        }
+        const deduped = [...new Set(enumValues)];
+        enumValues.length = 0;
+        enumValues.push(...deduped.slice(0, 64));
+        nextOffset += count * size;
+      } else if (formFlag === 0x01) {
+        if (nextOffset + size * 3 > blob.length) continue;
+        range = {
+          min: readValue(dataType, nextOffset),
+          max: readValue(dataType, nextOffset + size),
+          step: readValue(dataType, nextOffset + size * 2),
+        };
+        nextOffset += size * 3;
+      }
+
+      const existing = results.get(propCode);
+      const candidate: SonyLivePropEntry = {
+        propCode,
+        dataType,
+        currentValue,
+        defaultValue,
+        formFlag,
+        enumValues,
+        ...(range ? { range } : {}),
+      };
+
+      // Prefer richer records when the blob contains duplicates.
+      if (!existing || candidate.enumValues.length > existing.enumValues.length || (!!candidate.range && !existing.range)) {
+        results.set(propCode, candidate);
+      }
+
+      offset = nextOffset - 1;
+    }
+
+    return [...results.values()].sort((a, b) => a.propCode - b.propCode);
+  }
+
   private parsedOnce = false;
 
   private parseSonyProps(blob: Buffer): void {
@@ -339,6 +487,8 @@ export class SonyPTPClient extends EventEmitter {
     const [expComp,   expList]     = this.hunterExtractWithList(blob, 0x5010);
     const [colorT,    colorList]   = this.hunterExtractWithList(blob, 0xD20F);
     const [battery]                = this.hunterExtractWithList(blob, 0xD218);
+    const [batteryIcon]            = this.hunterExtractWithList(blob, 0xD205);
+    const [batteryStep]            = this.hunterExtractWithList(blob, 0xD20E);
     const [recState]               = this.hunterExtractWithList(blob, 0xD21D);
     // Remaining recordable time in seconds — PTP3 cameras (ZV-E10 II, FX30, etc.)
     // 0xD3C4 = Slot3RemainingTime, 0xD3C2 = Slot1RemainingTime (inferred from SDK pattern)
@@ -365,10 +515,17 @@ export class SonyPTPClient extends EventEmitter {
     if (expList.length)   this.supportedLists.set(0x5010, expList);
     if (colorList.length) this.supportedLists.set(0xD20F, colorList);
 
-    // Battery > 100 → some Sony models report AC power / charging this way
+    // Sony power-source detection is model-dependent:
+    // - some models report Battery Remain > 100 (or 255) while on AC / charging
+    // - some PTP3 models expose battery icon buckets where 0x05 = AC
+    // Keep the old heuristic for compatibility and add direct icon-based AC detection.
     const batRaw     = battery;
     const batPct     = battery !== null ? Math.min(100, battery > 100 ? 100 : battery) : null;
-    const isCharging = battery !== null && battery > 100;
+    const isCharging = !(
+  (battery !== null && (battery > 100 || battery === 255)) ||
+  batteryIcon === 0x05 ||
+  batteryStep === 0x05
+);
 
     let changed = false;
     if (iso      !== null && iso      !== this.state.iso)       { this.state.iso       = iso;      changed = true; }
@@ -384,6 +541,31 @@ export class SonyPTPClient extends EventEmitter {
     if (changed) {
       this.state.lastUpdate = Date.now();
       this.emit('stateUpdate', this.state);
+    }
+
+    // ── Runtime camera model ───────────────────────────────────────────────
+    // Build once on first poll, update on every subsequent poll.
+    // scanAllProps() provides the full prop list including vendor-marker filtering.
+    const liveProps = this.scanAllProps();
+    if (!this.runtimeModelBuilt && liveProps.length > 0) {
+      this.runtimeModel = buildRuntimeCameraModel(
+        {
+          cameraId: this.state.id,
+          model: this.state.model ?? 'Unknown',
+          firmware: this.deviceFirmware,
+          manufacturer: this.deviceManufacturer,
+          serial: this.deviceSerial,
+        },
+        liveProps,
+      );
+      this.runtimeModelBuilt = true;
+      this.log(
+        `Runtime model built: ${this.runtimeModel.knownProps.size} known props, ` +
+        `${this.runtimeModel.unknownProps.size} unknown props, ` +
+        `mode=${this.runtimeModel.sessionMode}`,
+      );
+    } else if (this.runtimeModel && liveProps.length > 0) {
+      updateRuntimeModel(this.runtimeModel, liveProps);
     }
   }
 
@@ -708,6 +890,8 @@ export class SonyPTPClient extends EventEmitter {
     this.log('Disconnecting...');
     this.state.connected = false;
     this.stopPolling();
+    this.runtimeModelBuilt = false;
+    this.runtimeModel = null;
     this._flushWaiters(new Error('disconnected'));
     if (this.cmdSocket) { this.cmdSocket.destroy(); this.cmdSocket = null; }
     if (this.evtSocket) { this.evtSocket.destroy(); this.evtSocket = null; }
