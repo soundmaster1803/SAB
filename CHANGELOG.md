@@ -2,6 +2,27 @@
 
 ---
 
+## v0.11.0 — 2026-04-13 (Runtime camera model — live integration)
+
+### Added
+- `src/sony/protocol/prop-knowledge.ts` — Central protocol knowledge table: 150+ PTP3 props with semantic ID, category, enum decoding, safety level, poll priority, UI widget, confidence level, alert relevance
+- `src/sony/runtime/types.ts` — `RuntimePropDescriptor`, `UnknownPropDescriptor`, `RuntimeCapabilities` (34 flags), `RuntimeCameraModel` types
+- `src/sony/runtime/builder.ts` — `buildRuntimeCameraModel()`, `updateRuntimeModel()`, `serializeRuntimeModel()` — builds and updates live runtime model from PTP poll data
+- `src/sony/polling/strategy.ts` — `getPollPriority()`, `getPollSummary()`, `filterSafeToRead()`, `getRecommendedPollIntervals()` — capability-aware poll tier logic
+- `GET /api/cameras/:id/runtime-model` — endpoint exposing the full live runtime model with knownProps, unknownProps, capabilities, and pollSummary
+
+### Changed
+- `src/sony/ptp-client.ts` — Builds `RuntimeCameraModel` on first poll; updates it on every subsequent cycle; resets on disconnect; filters vendor markers (0x8000, 0x9000) from `scanAllProps()`
+- `src/sony/constants.ts` — Added `PROP_CODES_EXT` with 100+ extended PTP3 property codes
+- `src/api/ws/broadcaster.ts` — WS state now includes `runtimeInfo` (ptpVersion, sessionMode, knownPropCount, unknownPropCount) and `capabilities` (34 boolean flags) per camera
+- `public/index.html` — Camera cards now show PTP version badge and per-capability badges (Silent, ND, IS, AF-S, Stream, Tally, unknown count); badges update live via WS
+
+### Migration notes
+- No breaking API shape changes — `runtimeInfo` and `capabilities` are additive optional fields
+- Runtime model is null until first poll completes; UI badges appear after first successful camera poll
+
+---
+
 ## v0.10.0 — 2026-04-11 (Phase 6 Step 4 — Bridge registry skeletons)
 
 ### Added

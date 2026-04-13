@@ -98,7 +98,22 @@ export function createBroadcaster({
       version: appVersion,
       cameras: manager.getAllStates().map(state => {
         const cfg = cfgMap.get(state.id);
-        return { ...uiState(state), atemInput: cfg?.atemInput ?? 0, atemControlEnabled: cfg?.atemControlEnabled ?? false };
+        const client = manager.getClient(state.id);
+        const rm = client?.runtimeModel ?? null;
+        return {
+          ...uiState(state),
+          atemInput: cfg?.atemInput ?? 0,
+          atemControlEnabled: cfg?.atemControlEnabled ?? false,
+          ...(rm ? {
+            runtimeInfo: {
+              ptpVersion: rm.ptpVersion,
+              sessionMode: rm.sessionMode,
+              knownPropCount: rm.knownProps.size,
+              unknownPropCount: rm.unknownProps.size,
+            },
+            capabilities: rm.capabilities,
+          } : {}),
+        };
       }),
       atemIp: appConfig.atemIp,
       atemConnected: atem.connected,

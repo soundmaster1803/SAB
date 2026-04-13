@@ -19,6 +19,8 @@
       --t2: rgba(255,255,255,0.5);
       --t3: rgba(255,255,255,0.25);
       --tally-h: 56px;
+      --log-toolbar-h: 38px;
+      --log-body-h: 210px;
     }
 
     html { -webkit-tap-highlight-color: transparent; }
@@ -28,7 +30,11 @@
       color: var(--t1);
       font-family: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
       min-height: 100dvh;
-      padding-bottom: calc(var(--tally-h) + 8px);
+      padding-bottom: calc(var(--tally-h) + var(--log-toolbar-h) + 12px);
+      transition: padding-bottom 0.22s ease;
+    }
+    body.log-expanded {
+      padding-bottom: calc(var(--tally-h) + var(--log-toolbar-h) + var(--log-body-h) + 12px);
     }
 
     /* ── Header ───────────────────────────────────────────────────────── */
@@ -305,16 +311,28 @@
     }
     .cam-meta { flex: 1; min-width: 0; }
     .cam-name {
-      font-size: 14px;
+      font-size: 15px;
+      font-weight: 700;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      letter-spacing: -0.2px;
+    }
+    .cam-model {
+      font-size: 10px;
+      color: var(--accent);
+      margin-top: 1px;
       font-weight: 600;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      opacity: 0.8;
     }
+    .cam-model:empty { display: none; }
     .cam-ip {
-      font-size: 11px;
+      font-size: 10px;
       color: var(--t3);
-      margin-top: 2px;
+      margin-top: 1px;
       font-variant-numeric: tabular-nums;
     }
     .card-head-actions {
@@ -382,17 +400,39 @@
       color: var(--t2);
       font-variant-numeric: tabular-nums;
     }
+    .bat-power {
+      display: none;
+      font-size: 12px;
+      color: var(--orange);
+      line-height: 1;
+    }
+    .bat-power.active { display: inline-block; }
 
     /* Rec timer */
     .rec-timer {
-      font-size: 11px;
-      font-variant-numeric: tabular-nums;
-      font-weight: 600;
-      color: var(--red);
-      margin-left: auto;
       display: none;
+      flex-direction: column;
+      align-items: flex-end;
+      margin-left: auto;
+      gap: 1px;
     }
-    .recording .rec-timer { display: block; }
+    .recording .rec-timer { display: flex; }
+    .rec-elapsed {
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      color: var(--red);
+      animation: blink-dot 1s step-start infinite;
+    }
+    @keyframes blink-dot {
+      0%, 100% { opacity: 1; } 50% { opacity: 0.5; }
+    }
+    .rec-remain {
+      font-size: 9px;
+      font-variant-numeric: tabular-nums;
+      color: rgba(255,59,48,0.55);
+      font-weight: 600;
+    }
 
     /* Params */
     .params {
@@ -700,27 +740,29 @@
 
     /* ── Log Terminal ─────────────────────────────────────────────────── */
     .log-panel {
-      margin: 0 16px 12px;
-      border-radius: 14px;
-      border: 1px solid var(--border);
-      background: rgba(0,0,0,0.5);
-      overflow: hidden;
+      position: fixed;
+      bottom: var(--tally-h);
+      left: 0; right: 0;
+      z-index: 85;
+      background: rgba(10,10,10,0.97);
+      border-top: 1px solid var(--border);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
     }
     .log-toolbar {
       display: flex;
       align-items: center;
       gap: 5px;
-      padding: 6px 10px;
-      background: rgba(255,255,255,0.03);
+      padding: 0 12px;
+      height: var(--log-toolbar-h);
       user-select: none;
-      flex-wrap: wrap;
     }
     .log-toggle {
-      width: 20px; height: 20px;
+      width: 22px; height: 22px;
       background: transparent;
       border: none;
       color: var(--t3);
-      font-size: 10px;
+      font-size: 12px;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -730,7 +772,7 @@
       padding: 0;
     }
     .log-toggle:hover { color: var(--t1); }
-    .log-panel.collapsed .log-toggle { transform: rotate(-90deg); }
+    .log-panel.collapsed .log-toggle { transform: rotate(180deg); }
     .log-title {
       font-size: 10px;
       font-weight: 700;
@@ -738,6 +780,17 @@
       text-transform: uppercase;
       color: var(--t3);
       flex: 1;
+    }
+    .log-count {
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--t3);
+      background: rgba(255,255,255,0.07);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1px 6px;
+      min-width: 22px;
+      text-align: center;
     }
     .log-filter-btn {
       padding: 2px 7px;
@@ -765,14 +818,14 @@
     }
     .log-clear-btn:hover { color: var(--red); background: rgba(255,59,48,0.08); border-color: rgba(255,59,48,0.3); }
     .log-body-wrap {
-      height: 150px;
+      height: var(--log-body-h);
       overflow: hidden;
       transition: height 0.22s ease;
       border-top: 1px solid var(--border);
     }
     .log-panel.collapsed .log-body-wrap { height: 0; border-top-color: transparent; }
     .log-scroll {
-      height: 150px;
+      height: var(--log-body-h);
       overflow-y: auto;
       padding: 7px 12px;
       font-family: 'SF Mono', ui-monospace, monospace;
@@ -784,7 +837,7 @@
     .log-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
     .log-entry { display: flex; gap: 7px; }
     .log-ts  { color: rgba(255,255,255,0.2); flex-shrink: 0; }
-    .log-cat { min-width: 46px; font-weight: 700; flex-shrink: 0; }
+    .log-cat { min-width: 50px; font-weight: 700; flex-shrink: 0; }
     .log-cat.cat-ATEM   { color: #5AC8FA; }
     .log-cat.cat-SONY   { color: #FF9F0A; }
     .log-cat.cat-BRIDGE { color: #32D74B; }
@@ -867,6 +920,323 @@
     .modal-input::placeholder { color: var(--t3); }
     .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
+    /* ── Debug panel ─────────────────────────────────────────────────── */
+    .debug-panel {
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+    }
+    .debug-panel.hidden { display: none; }
+    .dbg-section { display: flex; flex-direction: column; gap: 6px; }
+    .dbg-title {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--t3);
+    }
+    .dbg-model-info { font-size: 11px; color: var(--t2); }
+    .dbg-model-info strong { color: var(--t1); }
+    .dbg-no-spec {
+      display: inline-block;
+      font-size: 9px;
+      font-weight: 600;
+      color: var(--orange);
+      background: rgba(255,149,0,0.08);
+      border: 1px solid rgba(255,149,0,0.2);
+      border-radius: 5px;
+      padding: 1px 6px;
+    }
+    .dbg-caps { display: flex; flex-wrap: wrap; gap: 4px; }
+    .dbg-cap {
+      font-size: 9px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 5px;
+    }
+    .dbg-cap.on  { background: rgba(52,199,89,0.1);  color: var(--green);  border: 1px solid rgba(52,199,89,0.25); }
+    .dbg-cap.off { background: rgba(255,255,255,0.04); color: var(--t3);   border: 1px solid var(--border); }
+    .dbg-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10px;
+    }
+    .dbg-table td {
+      padding: 3px 4px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      vertical-align: middle;
+    }
+    .dbg-table td:first-child { color: var(--t3); white-space: nowrap; width: 72px; }
+    .dbg-table td:nth-child(2) { font-family: monospace; font-size: 9px; color: rgba(255,255,255,0.28); }
+    .dbg-table td:last-child { color: var(--accent); font-weight: 700; text-align: right; }
+    .dbg-enum-group { display: flex; flex-direction: column; gap: 4px; }
+    .dbg-enum-label { font-size: 9px; color: var(--t3); }
+    .dbg-enum-list { display: flex; flex-wrap: wrap; gap: 3px; max-height: 64px; overflow-y: auto; }
+    .dbg-chip {
+      font-size: 9px;
+      padding: 1px 5px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--t2);
+      white-space: nowrap;
+    }
+    .dbg-chip.cur {
+      background: rgba(0,122,255,0.14);
+      border-color: rgba(0,122,255,0.4);
+      color: var(--accent);
+      font-weight: 700;
+    }
+    .dbg-loading { font-size: 10px; color: var(--t3); text-align: center; padding: 6px 0; }
+    .dbg-refresh {
+      align-self: flex-end;
+      font-size: 9px;
+      font-weight: 600;
+      color: var(--t3);
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 2px 7px;
+      cursor: pointer;
+      transition: color 0.15s, background 0.15s;
+    }
+    .dbg-refresh:hover { color: var(--t1); background: rgba(255,255,255,0.11); }
+
+    .debug-modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 140;
+      background: rgba(4,6,10,0.74);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      display: none;
+      align-items: stretch;
+      justify-content: center;
+      padding: 18px;
+    }
+    .debug-modal-overlay.open { display: flex; }
+    .debug-modal {
+      width: min(1320px, 100%);
+      height: min(88vh, 920px);
+      background: linear-gradient(180deg, rgba(18,20,26,0.98), rgba(9,11,15,0.98));
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: 0 30px 90px rgba(0,0,0,0.55);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .debug-modal-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.03);
+    }
+    .debug-modal-title-wrap { display: flex; flex-direction: column; min-width: 0; }
+    .debug-modal-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .debug-modal-subtitle {
+      font-size: 10px;
+      color: var(--t3);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .debug-modal-spacer { flex: 1; }
+    .debug-modal-btn {
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.05);
+      color: var(--t2);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .debug-modal-btn:hover { color: var(--t1); background: rgba(255,255,255,0.1); }
+    .debug-modal-body {
+      flex: 1;
+      overflow: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .dbg-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+    }
+    .dbg-stat {
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.04);
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .dbg-stat-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--t3);
+      font-weight: 700;
+    }
+    .dbg-stat-value {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--t1);
+    }
+    .dbg-stat-note {
+      font-size: 10px;
+      color: var(--t3);
+      line-height: 1.3;
+    }
+    .dbg-panels {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 12px;
+    }
+    .dbg-panel-card {
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.035);
+      border-radius: 14px;
+      padding: 12px;
+      overflow: hidden;
+    }
+    .dbg-kv {
+      display: grid;
+      grid-template-columns: minmax(110px, 150px) 1fr;
+      gap: 6px 10px;
+      font-size: 11px;
+      align-items: start;
+    }
+    .dbg-kv div:nth-child(odd) {
+      color: var(--t3);
+      font-weight: 600;
+    }
+    .dbg-kv div:nth-child(even) {
+      color: var(--t1);
+      min-width: 0;
+      word-break: break-word;
+    }
+    .dbg-runtime-block {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 8px;
+    }
+    .dbg-runtime-chip {
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.04);
+      border-radius: 10px;
+      padding: 8px 9px;
+      font-size: 10px;
+      line-height: 1.35;
+    }
+    .dbg-runtime-chip strong {
+      display: block;
+      color: var(--t1);
+      margin-bottom: 2px;
+      font-size: 11px;
+    }
+    .dbg-table-wrap {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.03);
+      overflow: auto;
+    }
+    .dbg-wide-table {
+      width: 100%;
+      min-width: 1080px;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+    .dbg-wide-table th,
+    .dbg-wide-table td {
+      padding: 8px 9px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      vertical-align: top;
+      text-align: left;
+    }
+    .dbg-wide-table th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: rgba(15,18,25,0.98);
+      color: var(--t3);
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+    .dbg-wide-table td {
+      color: var(--t2);
+    }
+    .dbg-wide-table td code {
+      font-family: 'SF Mono', ui-monospace, monospace;
+      font-size: 10px;
+      color: rgba(255,255,255,0.7);
+    }
+    .dbg-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .dbg-badge {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.05);
+      color: var(--t2);
+      white-space: nowrap;
+    }
+    .dbg-badge.live { color: var(--green); border-color: rgba(52,199,89,0.32); background: rgba(52,199,89,0.1); }
+    .dbg-badge.write { color: var(--accent); border-color: rgba(0,122,255,0.35); background: rgba(0,122,255,0.12); }
+    .dbg-badge.warn { color: var(--orange); border-color: rgba(255,149,0,0.35); background: rgba(255,149,0,0.12); }
+    .dbg-badge.muted { color: var(--t3); }
+    .dbg-opts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      max-width: 320px;
+    }
+    .dbg-opt {
+      font-size: 9px;
+      padding: 2px 6px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: rgba(255,255,255,0.04);
+      color: var(--t2);
+      white-space: nowrap;
+    }
+    .dbg-opt.current {
+      color: var(--accent);
+      border-color: rgba(0,122,255,0.35);
+      background: rgba(0,122,255,0.1);
+      font-weight: 700;
+    }
+    .dbg-notes {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-width: 340px;
+      font-size: 10px;
+      line-height: 1.35;
+      color: var(--t3);
+    }
+
     /* ── Responsive ───────────────────────────────────────────────────── */
     @media (max-width: 600px) {
       .header-row { gap: 8px; }
@@ -876,9 +1246,14 @@
       .header-row .header-actions { display: none; }
       .header-row-2 .header-actions { display: flex; flex: 1; }
       .header-row-2 .h-spacer { display: none; }
-      body { padding-bottom: calc(var(--tally-h) + 4px); }
+      body { padding-bottom: calc(var(--tally-h) + var(--log-toolbar-h) + 8px); }
+      body.log-expanded { padding-bottom: calc(var(--tally-h) + var(--log-toolbar-h) + var(--log-body-h) + 8px); }
       #cameras-container { padding: 10px; gap: 10px; grid-template-columns: 1fr; }
-      .log-panel { margin: 0 10px 10px; }
+      .debug-modal-overlay { padding: 8px; }
+      .debug-modal { height: 92vh; border-radius: 14px; }
+      .debug-modal-head { padding: 12px; flex-wrap: wrap; }
+      .dbg-panels { grid-template-columns: 1fr; }
+      /* log-panel is fixed — no margin override needed */
     }
     @media (min-width: 601px) and (max-width: 900px) {
       #cameras-container { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
@@ -886,6 +1261,28 @@
     @media (min-width: 601px) {
       .iface-pill { display: flex; }
     }
+
+    /* ── Runtime capability badges on camera card ──────────────────────── */
+    .cam-runtime-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+      margin-top: 4px;
+      min-height: 0;
+    }
+    .rt-badge {
+      font-size: 9px;
+      font-weight: 600;
+      padding: 1px 5px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.05);
+      color: var(--t3);
+      white-space: nowrap;
+    }
+    .rt-badge.ptp   { color: var(--accent);  border-color: rgba(0,122,255,0.3);    background: rgba(0,122,255,0.1);    }
+    .rt-badge.cap   { color: var(--green);   border-color: rgba(52,199,89,0.25);   background: rgba(52,199,89,0.08);   }
+    .rt-badge.unk   { color: var(--orange);  border-color: rgba(255,149,0,0.3);    background: rgba(255,149,0,0.1);    }
   </style>
 </head>
 <body>
@@ -938,11 +1335,12 @@
     <p class="no-cameras">Connecting…</p>
   </div>
 
-  <!-- Log Terminal -->
-  <div class="log-panel" id="log-panel">
+  <!-- Log Terminal — fixed above tally bar -->
+  <div class="log-panel collapsed" id="log-panel">
     <div class="log-toolbar">
-      <button class="log-toggle" id="log-toggle">▼</button>
-      <span class="log-title">Log</span>
+      <button class="log-toggle" id="log-toggle">▲</button>
+      <span class="log-title">System Log</span>
+      <span class="log-count" id="log-count">0</span>
       <button class="log-filter-btn active" data-cat="ALL">All</button>
       <button class="log-filter-btn" data-cat="ATEM">ATEM</button>
       <button class="log-filter-btn" data-cat="SONY">Sony</button>
@@ -985,6 +1383,23 @@
     </div>
   </div>
 
+  <div class="debug-modal-overlay" id="debug-modal-overlay">
+    <div class="debug-modal">
+      <div class="debug-modal-head">
+        <div class="debug-modal-title-wrap">
+          <div class="debug-modal-title" id="debug-modal-title">Camera Debug</div>
+          <div class="debug-modal-subtitle" id="debug-modal-subtitle">Live Sony poll and knowledge view</div>
+        </div>
+        <div class="debug-modal-spacer"></div>
+        <button class="debug-modal-btn" id="debug-modal-refresh">Refresh</button>
+        <button class="debug-modal-btn" id="debug-modal-close">Close</button>
+      </div>
+      <div class="debug-modal-body" id="debug-modal-body">
+        <div class="dbg-loading">Select a camera debug panel.</div>
+      </div>
+    </div>
+  </div>
+
   <script>
     // ── State ─────────────────────────────────────────────────────────────────
     let cameras   = [];
@@ -994,6 +1409,8 @@
     const MAX_LOG      = 500;
     const recStartTimes = new Map(); // camId → Date.now() when rec started
     let ifaceList      = [];
+    let debugCamId = null;
+    let debugRefreshTimer = 0;
 
     // ── DOM ───────────────────────────────────────────────────────────────────
     const container      = document.getElementById('cameras-container');
@@ -1006,6 +1423,10 @@
     const statusEl       = document.getElementById('m-status');
     const ifacePill      = document.getElementById('iface-pill');
     const ifaceDropdown  = document.getElementById('iface-dropdown');
+    const debugModalEl   = document.getElementById('debug-modal-overlay');
+    const debugModalBody = document.getElementById('debug-modal-body');
+    const debugModalTitle = document.getElementById('debug-modal-title');
+    const debugModalSubtitle = document.getElementById('debug-modal-subtitle');
 
     // ── Utils ─────────────────────────────────────────────────────────────────
     const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -1067,12 +1488,36 @@
       const now = Date.now();
       document.querySelectorAll('.camera-card.recording').forEach(card => {
         const id = card.dataset.cam;
-        const timerEl = card.querySelector('.rec-timer');
-        if (!timerEl) return;
+        const elapsedEl = card.querySelector('.rec-elapsed');
+        const remainEl  = card.querySelector('.rec-remain');
         const start = recStartTimes.get(id);
-        if (start) timerEl.textContent = '⏺ ' + fmtElapsed(now - start);
+        if (elapsedEl) {
+          elapsedEl.textContent = start ? '⏺ ' + fmtElapsed(now - start) : '⏺ REC';
+        }
+        if (remainEl) {
+          const cam = cameras.find(c => c.id === id);
+          const secs = cam?.recRemainSec ?? 0;
+          remainEl.textContent = secs > 0 ? fmtElapsed(secs * 1000) + ' left' : '';
+        }
       });
     }, 1000);
+
+    // ── Runtime capability badges ─────────────────────────────────────────────
+    function runtimeBadgesHTML(cam) {
+      const ri = cam.runtimeInfo;
+      if (!ri) return '';
+      const caps = cam.capabilities || {};
+      const b = [];
+      if (ri.ptpVersion) b.push(`<span class="rt-badge ptp">${esc(ri.ptpVersion)}</span>`);
+      if (caps.hasSilentMode)        b.push('<span class="rt-badge cap">Silent</span>');
+      if (caps.hasNdFilter)          b.push('<span class="rt-badge cap">ND</span>');
+      if (caps.hasStabilization)     b.push('<span class="rt-badge cap">IS</span>');
+      if (caps.hasSubjectRecognition) b.push('<span class="rt-badge cap">AF-S</span>');
+      if (caps.hasStreaming)         b.push('<span class="rt-badge cap">Stream</span>');
+      if (caps.hasTallyLamps)        b.push('<span class="rt-badge cap">Tally</span>');
+      if (ri.unknownPropCount > 0)   b.push(`<span class="rt-badge unk">${ri.unknownPropCount} unk</span>`);
+      return b.join('');
+    }
 
     // ── Card HTML ─────────────────────────────────────────────────────────────
     function makeCard(cam) {
@@ -1096,10 +1541,13 @@
         <div class="card-head">
           <div class="cam-meta">
             <div class="cam-name" data-f="name">${esc(cam.name)}</div>
+            <div class="cam-model" data-f="model">${esc(cam.model ?? '')}</div>
+            <div class="cam-runtime-badges" data-f="runtime-badges">${runtimeBadgesHTML(cam)}</div>
             <div class="cam-ip"   data-f="ip">${esc(cam.ip)}</div>
           </div>
           <div class="card-head-actions">
             <div class="conn-dot${cam.connected ? ' connected' : ''}"></div>
+            <button class="btn-icon js-debug"     data-cam="${id}" title="Debug info">⚙</button>
             <button class="btn-icon js-edit"      data-cam="${id}" title="Edit">✎</button>
             <button class="btn-icon js-reconnect" data-cam="${id}" title="Reconnect">↻</button>
           </div>
@@ -1124,8 +1572,12 @@
           <div class="bat-body" title="Battery ${bat}%">
             <div class="bat-level${bat < 20 ? ' low' : bat < 50 ? ' mid' : ''}" style="width:${Math.min(100,bat)}%"></div>
           </div>
-          <span class="bat-pct" data-f="battery">${bat < 20 ? '🔴 ' : ''}${bat}%</span>
-          <span class="rec-timer"></span>
+          <span class="bat-power${cam.charging ? ' active' : ''}" data-f="charging" title="External power">⚡</span>
+          <span class="bat-pct" data-f="battery">${bat}%</span>
+          <div class="rec-timer">
+            <span class="rec-elapsed">⏺ 0:00</span>
+            <span class="rec-remain" data-f="recRemain"></span>
+          </div>
         </div>
 
         <div class="params">
@@ -1187,6 +1639,163 @@
         </div>`;
     }
 
+    // ── Debug panel ───────────────────────────────────────────────────────────
+    async function loadDebug(camId, silent = false) {
+      if (!silent) debugModalBody.innerHTML = '<div class="dbg-loading">Loading live camera diagnostics…</div>';
+      const data = await api('GET', `/api/cameras/${encodeURIComponent(camId)}/debug`);
+      if (!data) {
+        if (!silent) debugModalBody.innerHTML = '<div class="dbg-loading">Failed to load diagnostics.</div>';
+        return;
+      }
+      renderDebug(camId, data, silent);
+    }
+
+    const CTRL_BADGE = {
+      step: ['STEP', 'rgba(0,122,255,0.15)', 'var(--accent)'],
+      set:  ['SET',  'rgba(52,199,89,0.12)', 'var(--green)'],
+      btn:  ['BTN',  'rgba(255,149,0,0.12)', 'var(--orange)'],
+      read: ['READ', 'rgba(255,255,255,0.05)', 'var(--t3)'],
+    };
+    const CAT_ORDER = ['exposure','focus','color','recording','media','battery','alerts','system','capture','streaming'];
+    const CAP_LABELS = {
+      iso:'ISO', shutterSpeed:'Shutter', fNumber:'f-number', exposureComp:'EV Comp',
+      recordingState:'Recording', movieRecButton:'Rec Btn', batteryRemain:'Battery',
+      focusMode:'Focus Mode', mfNearFar:'MF Near/Far', focusPosition:'Focus Pos',
+      whiteBalance:'White Bal', colorTemp:'Color Temp', wbTint:'WB Tint',
+      ndFilter:'ND Filter', streaming:'Streaming', tallyLamps:'Tally',
+      hdmiControl:'HDMI Ctrl', lensInfo:'Lens Info', panTiltZoom:'PTZ',
+    };
+
+    function renderDebug(camId, data, preserveScroll = false) {
+      debugModalTitle.textContent = `${data.name || 'Camera'} Debug`;
+      debugModalSubtitle.textContent = `${data.model || 'Unknown model'} • ${data.ip || 'no ip'} • ${data.connected ? 'online' : 'offline'}`;
+
+      const prevBodyScrollTop = preserveScroll ? debugModalBody.scrollTop : 0;
+      const prevTableWrap = preserveScroll ? debugModalBody.querySelector('.dbg-table-wrap') : null;
+      const prevTableScrollTop = prevTableWrap ? prevTableWrap.scrollTop : 0;
+      const prevTableScrollLeft = prevTableWrap ? prevTableWrap.scrollLeft : 0;
+
+      const cap = data.spec?.capabilities ?? null;
+      const runtime = data.runtime || {};
+      const raw = runtime.raw || {};
+      const derived = runtime.derived || {};
+      const alerts = runtime.alerts || {};
+
+      let html = `
+        <div class="dbg-grid">
+          <div class="dbg-stat"><div class="dbg-stat-label">Live Props</div><div class="dbg-stat-value">${esc(data.coverage?.livePropCount ?? 0)}</div><div class="dbg-stat-note">properties parsed from current Sony poll blob</div></div>
+          <div class="dbg-stat"><div class="dbg-stat-label">Knowledge Match</div><div class="dbg-stat-value">${esc(data.coverage?.matchedKnowledgeProps ?? 0)}</div><div class="dbg-stat-note">live properties mapped to our knowledge catalogs</div></div>
+          <div class="dbg-stat"><div class="dbg-stat-label">SAB Actions</div><div class="dbg-stat-value">${esc(data.coverage?.actionableProps ?? 0)}</div><div class="dbg-stat-note">live properties already actionable in SAB runtime</div></div>
+          <div class="dbg-stat"><div class="dbg-stat-label">Poll Blob</div><div class="dbg-stat-value">${esc(data.pollBlobBytes ?? 0)} B</div><div class="dbg-stat-note">${data.hasPollBlob ? 'camera is returning live property blobs' : 'no poll blob received yet'}</div></div>
+        </div>
+      `;
+
+      html += `
+        <div class="dbg-panels">
+          <div class="dbg-panel-card">
+            <div class="dbg-title">Device / Knowledge</div>
+            <div class="dbg-kv">
+              <div>Model</div><div>${esc(data.model || '—')}</div>
+              <div>Manufacturer</div><div>${esc(data.manufacturer || '—')}</div>
+              <div>Firmware</div><div>${esc(data.firmware || '—')}</div>
+              <div>Serial</div><div>${esc(data.serial || '—')}</div>
+              <div>Spec</div><div>${data.spec ? `${esc(data.spec.name)} (${esc(data.spec.status)})` : '<span class="dbg-no-spec">not matched</span>'}</div>
+              <div>PTP</div><div>${esc(data.spec?.ptpVersion || '—')}</div>
+              <div>Knowledge model</div><div>${esc(data.modelKnowledge?.file || 'not matched')}</div>
+              <div>Coverage</div><div>${data.coverage?.specMatched ? 'spec matched' : 'spec missing'} / ${data.coverage?.knowledgeModelMatched ? 'model db matched' : 'model db missing'}</div>
+            </div>
+            ${cap ? `<div class="dbg-section"><div class="dbg-title" style="margin-top:10px">Model Capabilities</div><div class="dbg-caps">${Object.entries(CAP_LABELS).filter(([key]) => cap[key] !== undefined).map(([key, label]) => `<span class="dbg-cap ${cap[key] ? 'on' : 'off'}">${esc(label)}</span>`).join('')}</div></div>` : ''}
+          </div>
+          <div class="dbg-panel-card">
+            <div class="dbg-title">Runtime State Layers</div>
+            <div class="dbg-runtime-block">
+              <div class="dbg-runtime-chip"><strong>Raw</strong>connected=${esc(raw.connected)}<br>iso=${esc(raw.iso)}<br>shutter=${esc(raw.shutter)}<br>colorTemp=${esc(raw.colorTemp)}<br>recState=${esc(raw.recState)}</div>
+              <div class="dbg-runtime-chip"><strong>Derived</strong>iso=${esc(derived.isoDisplay || '—')}<br>shutter=${esc(derived.shutterDisplay || '—')}<br>fnumber=${esc(derived.fnumberDisplay || '—')}<br>ev=${esc(derived.expCompDisplay || '—')}</div>
+              <div class="dbg-runtime-chip"><strong>Alerts</strong>battery=${esc(alerts.batterySeverity || 'none')}<br>record=${esc(alerts.recRemaining || 'none')}<br>connectionLost=${esc(alerts.connectionLost ? 'yes' : 'no')}<br>criticalBattery=${esc(alerts.criticalBattery ? 'yes' : 'no')}</div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      if (!data.props || data.props.length === 0) {
+        html += '<div class="dbg-loading">No live properties parsed yet. Wait for the first Sony poll cycle.</div>';
+      } else {
+        html += '<div class="dbg-title">Live Camera Properties</div><div class="dbg-table-wrap"><table class="dbg-wide-table"><thead><tr><th>Property</th><th>Current</th><th>Raw</th><th>Control</th><th>SAB</th><th>Knowledge</th><th>Options / Range</th><th>Notes</th></tr></thead><tbody>';
+        for (const p of data.props) {
+          const [badge, bg, color] = CTRL_BADGE[p.control] ?? CTRL_BADGE.read;
+          const knowledgeBadges = [
+            p.sourceFlags?.capabilityCatalog ? '<span class="dbg-badge live">capability</span>' : '',
+            p.sourceFlags?.controlSemantics ? '<span class="dbg-badge live">semantics</span>' : '',
+            p.sourceFlags?.controlCatalog ? '<span class="dbg-badge live">control</span>' : '',
+            p.pollGroup ? `<span class="dbg-badge ${p.pollGroup === 'ON_DEMAND' ? 'warn' : 'muted'}">${esc(p.pollGroup)}</span>` : '',
+            p.uiRelevant ? '<span class="dbg-badge write">ui</span>' : '',
+            p.alertRelevant ? '<span class="dbg-badge warn">alert</span>' : '',
+          ].filter(Boolean).join('');
+          const sabBadge = p.runtimeControl && p.runtimeControl !== 'none'
+            ? `<span class="dbg-badge write">${esc(p.runtimeControl)}</span>`
+            : '<span class="dbg-badge muted">none</span>';
+          const opts = p.enumValues?.length
+            ? `<div class="dbg-opts">${p.enumValues.slice(0, 24).map(opt => `<span class="dbg-opt ${opt.current ? 'current' : ''}">${esc(opt.label)} <code>${esc(opt.hex)}</code></span>`).join('')}${p.enumValues.length > 24 ? `<span class="dbg-opt">+${p.enumValues.length - 24} more</span>` : ''}</div>`
+            : p.range
+              ? `<div class="dbg-notes"><div>min ${esc(p.range.min)} / max ${esc(p.range.max)} / step ${esc(p.range.step)}</div></div>`
+              : '<span class="dbg-badge muted">—</span>';
+          const notes = [
+            p.pollReason || '',
+            ...(p.notes || []),
+          ].filter(Boolean).slice(0, 4);
+          html += `<tr>
+            <td><strong style="color:var(--t1)">${esc(p.name)}</strong><br><code>${esc(p.code)}</code> <span style="color:var(--t3)">(${esc(p.category)})</span><br><span style="color:rgba(255,255,255,0.28)">dtype ${esc(p.dataType)}</span></td>
+            <td><span style="color:var(--accent);font-weight:700">${esc(p.currentDecoded)}</span><br><span style="color:var(--t3)">default ${esc(p.defaultDecoded)}</span></td>
+            <td><code>${esc(p.currentHex)}</code><br><span style="color:var(--t3)">raw ${esc(p.current)}</span></td>
+            <td><div class="dbg-badges"><span class="dbg-badge" style="background:${bg};color:${color};border-color:transparent">${badge}</span><span class="dbg-badge ${p.writable ? 'write' : 'muted'}">${p.writable ? 'writable' : 'read-only'}</span></div></td>
+            <td>${sabBadge}</td>
+            <td><div class="dbg-badges">${knowledgeBadges || '<span class="dbg-badge muted">unmapped</span>'}</div>${p.capabilityId ? `<div style="margin-top:6px;color:var(--t3);font-size:10px">${esc(p.capabilityId)}</div>` : ''}</td>
+            <td>${opts}</td>
+            <td><div class="dbg-notes">${notes.length ? notes.map(note => `<div>${esc(note)}</div>`).join('') : '<div>—</div>'}</div></td>
+          </tr>`;
+        }
+        html += '</tbody></table></div>';
+      }
+
+      debugModalBody.innerHTML = html;
+
+      if (preserveScroll) {
+        const nextTableWrap = debugModalBody.querySelector('.dbg-table-wrap');
+        requestAnimationFrame(() => {
+          debugModalBody.scrollTop = prevBodyScrollTop;
+          if (nextTableWrap) {
+            nextTableWrap.scrollTop = prevTableScrollTop;
+            nextTableWrap.scrollLeft = prevTableScrollLeft;
+          }
+        });
+      }
+    }
+
+    function clearDebugRefresh() {
+      if (debugRefreshTimer) clearInterval(debugRefreshTimer);
+      debugRefreshTimer = 0;
+    }
+
+    function closeDebugModal() {
+      clearDebugRefresh();
+      debugCamId = null;
+      debugModalEl.classList.remove('open');
+    }
+
+    function openDebugModal(camId) {
+      debugCamId = camId;
+      debugModalEl.classList.add('open');
+      clearDebugRefresh();
+      loadDebug(camId);
+      debugRefreshTimer = setInterval(() => {
+        if (!debugCamId || !debugModalEl.classList.contains('open')) {
+          clearDebugRefresh();
+          return;
+        }
+        loadDebug(debugCamId, true);
+      }, 1500);
+    }
+
     // ── Smart sync ────────────────────────────────────────────────────────────
     function syncCameras(incoming) {
       cameras = incoming;
@@ -1199,7 +1808,10 @@
 
       // Remove stale cards
       container.querySelectorAll('.camera-card').forEach(el => {
-        if (!ids.has(el.dataset.cam)) el.remove();
+        if (!ids.has(el.dataset.cam)) {
+          if (debugCamId === el.dataset.cam) closeDebugModal();
+          el.remove();
+        }
       });
 
       const noEl = container.querySelector('.no-cameras');
@@ -1212,11 +1824,13 @@
       incoming.forEach((cam, idx) => {
         const existing = container.querySelector(`.camera-card[data-cam="${CSS.escape(cam.id)}"]`);
 
-        // Track recording start time
+        // Track recording start time.
+        // Only set start time when we witness the transition idle→recording.
+        // If the card is new AND already recording, we don't know the real start — leave unset.
         const wasRec = existing ? existing.classList.contains('recording') : false;
         const isRec  = cam.recState === 1;
-        if (!wasRec && isRec)  recStartTimes.set(cam.id, Date.now());
-        if (wasRec  && !isRec) recStartTimes.delete(cam.id);
+        if (wasRec && !isRec)   recStartTimes.delete(cam.id);
+        if (!wasRec && isRec && existing) recStartTimes.set(cam.id, Date.now());
 
         if (!existing) {
           const card = makeCard(cam);
@@ -1238,6 +1852,15 @@
           setTxt(existing, '[data-f="name"]', cam.name ?? '—');
           setTxt(existing, '[data-f="ip"]',   cam.ip   ?? '—');
         }
+        setTxt(existing, '[data-f="model"]', cam.model ?? '');
+
+        // Runtime capability badges
+        const rtBadgesEl = existing.querySelector('[data-f="runtime-badges"]');
+        if (rtBadgesEl) {
+          const newBadges = runtimeBadgesHTML(cam);
+          if (rtBadgesEl.innerHTML !== newBadges) rtBadgesEl.innerHTML = newBadges;
+        }
+
         setTxt(existing, '[data-f="iso"]',     cam.iso  && cam.iso !== 0 ? cam.iso : '—');
         setTxt(existing, '[data-f="shutter"]', cam.shutter && cam.shutter !== '0' ? cam.shutter : '—');
         setTxt(existing, '[data-f="fnumber"]',   cam.fnumber   ? fmt(cam.fnumber)             : '—');
@@ -1246,11 +1869,15 @@
         // Battery
         const bat = cam.battery ?? 0;
         const batLevel = existing.querySelector('.bat-level');
+        const batPower = existing.querySelector('[data-f="charging"]');
         const batPct   = existing.querySelector('.bat-pct');
         if (batLevel) {
           batLevel.style.width = Math.min(100, bat) + '%';
           batLevel.classList.toggle('low', bat < 20);
           batLevel.classList.toggle('mid', bat >= 20 && bat < 50);
+        }
+        if (batPower) {
+          batPower.classList.toggle('active', !!cam.charging);
         }
         if (batPct) {
           const txt = (bat < 20 ? '🔴 ' : '') + bat + '%';
@@ -1296,6 +1923,11 @@
 
       if (btn.classList.contains('js-reconnect')) {
         await api('POST', `/api/cameras/${encodeURIComponent(id)}/connect`);
+        return;
+      }
+
+      if (btn.classList.contains('js-debug')) {
+        openDebugModal(id);
         return;
       }
 
@@ -1498,21 +2130,37 @@
       })
     );
 
+    document.getElementById('debug-modal-refresh').addEventListener('click', () => {
+      if (debugCamId) loadDebug(debugCamId);
+    });
+    document.getElementById('debug-modal-close').addEventListener('click', closeDebugModal);
+    debugModalEl.addEventListener('click', e => {
+      if (e.target === debugModalEl) closeDebugModal();
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && debugModalEl.classList.contains('open')) closeDebugModal();
+    });
+
     // ── Log terminal ──────────────────────────────────────────────────────────
-    const logScroll = document.getElementById('log-scroll');
-    const logPanel  = document.getElementById('log-panel');
+    const logScroll  = document.getElementById('log-scroll');
+    const logPanel   = document.getElementById('log-panel');
+    const logCountEl = document.getElementById('log-count');
 
     (function initLog() {
-      if (localStorage.getItem('logCollapsed') === '1') logPanel.classList.add('collapsed');
+      const collapsed = localStorage.getItem('logCollapsed') !== '0';
+      if (collapsed) logPanel.classList.add('collapsed');
+      else { logPanel.classList.remove('collapsed'); document.body.classList.add('log-expanded'); }
     })();
 
     document.getElementById('log-toggle').addEventListener('click', () => {
       const c = logPanel.classList.toggle('collapsed');
+      document.body.classList.toggle('log-expanded', !c);
       localStorage.setItem('logCollapsed', c ? '1' : '0');
     });
     document.getElementById('log-clear').addEventListener('click', () => {
       logEntries.length = 0;
       logScroll.innerHTML = '';
+      if (logCountEl) logCountEl.textContent = '0';
     });
     document.querySelectorAll('.log-filter-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -1534,6 +2182,7 @@
     function pushLog(entry) {
       logEntries.push(entry);
       if (logEntries.length > MAX_LOG) logEntries.shift();
+      if (logCountEl) logCountEl.textContent = logEntries.length;
       if (logFilter === 'ALL' || logFilter === entry.category) {
         const row = document.createElement('div');
         row.className = 'log-entry';
@@ -1656,8 +2305,10 @@
             // Cameras + tally
             syncCameras(msg.cameras || []);
             syncTally(msg.tally, msg.topology, connected, msg.inputCount || 0);
-          } else if (msg.type === 'log') {
-            pushLog({ category: msg.category || 'SYSTEM', text: msg.text || '', timestamp: msg.timestamp || '' });
+          } else if (msg.type === 'logs') {
+            for (const entry of (msg.entries || [])) {
+              pushLog({ category: entry.category || 'SYSTEM', text: entry.text || '', timestamp: entry.timestamp || '' });
+            }
           }
         } catch (err) { console.error('[WS]', err); }
       });
