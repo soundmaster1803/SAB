@@ -521,11 +521,10 @@ export class SonyPTPClient extends EventEmitter {
     // Keep the old heuristic for compatibility and add direct icon-based AC detection.
     const batRaw     = battery;
     const batPct     = battery !== null ? Math.min(100, battery > 100 ? 100 : battery) : null;
-    const isCharging = !(
-  (battery !== null && (battery > 100 || battery === 255)) ||
-  batteryIcon === 0x05 ||
-  batteryStep === 0x05
-);
+    const isCharging =
+      (battery !== null && (battery > 100 || battery === 255)) ||
+      batteryIcon === 0x05 ||
+      batteryStep === 0x05;
 
     let changed = false;
     if (iso      !== null && iso      !== this.state.iso)       { this.state.iso       = iso;      changed = true; }

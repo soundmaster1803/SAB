@@ -403,7 +403,7 @@
     .bat-power {
       display: none;
       font-size: 12px;
-      color: var(--orange);
+      color: var(--green);
       line-height: 1;
     }
     .bat-power.active { display: inline-block; }
@@ -1572,8 +1572,8 @@
           <div class="bat-body" title="Battery ${bat}%">
             <div class="bat-level${bat < 20 ? ' low' : bat < 50 ? ' mid' : ''}" style="width:${Math.min(100,bat)}%"></div>
           </div>
-          <span class="bat-power${cam.charging ? ' active' : ''}" data-f="charging" title="External power">⚡</span>
           <span class="bat-pct" data-f="battery">${bat}%</span>
+          <span class="bat-power${cam.charging ? ' active' : ''}" data-f="charging" title="External power">⚡</span>
           <div class="rec-timer">
             <span class="rec-elapsed">⏺ 0:00</span>
             <span class="rec-remain" data-f="recRemain"></span>
