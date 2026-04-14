@@ -19,7 +19,6 @@ import { startServer } from './api/server';
 import { initLogger, appendLog } from './logger';
 import { wireBridgeRuntime } from './bridge/runtime';
 import { APP_VERSION } from './version';
-
 function ts(): string { return new Date().toISOString().slice(11, 23); }
 async function main(): Promise<void> {
   initLogger();

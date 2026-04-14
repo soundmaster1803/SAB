@@ -2,6 +2,23 @@
 
 ---
 
+## v0.12.1 — 2026-04-14 (Fix AC charging detection on ZV-E10M2)
+
+### Fixed
+- `src/sony/ptp-client.ts` — Charging (AC power) now detected correctly on ZV-E10M2 and other Sony PTP3 cameras.
+  - Primary indicator changed from `0xD150` (USB Power Supply — static on ZV-E10M2, not a dynamic state prop) to `0xD205` bit 3 (`batteryIcon & 0x08`): set when AC is connected (`0x0F`), clear on battery only (`0x07`).
+  - Fallback heuristic `battery > 100 || battery === 255` retained for older models.
+- `src/sony/ptp-client.ts` — Fixed Sony SDIO ALLEXTDEVICEINFO prop layout in `scanAllProps` sequential scanner.
+  - Real format: `[propCode:2][dtype:2][getset:1][reserved:1][defaultVal:size][currentVal:size][formFlag:1]` (6-byte header, not 4-byte as previously assumed).
+  - All single-byte props (`0xD205`, `0xD20E`, `0xD218`, etc.) now read correct current values from runtimeModel.
+  - `isPlausibleAt` validation updated to match corrected offsets.
+  - runtimeModel now discovers more known props (187 vs 178 previously).
+
+### Changed
+- `src/sony/ptp-client.ts` — Removed two-stage charging detection (heuristic first + runtimeModel sync block after updateRuntimeModel). Charging state is now resolved in a single pass from hunter-extracted `0xD205`.
+
+---
+
 ## v0.12.0 — 2026-04-14 (State layers fully wired — UI uses derived/alerts)
 
 ### Added

@@ -37,7 +37,13 @@ Copy or create `config.json` at the project root:
 {
   "atemIp": "192.168.x.x",
   "cameras": [
-    { "id": "cam1", "name": "Camera 1", "ip": "192.168.x.x", "input": 1 }
+    {
+      "id": "cam1",
+      "name": "Camera 1",
+      "ip": "192.168.x.x",
+      "atemInput": 1,
+      "atemControlEnabled": true
+    }
   ]
 }
 ```
@@ -48,7 +54,7 @@ Copy or create `config.json` at the project root:
 node dist/bridge.cjs
 ```
 
-Then open the operator console at `http://localhost:3000` (or configured port).
+Then open the operator console at `http://localhost:7777`.
 
 ## Development
 

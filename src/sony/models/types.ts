@@ -128,7 +128,9 @@ export interface SonyModelSpec {
   /**
    * Whether this spec is a verified specification or an unverified stub.
    *
-   * - `'confirmed'` — capabilities derived from SDK docs and/or live-test confirmation.
+   * - `'confirmed'` — capabilities derived from evidence-backed research
+   *                   (SDK docs, protocol captures, repo knowledge corpus,
+   *                   and/or live-test confirmation).
    * - `'stub'`      — PTP version is documented but individual capabilities are unverified.
    *                   All capability flags default to `false`. Do not act on stub specs.
    */

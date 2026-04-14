@@ -24,6 +24,20 @@ const MODEL_SPECS: SonyModelSpec[] = [
   Z200_SPEC,
 ];
 
+const MODEL_ALIASES = new Map<string, SonyModelSpec>([
+  ['FX30', FX30_SPEC],
+  ['ILME-FX30B', FX30_SPEC],
+  ['ZV-E10M2', ZVE10M2_SPEC],
+  ['ZV-E10 II', ZVE10M2_SPEC],
+  ['FX6', FX6_SPEC],
+  ['PXW-Z200', Z200_SPEC],
+  ['Z200', Z200_SPEC],
+]);
+
+function normalizeModelId(modelId: string): string {
+  return modelId.trim().toUpperCase().replace(/\s+/g, '');
+}
+
 /**
  * Resolve a SonyModelSpec from a model identifier string.
  *
@@ -34,10 +48,14 @@ const MODEL_SPECS: SonyModelSpec[] = [
  * Callers must handle the null case — do not fall back to a default spec.
  */
 export function getSonyModelSpec(modelId: string): SonyModelSpec | null {
+  const normalized = normalizeModelId(modelId);
   for (const spec of MODEL_SPECS) {
-    if (spec.modelIds.includes(modelId)) {
+    if (spec.modelIds.some(candidate => normalizeModelId(candidate) === normalized)) {
       return spec;
     }
+  }
+  for (const [alias, spec] of MODEL_ALIASES) {
+    if (normalizeModelId(alias) === normalized) return spec;
   }
   return null;
 }

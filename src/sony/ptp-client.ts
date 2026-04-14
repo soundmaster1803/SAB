@@ -10,6 +10,7 @@ import {
 } from './packet-builder';
 import { SDI_CONTROL_TYPE, KELVIN_SCALE, OPCODES } from './constants';
 import { isVendorMarker } from './protocol/prop-knowledge.js';
+
 import {
   buildRuntimeCameraModel,
   updateRuntimeModel,
@@ -384,7 +385,8 @@ export class SonyPTPClient extends EventEmitter {
       const dataType = blob.readUInt16LE(offset + 2);
       const size = TYPE_SIZE[dataType];
       if (!size) return false;
-      const formFlagOff = offset + 4 + size + size;
+      // 6 bytes header (propCode+dtype+getset+reserved), then default+current, then formFlag
+      const formFlagOff = offset + 6 + size + size;
       if (formFlagOff >= blob.length) return false;
       const formFlag = blob.readUInt8(formFlagOff);
       if (formFlag !== 0x00 && formFlag !== 0x01 && formFlag !== 0x02) return false;
@@ -413,7 +415,11 @@ export class SonyPTPClient extends EventEmitter {
       if (!size) continue;
       if (propCode < 0x5000 || propCode > 0xEFFF) continue;
 
-      const defaultOff = offset + 4;
+      // Sony SDIO ALLEXTDEVICEINFO prop format (confirmed from raw blob analysis):
+      //   [propCode:2][dtype:2][getset:1][reserved:1][defaultVal:size][currentVal:size][formFlag:1]
+      // Two bytes (getset + reserved) precede defaultVal — standard PTP has only 1 byte (getset).
+      const SONY_HDR = 6; // bytes before defaultVal: propCode(2)+dtype(2)+getset(1)+reserved(1)
+      const defaultOff = offset + SONY_HDR;
       const currentOff = defaultOff + size;
       const formFlagOff = currentOff + size;
       if (formFlagOff >= blob.length) continue;
@@ -515,20 +521,22 @@ export class SonyPTPClient extends EventEmitter {
     if (expList.length)   this.supportedLists.set(0x5010, expList);
     if (colorList.length) this.supportedLists.set(0xD20F, colorList);
 
-    // Sony power-source detection is model-dependent:
-    // - some models report Battery Remain > 100 (or 255) while on AC / charging
-    // - some PTP3 models expose battery icon buckets where 0x05 = AC
-    // - 0xD150 (USB Power Supply) is the authoritative source when available:
-    //   value=1 = on AC/USB power. If present in the runtime model, skip the heuristic
-    //   to prevent ping-pong between heuristic and prop-based detection every poll cycle.
+    // ── Power-source / charging detection ────────────────────────────────────
+    // Confirmed via raw blob analysis (ZV-E10M2 fw 1.02):
+    //
+    //   0xD205 (Battery Level Icon): bit 3 (0x08) is set when AC power is connected.
+    //     AC connected:    0x0F (0b00001111) — bit 3 set
+    //     Battery only:    0x07 (0b00000111) — bit 3 clear
+    //
+    //   0xD150 (USB Power Supply): static on ZV-E10M2 — always 2 during PTP session.
+    //     NOT a reliable dynamic charging indicator. Ignored for state decisions.
+    //
+    //   Fallback: battery > 100 (some older Sony models signal AC this way).
     const batRaw = battery;
     const batPct = battery !== null ? Math.min(100, battery > 100 ? 100 : battery) : null;
-    const hasUsbProp = !!this.runtimeModel?.knownProps.has(0xD150);
-    const isCharging = hasUsbProp
-      ? this.state.charging   // USB prop will authorise the update in the block below
-      : (battery !== null && (battery > 100 || battery === 255)) ||
-        batteryIcon === 0x05 ||
-        batteryStep === 0x05;
+    const isCharging =
+      (batteryIcon !== null && (batteryIcon & 0x08) !== 0) ||
+      (battery !== null && (battery > 100 || battery === 255));
 
     let changed = false;
     if (iso      !== null && iso      !== this.state.iso)       { this.state.iso       = iso;      changed = true; }
@@ -537,7 +545,10 @@ export class SonyPTPClient extends EventEmitter {
     if (expComp  !== null && expComp  !== this.state.expComp)   { this.state.expComp   = expComp;  changed = true; }
     if (colorT   !== null && colorT   !== this.state.colorTemp) { this.state.colorTemp = colorT;   changed = true; }
     if (batPct   !== null && batPct   !== this.state.battery)   { this.state.battery   = batPct;   changed = true; }
-    if (batRaw   !== null && isCharging !== this.state.charging)      { this.state.charging     = isCharging; changed = true; }
+    if (isCharging !== this.state.charging) {
+      this.log(`[PWR] charging ${this.state.charging} → ${isCharging}  d205=0x${(batteryIcon??0).toString(16)} bat=${battery}`);
+      this.state.charging = isCharging; changed = true;
+    }
     if (recState !== null && recState !== this.state.recState)        { this.state.recState      = recState;   changed = true; }
     if (remSec   !== this.state.recRemainSec)                         { this.state.recRemainSec  = remSec;     changed = true; }
 
@@ -571,23 +582,6 @@ export class SonyPTPClient extends EventEmitter {
       updateRuntimeModel(this.runtimeModel, liveProps);
     }
 
-    // ── Charging / AC power sync ───────────────────────────────────────────────
-    // The hunter parser can produce false positives for battery props (e.g. 0xD218).
-    // 0xD150 (USB Power Supply) is a more reliable AC indicator: value=1 when the
-    // camera is powered from USB/AC, value=0 when on battery only.
-    // We read it from the runtime model (uses sequential scanner — no false positives).
-    if (this.runtimeModel) {
-      const usbProp = this.runtimeModel.knownProps.get(0xD150);
-      if (usbProp !== undefined) {
-        const usbPowerOn = usbProp.currentValue === 1;
-        if (usbPowerOn !== this.state.charging) {
-          this.log(`[PWR] USB power ${usbPowerOn ? 'CONNECTED (charging=true)' : 'DISCONNECTED (charging=false)'} — 0xD150=${usbProp.currentValue}`);
-          this.state.charging = usbPowerOn;
-          this.state.lastUpdate = Date.now();
-          this.emit('stateUpdate', this.state);
-        }
-      }
-    }
   }
 
   // ─── Device control ────────────────────────────────────────────────────────

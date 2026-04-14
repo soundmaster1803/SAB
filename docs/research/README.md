@@ -18,11 +18,13 @@ that were gathered before and during the modular refactor.
 
 ## Relationship to knowledge/
 
-`docs/research/` — raw reference material (original docs and analysis)
+`docs/research/` — raw reference material and human-readable analysis
 `knowledge/` — structured, evidence-tagged knowledge files (normalized for code use)
+`knowledge/sony/staging/` — machine-readable intermediate facts waiting for merge into working catalogs
 
 Research docs are the source. Knowledge files are the processed output.
-When a research doc contradicts a knowledge file, investigate and update both.
+Staging files are the bridge between the two.
+When a research doc contradicts a knowledge file, investigate, update staging, then update working knowledge.
 
 ## Critical notes from research
 
