@@ -29,8 +29,16 @@ import {
 import { canSend } from '../policies/throttle';
 
 // Track previous ATEM focus position per camera (for delta calculation).
-// Module-private — intentionally not exported.
 const prevFocus = new Map<string, number>();
+
+/**
+ * Clear the stored focus position for a camera.
+ * Call this when a camera reconnects (addCamera) so the first focus delta
+ * after reconnect is computed from the current ATEM value, not a stale one.
+ */
+export function clearPrevFocus(cameraId: string): void {
+  prevFocus.delete(cameraId);
+}
 
 export interface SonyExecutorContext {
   /** Connected Sony PTP client for the target camera. */

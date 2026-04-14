@@ -6,8 +6,6 @@
  *
  * Only alerts that are grounded in fields actively produced by the current
  * runtime are included. No speculative alerts.
- *
- * Phase: skeleton only — not wired into runtime yet (Phase 5).
  */
 
 import type { SonyRawState } from './raw';

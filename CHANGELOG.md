@@ -2,6 +2,31 @@
 
 ---
 
+## v0.12.0 — 2026-04-14 (State layers fully wired — UI uses derived/alerts)
+
+### Added
+- `src/sony/state/derived.ts` — `colorTempDisplay: string` field in `SonyDerivedState`; `decodeColorTemp()` helper
+- `src/bridge/executors/sony-command-executor.ts` — `clearPrevFocus(cameraId)` exported; clears stale focus delta on camera reconnect
+
+### Changed
+- `src/api/viewmodels/camera.ts` — `uiState()` now overrides `fnumber` (→ `derived.fnumberDisplay`, e.g. "2.8") and `colorTemp` (→ `derived.colorTempDisplay`, e.g. "5500K") at top level, matching existing `iso`/`shutter` overrides
+- `src/bridge/runtime.ts` — calls `clearPrevFocus(cfg.id)` on every `cameraAdded` event (covers reconnect)
+- `public/index.html` — UI now reads `cam.derived.isoDisplay`, `cam.derived.shutterDisplay`, `cam.derived.fnumberDisplay`, `cam.derived.colorTempDisplay` from the derived state layer instead of raw top-level fields
+- `public/index.html` — Battery display: removed yellow/mid state; bar is green ≥ 20%, red < 20%; severity driven by `cam.alerts.batterySeverity`; ⚡ icon tied to `'charging'` severity (AC power connected, not charging)
+- `public/index.html` — Removed `🔴` emoji from battery percentage text
+- `src/sony/state/raw.ts`, `derived.ts`, `alerts.ts` — removed stale "skeleton only" Phase 5 comments
+
+### Fixed
+- UI ISO check `cam.iso !== 0` was type-unsafe (string vs number) — removed
+- UI shutter check `cam.shutter !== '0'` was dead code — removed
+- Battery 'mid' CSS class removed; coloring is now binary (green / red) driven by alerts layer
+
+### Migration notes
+- `cam.fnumber` in WS state is now a display string (e.g. "2.8") instead of raw UINT16×100 (e.g. 280). UI prepends "f/" for display. Any custom consumer reading `cam.fnumber` as a number must switch to `cam.raw.fnumber`.
+- `cam.colorTemp` in WS state is now a display string (e.g. "5500K") instead of raw Kelvin integer. Raw value remains accessible via `cam.raw.colorTemp`.
+
+---
+
 ## v0.11.0 — 2026-04-13 (Runtime camera model — live integration)
 
 ### Added

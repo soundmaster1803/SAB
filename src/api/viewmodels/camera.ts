@@ -27,8 +27,12 @@ export function uiState(cam: CameraState) {
 
   return {
     ...raw,
-    iso: derived.isoDisplay,
-    shutter: derived.shutterDisplay,
+    // Top-level display overrides — UI should prefer cam.derived.* for new code.
+    // Kept for backward compatibility of existing consumers.
+    iso:       derived.isoDisplay,
+    shutter:   derived.shutterDisplay,
+    fnumber:   derived.fnumberDisplay,   // "2.8" — UI prepends "f/"
+    colorTemp: derived.colorTempDisplay, // "5500K"
     raw,
     derived,
     alerts,

@@ -518,13 +518,17 @@ export class SonyPTPClient extends EventEmitter {
     // Sony power-source detection is model-dependent:
     // - some models report Battery Remain > 100 (or 255) while on AC / charging
     // - some PTP3 models expose battery icon buckets where 0x05 = AC
-    // Keep the old heuristic for compatibility and add direct icon-based AC detection.
-    const batRaw     = battery;
-    const batPct     = battery !== null ? Math.min(100, battery > 100 ? 100 : battery) : null;
-    const isCharging =
-      (battery !== null && (battery > 100 || battery === 255)) ||
-      batteryIcon === 0x05 ||
-      batteryStep === 0x05;
+    // - 0xD150 (USB Power Supply) is the authoritative source when available:
+    //   value=1 = on AC/USB power. If present in the runtime model, skip the heuristic
+    //   to prevent ping-pong between heuristic and prop-based detection every poll cycle.
+    const batRaw = battery;
+    const batPct = battery !== null ? Math.min(100, battery > 100 ? 100 : battery) : null;
+    const hasUsbProp = !!this.runtimeModel?.knownProps.has(0xD150);
+    const isCharging = hasUsbProp
+      ? this.state.charging   // USB prop will authorise the update in the block below
+      : (battery !== null && (battery > 100 || battery === 255)) ||
+        batteryIcon === 0x05 ||
+        batteryStep === 0x05;
 
     let changed = false;
     if (iso      !== null && iso      !== this.state.iso)       { this.state.iso       = iso;      changed = true; }
@@ -577,6 +581,7 @@ export class SonyPTPClient extends EventEmitter {
       if (usbProp !== undefined) {
         const usbPowerOn = usbProp.currentValue === 1;
         if (usbPowerOn !== this.state.charging) {
+          this.log(`[PWR] USB power ${usbPowerOn ? 'CONNECTED (charging=true)' : 'DISCONNECTED (charging=false)'} — 0xD150=${usbProp.currentValue}`);
           this.state.charging = usbPowerOn;
           this.state.lastUpdate = Date.now();
           this.emit('stateUpdate', this.state);

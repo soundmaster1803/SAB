@@ -3,7 +3,7 @@ import type { SonyPTPClient } from '../sony/ptp-client';
 import type { CameraConfig } from '../config';
 import type { ATEMListener, ATEMCameraControl } from '../atem/listener';
 import { decodeControlIntent } from './intents/decoder';
-import { executeSonyIntent } from './executors/sony-command-executor';
+import { executeSonyIntent, clearPrevFocus } from './executors/sony-command-executor';
 import { isInCooldown } from './policies/anti-loop';
 import { syncCameraStateToAtem as syncStateImpl } from './sync/atem-sync';
 
@@ -87,6 +87,7 @@ function handleTallyUpdate(
 
 export function wireBridgeRuntime(manager: CameraManager, atemListener: ATEMListener): void {
   manager.on('cameraAdded', (client: SonyPTPClient, cfg: CameraConfig) => {
+    clearPrevFocus(cfg.id);
     handleFirstPollSync(client, cfg, manager, atemListener);
   });
 

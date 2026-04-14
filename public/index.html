@@ -393,7 +393,6 @@
       background: var(--green);
       transition: width 0.5s ease, background 0.3s;
     }
-    .bat-level.mid { background: var(--orange); }
     .bat-level.low { background: var(--red); }
     .bat-pct {
       font-size: 11px;
@@ -1430,7 +1429,8 @@
 
     // ── Utils ─────────────────────────────────────────────────────────────────
     const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    const fmt = fn => fn ? 'f/' + (fn / 100).toFixed(1) : '—';
+    // fmtFn: cam.fnumber is now derived.fnumberDisplay ("2.8") — prepend "f/" unless unknown
+    const fmtFn = fn => (fn && fn !== '—') ? 'f/' + fn : '—';
 
     function fmtElapsed(ms) {
       const s = Math.floor(ms / 1000);
@@ -1570,10 +1570,10 @@
 
         <div class="bat-row">
           <div class="bat-body" title="Battery ${bat}%">
-            <div class="bat-level${bat < 20 ? ' low' : bat < 50 ? ' mid' : ''}" style="width:${Math.min(100,bat)}%"></div>
+            <div class="bat-level${bat < 20 ? ' low' : ''}" style="width:${Math.min(100,bat)}%"></div>
           </div>
           <span class="bat-pct" data-f="battery">${bat}%</span>
-          <span class="bat-power${cam.charging ? ' active' : ''}" data-f="charging" title="External power">⚡</span>
+          <span class="bat-power${cam.alerts?.batterySeverity === 'charging' ? ' active' : ''}" data-f="charging" title="AC power">⚡</span>
           <div class="rec-timer">
             <span class="rec-elapsed">⏺ 0:00</span>
             <span class="rec-remain" data-f="recRemain"></span>
@@ -1585,7 +1585,7 @@
             <span class="param-label">ISO</span>
             <div class="param-controls">
               <button class="adj-btn js-adj" data-cam="${id}" data-param="iso" data-delta="-1">‹</button>
-              <span class="param-value" data-f="iso">${cam.iso || '—'}</span>
+              <span class="param-value" data-f="iso">${cam.derived?.isoDisplay || '—'}</span>
               <button class="adj-btn js-adj" data-cam="${id}" data-param="iso" data-delta="1">›</button>
             </div>
           </div>
@@ -1593,7 +1593,7 @@
             <span class="param-label">Shutter</span>
             <div class="param-controls">
               <button class="adj-btn js-adj" data-cam="${id}" data-param="shutter" data-delta="-1">‹</button>
-              <span class="param-value" data-f="shutter">${esc(cam.shutter) || '—'}</span>
+              <span class="param-value" data-f="shutter">${esc(cam.derived?.shutterDisplay ?? '—')}</span>
               <button class="adj-btn js-adj" data-cam="${id}" data-param="shutter" data-delta="1">›</button>
             </div>
           </div>
@@ -1601,7 +1601,7 @@
             <span class="param-label">Iris</span>
             <div class="param-controls">
               <button class="adj-btn js-adj" data-cam="${id}" data-param="fnumber" data-delta="-1">‹</button>
-              <span class="param-value" data-f="fnumber">${fmt(cam.fnumber)}</span>
+              <span class="param-value" data-f="fnumber">${fmtFn(cam.fnumber)}</span>
               <button class="adj-btn js-adj" data-cam="${id}" data-param="fnumber" data-delta="1">›</button>
             </div>
           </div>
@@ -1612,7 +1612,7 @@
             <span class="param-label">Color Temp</span>
             <div class="param-controls">
               <button class="adj-btn js-ct-adj" data-cam="${id}" data-delta="-1">‹</button>
-              <span class="param-value" data-f="colorTemp">${cam.colorTemp ? cam.colorTemp + 'K' : '—'}</span>
+              <span class="param-value" data-f="colorTemp">${cam.derived?.colorTempDisplay || '—'}</span>
               <button class="adj-btn js-ct-adj" data-cam="${id}" data-delta="1">›</button>
             </div>
           </div>
@@ -1861,26 +1861,27 @@
           if (rtBadgesEl.innerHTML !== newBadges) rtBadgesEl.innerHTML = newBadges;
         }
 
-        setTxt(existing, '[data-f="iso"]',     cam.iso  && cam.iso !== 0 ? cam.iso : '—');
-        setTxt(existing, '[data-f="shutter"]', cam.shutter && cam.shutter !== '0' ? cam.shutter : '—');
-        setTxt(existing, '[data-f="fnumber"]',   cam.fnumber   ? fmt(cam.fnumber)             : '—');
-        setTxt(existing, '[data-f="colorTemp"]', cam.colorTemp ? cam.colorTemp + 'K'          : '—');
+        setTxt(existing, '[data-f="iso"]',       cam.derived?.isoDisplay       || '—');
+        setTxt(existing, '[data-f="shutter"]',   cam.derived?.shutterDisplay   || '—');
+        setTxt(existing, '[data-f="fnumber"]',   fmtFn(cam.fnumber));
+        setTxt(existing, '[data-f="colorTemp"]', cam.derived?.colorTempDisplay || '—');
 
-        // Battery
+        // Battery — severity from alerts layer; no yellow/mid state
         const bat = cam.battery ?? 0;
+        const sev = cam.alerts?.batterySeverity;
         const batLevel = existing.querySelector('.bat-level');
         const batPower = existing.querySelector('[data-f="charging"]');
         const batPct   = existing.querySelector('.bat-pct');
         if (batLevel) {
           batLevel.style.width = Math.min(100, bat) + '%';
-          batLevel.classList.toggle('low', bat < 20);
-          batLevel.classList.toggle('mid', bat >= 20 && bat < 50);
+          batLevel.classList.toggle('low', sev === 'low' || sev === 'critical');
+          batLevel.classList.remove('mid');
         }
         if (batPower) {
-          batPower.classList.toggle('active', !!cam.charging);
+          batPower.classList.toggle('active', sev === 'charging');
         }
         if (batPct) {
-          const txt = (bat < 20 ? '🔴 ' : '') + bat + '%';
+          const txt = bat + '%';
           if (batPct.textContent !== txt) batPct.textContent = txt;
         }
 

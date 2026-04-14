@@ -6,8 +6,6 @@
  *
  * All derivations are deterministic functions of SonyRawState.
  * No I/O, no side effects, no transport imports.
- *
- * Phase: skeleton only — not wired into runtime yet (Phase 5).
  */
 
 import type { SonyRawState } from './raw';
@@ -16,19 +14,22 @@ import type { SonyRawState } from './raw';
  * Derived Sony state — human-readable and computed values.
  *
  * Field notes:
- *   - `isoDisplay`      "AUTO" or numeric string (e.g. "800")
- *   - `shutterDisplay`  fraction or long-exposure string (e.g. "1/100", "2.0\"")
- *   - `fnumberDisplay`  f-number as decimal string (e.g. "2.8")
- *   - `expCompEv`       float EV value (e.g. -0.7, +1.3)
- *   - `expCompDisplay`  formatted EV string (e.g. "+1.3", "-0.7", "0")
+ *   - `isoDisplay`        "AUTO" or numeric string (e.g. "800")
+ *   - `shutterDisplay`    fraction or long-exposure string (e.g. "1/100", "2.0\"")
+ *   - `fnumberDisplay`    f-number as decimal string (e.g. "2.8")
+ *   - `colorTempDisplay`  color temperature with unit (e.g. "5500K") or "—"
+ *   - `expCompEv`         float EV value (e.g. -0.7, +1.3)
+ *   - `expCompDisplay`    formatted EV string (e.g. "+1.3", "-0.7", "0")
  */
 export interface SonyDerivedState {
   /** ISO as display string — "AUTO" or numeric (e.g. "800"). */
   isoDisplay: string;
   /** Shutter speed as display string — "1/100", "2.0\"", or "—" for unknown. */
   shutterDisplay: string;
-  /** F-number as display string — e.g. "2.8". */
+  /** F-number as decimal string — e.g. "2.8". UI prepends "f/" for display. */
   fnumberDisplay: string;
+  /** Color temperature as display string — e.g. "5500K", or "—" when unavailable. */
+  colorTempDisplay: string;
   /** Exposure compensation as float EV (e.g. -0.667, 1.333). */
   expCompEv: number;
   /** Exposure compensation as formatted display string — e.g. "+1.3", "-0.7", "0". */
@@ -74,6 +75,15 @@ function decodeFNumber(raw: number): string {
 }
 
 /**
+ * Decode color temperature (Kelvin) to a display string.
+ * e.g. 5500 → "5500K", 0 → "—"
+ */
+function decodeColorTemp(raw: number): string {
+  if (!raw || raw === 0) return '—';
+  return `${raw}K`;
+}
+
+/**
  * Format EV float to a signed display string.
  * e.g. 1.333 → "+1.3", -0.667 → "-0.7", 0 → "0"
  */
@@ -93,10 +103,11 @@ export function deriveSonyState(raw: SonyRawState): SonyDerivedState {
   const expCompEv = raw.expComp / 1000;
 
   return {
-    isoDisplay:     decodeISO(raw.iso),
-    shutterDisplay: decodeShutter(raw.shutter),
-    fnumberDisplay: decodeFNumber(raw.fnumber),
+    isoDisplay:       decodeISO(raw.iso),
+    shutterDisplay:   decodeShutter(raw.shutter),
+    fnumberDisplay:   decodeFNumber(raw.fnumber),
+    colorTempDisplay: decodeColorTemp(raw.colorTemp),
     expCompEv,
-    expCompDisplay: formatEv(expCompEv),
+    expCompDisplay:   formatEv(expCompEv),
   };
 }

@@ -451,7 +451,7 @@ export function buildSonyDebugPayload(client: SonyPTPClient) {
            : null);
 
       const uiRelevant = knowledge?.capability?.uiRelevant
-        ?? (pk ? pk.uiWidget !== 'debug-only' && pk.uiWidget !== 'none' : false);
+        ?? (pk ? pk.uiWidget !== 'debug-only' && pk.uiWidget !== 'hidden' : false);
       const alertRelevant = knowledge?.capability?.alertRelevant ?? pk?.alertRelevant ?? false;
 
       const notes: string[] = [

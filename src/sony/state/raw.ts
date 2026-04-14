@@ -7,8 +7,6 @@
  * Every field here is grounded in actual runtime data from ptp-client.ts.
  *
  * Do not add fields here unless they are confirmed to be produced by the transport.
- *
- * Phase: skeleton only — not wired into runtime yet (Phase 5).
  */
 
 /**
