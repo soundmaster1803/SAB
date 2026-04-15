@@ -19,13 +19,18 @@ export interface AppConfig {
 // Anchor config.json to the location of the running file, not cwd.
 // - ESM dev (tsx src/index.ts): import.meta.url = file:///…/src/config.ts → one level up = project root
 // - CJS bundle (node dist/bridge.cjs): import.meta is empty — fall back to process.argv[1]
+// - SAB_CONFIG_PATH env var overrides all (used by macOS app bundle to store config outside the .app)
 let CONFIG_PATH: string;
-try {
-  const __filename = fileURLToPath(import.meta.url);   // throws in CJS bundle
-  CONFIG_PATH = join(dirname(__filename), '../config.json');
-} catch {
-  // CJS bundle: argv[1] is the path to bridge.cjs; config.json lives one dir up (project root / Beta dir)
-  CONFIG_PATH = join(dirname(process.argv[1] ?? ''), '../config.json');
+if (process.env.SAB_CONFIG_PATH) {
+  CONFIG_PATH = process.env.SAB_CONFIG_PATH;
+} else {
+  try {
+    const __filename = fileURLToPath(import.meta.url);   // throws in CJS bundle
+    CONFIG_PATH = join(dirname(__filename), '../config.json');
+  } catch {
+    // CJS bundle: argv[1] is the path to bridge.cjs; config.json lives one dir up (project root / Beta dir)
+    CONFIG_PATH = join(dirname(process.argv[1] ?? ''), '../config.json');
+  }
 }
 
 const DEFAULT_CONFIG: AppConfig = {
