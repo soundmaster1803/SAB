@@ -2,6 +2,17 @@
 
 ---
 
+## v0.12.2 — 2026-04-15 (Fix CloseSession on camera remove + race guard in connectWithRetry)
+
+### Fixed
+- `src/sony/ptp-client.ts` — `CloseSession` command now sent cleanly when a camera is removed, preventing PTP session leaks on the device side.
+- `src/sony/manager.ts` — Added race guard in `connectWithRetry` to prevent duplicate connection attempts when a camera is removed mid-retry loop.
+
+### Migration notes
+- No API shape changes. No behavior changes for cameras that remain connected.
+
+---
+
 ## v0.12.1 — 2026-04-14 (Fix AC charging detection on ZV-E10M2)
 
 ### Fixed
