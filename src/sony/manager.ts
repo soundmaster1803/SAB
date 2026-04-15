@@ -49,6 +49,14 @@ export class CameraManager extends EventEmitter {
     log(`Connecting to "${config.name}" @ ${config.ip}...`);
     client.connect()
       .then(() => {
+        // Guard: if this camera was removed while connect() was in flight, shut it
+        // down immediately and bail. Without this check, startPolling() would start
+        // on a client that is no longer in the manager, causing infinite error logs.
+        if (!this.clients.has(config.id) || this.clients.get(config.id) !== client) {
+          log(`"${config.name}" connected but was already removed — closing session`);
+          client.disconnect();
+          return;
+        }
         client.state.connected = true;
         client.startPolling(200);
         log(`"${config.name}" is ONLINE (${config.ip})`);
@@ -110,7 +118,10 @@ export class CameraManager extends EventEmitter {
     // so no stateUpdate events or error logs fire after removal.
     client.stopPolling();
     client.removeAllListeners();
-    client.disconnect();
+    // Graceful disconnect: sends CloseSession so the camera frees the PTP session
+    // immediately, allowing a fresh reconnect without waiting for camera timeout.
+    // Fire-and-forget — removeCamera() is synchronous; caller doesn't need to wait.
+    client.gracefulDisconnect().catch(() => {});
     log(`Camera "${config?.name ?? id}" removed`);
   }
 

@@ -912,4 +912,21 @@ export class SonyPTPClient extends EventEmitter {
     if (this.evtSocket) { this.evtSocket.destroy(); this.evtSocket = null; }
     this.log('Disconnected');
   }
+
+  // Graceful disconnect: sends CloseSession so the camera frees the PTP session
+  // before the sockets are destroyed. Falls back to force-disconnect on timeout.
+  async gracefulDisconnect(): Promise<void> {
+    if (this.state.connected && this.cmdSocket && !this.cmdSocket.destroyed) {
+      try {
+        await Promise.race([
+          this.sendCmd(OPCODES.CLOSE_SESSION, [], DATA_PHASE_NONE),
+          new Promise<void>((_, rej) => setTimeout(() => rej(new Error('CloseSession timeout')), 1500)),
+        ]);
+        this.log('CloseSession OK');
+      } catch (e: any) {
+        this.warn(`CloseSession skipped: ${e.message}`);
+      }
+    }
+    this.disconnect();
+  }
 }
