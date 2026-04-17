@@ -33,35 +33,83 @@ Architecture must evolve incrementally — never in a single large rewrite.
 
 ## 2. Current Architecture
 
-As of 2026-04-11, the actual source tree is:
+As of 2026-04-17 (v0.12.2), the actual source tree is:
 
 ```
 src/
-  index.ts              — bootstrap + bridge dispatch + throttle + tally sync  [OVERFULL]
+  index.ts              — bootstrap: config, manager/listener init, wireBridgeRuntime  [clean]
   config.ts             — config file I/O
   logger.ts             — logger + WS event bus
+  version.ts            — reads VERSION file at startup
   api/
-    server.ts           — HTTP routes + WS + UI formatting                     [OVERFULL]
+    server.ts           — HTTP bootstrap + route/WS wiring                             [clean]
+    routes/
+      cameras.ts        — camera management endpoints
+      atem.ts           — ATEM connect/disconnect
+      status.ts         — GET /api/status, /api/interfaces
+    ws/
+      broadcaster.ts    — WS state broadcast (500ms) + log flush (150ms)
+    viewmodels/
+      camera.ts         — uiState() — assembles raw + derived + alerts for UI
+      atem.ts           — uiAtemState() — ATEM raw + derived
+    services/
+      cameras.ts        — camera service helpers
+      network.ts        — listLanInterfaces()
+      sony-debug.ts     — debug endpoint payload builder
   atem/
-    listener.ts         — ATEM transport + tally + syncCameraStateToAtem       [mixed]
+    listener.ts         — ATEM transport + tally + camera-control dispatch              [mixed, minor]
+    state/
+      raw.ts            — ATEMRawState
+      derived.ts        — ATEMDerivedState + deriveATEMState()
+    actions/index.ts    — skeleton
+    variables/index.ts  — skeleton
+    feedbacks/index.ts  — skeleton
+    models/             — skeleton
   bridge/
-    mapper.ts           — pure ATEM→Sony converters                            [clean]
-    atem-decoder.ts     — ATEM command decoder                                 [clean]
+    runtime.ts          — wireBridgeRuntime() — orchestration core
+    mapper.ts           — pure ATEM→Sony converters                                    [clean]
+    atem-decoder.ts     — ATEM command decoder                                         [clean]
+    policies/
+      throttle.ts       — canSend() — 200ms per camera/property
+      anti-loop.ts      — enterCooldown() / isInCooldown() — 500ms sync guard
+    intents/
+      types.ts          — BridgeProperty, ControlIntent
+      decoder.ts        — decodeControlIntent()
+    executors/
+      sony-command-executor.ts — executeSonyIntent() + clearPrevFocus()
+    sync/
+      atem-sync.ts      — syncCameraStateToAtem() — reverse sync push
+    actions/index.ts    — skeleton
+    variables/index.ts  — skeleton
+    feedbacks/index.ts  — skeleton
   sony/
-    ptp-client.ts       — PTP/IP transport, handshake, polling, control        [clean]
-    manager.ts          — camera lifecycle                                     [clean]
-    constants.ts        — prop codes, opcodes, button values                   [clean]
-    packet-builder.ts   — PTP packet construction                              [clean]
+    ptp-client.ts       — PTP/IP transport, handshake, polling, control                [932 lines, core]
+    manager.ts          — CameraManager — camera lifecycle
+    constants.ts        — prop codes, opcodes, button values, extended codes
+    packet-builder.ts   — PTP packet construction
+    protocol/
+      prop-knowledge.ts — 150+ PTP3 props: semantics, safety, poll priority, UI widget [1625 lines]
+    runtime/
+      types.ts          — RuntimeCameraModel, RuntimeCapabilities (34 flags)
+      builder.ts        — buildRuntimeCameraModel() + updateRuntimeModel()             [wired v0.11.0]
+    polling/
+      strategy.ts       — getPollPriority(), filterSafeToRead()                        [wired in ptp-client]
+    models/
+      types.ts          — SonyModelSpec, SonyCapabilities (display metadata types only)
+      fx30.ts, zve10m2.ts, fx6.ts, z200.ts — optional display metadata + PTP version hints
+      index.ts          — getSonyModelSpec() — used only by debug endpoint
+    state/
+      raw.ts            — SonyRawState
+      derived.ts        — SonyDerivedState + deriveSonyState()
+      alerts.ts         — SonyAlertState + deriveSonyAlerts()
+      runtime.ts        — getSonyRuntimeState() — assembles all three layers           [wired v0.12.0]
+    actions/index.ts    — skeleton
+    variables/index.ts  — skeleton
+    feedbacks/index.ts  — skeleton
+    presets/index.ts    — skeleton (empty preset list)
 ```
 
-Known violations in the current state:
-- `src/index.ts` contains `handleCameraControl()`, throttle (`canSend`), `prevFocus` state — all bridge domain logic
-- `src/api/server.ts` contains `PROP_MAP`, `decodeShutter()`, `decodeISO()`, `uiState()` — all viewmodel/Sony domain logic
-- `src/atem/listener.ts` contains `syncCameraStateToAtem()` — bridge sync logic in transport layer
-- No model spec, capability, action, variable, feedback, or preset system exists
-- Single polling tier at 200ms for all camera properties
-- No intent layer — ATEM events map directly to Sony commands inside `index.ts`
-- Throttle and anti-loop logic are scattered (`lastCmdTime` in `index.ts`, `syncCooldowns` in `listener.ts`)
+Current violations: none critical. `src/atem/listener.ts` has minor mix (`readyAfterMs` is bridge policy surfaced via getRawState) — low priority.
 
 ---
 
@@ -240,21 +288,21 @@ Must not own:
 
 ## 5. Architecture Design Rules
 
-### Model spec system
+### Runtime capability model
 
-Every supported camera family must have:
-- A static model spec file (`src/sony/models/<model>.ts`)
-- A capability derivation function
-- Filtered actions (only actions the model supports)
-- Filtered presets
-- Filtered feedbacks and variables
+SAB is protocol-first. Capabilities derive from observed protocol behavior, not from a static camera database.
 
-Do not assume capabilities. Only write what is confirmed by reference docs or hardware logs.
+The authoritative source of truth is `RuntimeCameraModel` (`src/sony/runtime/`):
+- Built from live `SDIO_GetAllExtDevicePropInfo` polling data
+- `RuntimeCapabilities` (34 flags) are set when a prop code is observed in the device response
+- Unknown cameras are fully supported — capability surface is discovered, not assumed
 
-### Capability filtering
+`src/sony/models/` (static entries) are optional metadata only:
+- May provide display labels or PTP version hints for session initialization
+- Must not be used as the gate for runtime actions, feedbacks, or presets
+- A missing static entry must never block a camera from operating
 
-Actions must only exist if the camera model supports them.
-Example: ND filter actions exist only on cameras with ND hardware.
+Do not assume capabilities. Observe them.
 
 ### State layers
 
@@ -314,7 +362,7 @@ Do not scatter loop guards across unrelated files.
 ### Preset rules
 
 A preset must:
-- Validate camera model and capabilities before applying
+- Validate runtime capabilities (from `RuntimeCameraModel`) before applying — not static model name
 - Apply steps in a safe order
 - Support graceful partial failure or explicit refusal
 - Update state, variables, and feedbacks after apply
@@ -522,17 +570,18 @@ Migration proceeds in eight ordered phases. Each phase must leave the runtime fu
 - Update `src/api/server.ts` to import from modules
 - **No API response shape change**
 
-### Phase 4 — Sony model specs
-- `src/sony/models/types.ts` — `SonyModelSpec`, `SonyCapabilities` interfaces
-- `src/sony/models/fx30.ts` — FX30 spec (confirmed capabilities only)
-- `src/sony/models/index.ts` — `getModelSpec(modelName)`
-- **Skeleton only — not wired to runtime yet**
+### Phase 4 — Sony model metadata (optional, not source of truth)
+- `src/sony/models/types.ts` — `SonyModelSpec` interfaces (display metadata only)
+- `src/sony/models/fx30.ts`, `zve10m2.ts` etc. — optional label/hint entries
+- `src/sony/models/index.ts` — `getSonyModelSpec()` used only for debug/diagnostics
+- **Not wired to runtime capability gating — runtime uses `RuntimeCameraModel` instead**
 
-### Phase 5 — Sony state layers
+### Phase 5 — Sony state layers ✅ complete (v0.12.0)
 - `src/sony/state/raw.ts` — `SonyRawState`
 - `src/sony/state/derived.ts` — `SonyDerivedState`, `deriveSonyState()`
 - `src/sony/state/alerts.ts` — `SonyAlertState`, `deriveSonyAlerts()`
-- **Types only — not wired to runtime yet**
+- `src/sony/state/runtime.ts` — `getSonyRuntimeState()` — assembles all three layers
+- **Wired to runtime — used by WS broadcast and viewmodels**
 
 ### Phase 6 — Registry skeletons
 - `src/sony/actions/index.ts`
@@ -553,8 +602,8 @@ Migration proceeds in eight ordered phases. Each phase must leave the runtime fu
 - Update `src/sony/ptp-client.ts` to use two-tier polling
 - **Behavior change: low-priority props poll at 1000ms instead of 200ms**
 
-### Phase 8 — Wire model specs and capabilities to runtime
-- Gate actions, feedbacks, and presets by `SonyCapabilities`
+### Phase 8 — Wire RuntimeCapabilities to action gating
+- Gate actions, feedbacks, and presets by `RuntimeCapabilities` (protocol-discovered, from `src/sony/runtime/`)
 - Connect `SonyDerivedState` and `SonyAlertState` to WS broadcast
 - **First phase that adds new runtime behavior**
 

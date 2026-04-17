@@ -1,7 +1,7 @@
 # SAB — Current System
 
-Version: 0.10.0
-Last updated: 2026-04-11 (Phase 6 Step 2 complete — ATEM state + registries)
+Version: 0.12.2
+Last updated: 2026-04-17
 
 ---
 
@@ -9,135 +9,142 @@ Last updated: 2026-04-11 (Phase 6 Step 2 complete — ATEM state + registries)
 
 ```
 src/
-  index.ts              — bootstrap + tally sync (lean)                        [clean]
-  config.ts             — config file I/O
-  logger.ts             — logger + WS event bus
+  index.ts              — bootstrap: config load, manager/listener init, wireBridgeRuntime  [clean]
+  config.ts             — config file I/O (loadConfig, saveConfig, addCamera, removeCamera)
+  logger.ts             — logger + logBus EventEmitter (WS log broadcast)
+  version.ts            — reads VERSION file at startup
+
   api/
-    server.ts           — HTTP bootstrap + route/WS wiring                     [clean]
+    server.ts           — HTTP bootstrap: express + http.Server + route wiring              [clean, 68 lines]
+    routes/
+      cameras.ts        — camera management endpoints (POST/PATCH/DELETE)
+      atem.ts           — ATEM connect/disconnect endpoints
+      status.ts         — GET /api/status, /api/interfaces
+    ws/
+      broadcaster.ts    — WS server: 500ms state broadcast, 150ms log flush
+    viewmodels/
+      camera.ts         — uiState() — CameraState → UI payload (raw + derived + alerts)
+      atem.ts           — uiAtemState() — ATEM raw + derived state
+    services/
+      cameras.ts        — camera service helpers (80 lines)
+      network.ts        — listLanInterfaces()
+      sony-debug.ts     — buildSonyDebugPayload() — debug endpoint only
+
   atem/
-    listener.ts         — ATEM transport + tally + syncCameraStateToAtem       [mixed]
+    listener.ts         — ATEM transport + tally + camera-control dispatch                  [mixed, 163 lines]
     state/
-      raw.ts            — ATEMRawState, AtemTallyEntry                         [skeleton]
-      derived.ts        — ATEMDerivedState + deriveATEMState()                  [skeleton]
-    actions/
-      index.ts          — AtemActionId, AtemActionDefinition, ATEM_ACTIONS     [skeleton]
-    variables/
-      index.ts          — AtemVariableId, AtemVariableDefinition, ATEM_VARIABLES [skeleton]
-    feedbacks/
-      index.ts          — AtemFeedbackId, AtemFeedbackDefinition, ATEM_FEEDBACKS [skeleton]
-  bridge/
-    mapper.ts           — pure ATEM→Sony converters                            [clean]
-    atem-decoder.ts     — ATEM command decoder                                 [clean]
-    policies/
-      throttle.ts       — canSend() — 200ms per camera/property                [clean]
-      anti-loop.ts      — enterCooldown() / isInCooldown() — 500ms sync guard  [clean]
-    intents/
-      types.ts          — BridgeProperty, ControlIntent                        [clean]
-      decoder.ts        — decodeControlIntent() — ATEM cmd → ControlIntent     [clean]
-    executors/
-      sony-command-executor.ts — executeSonyIntent() — intent → Sony PTP       [clean]
-  sony/
-    ptp-client.ts       — PTP/IP transport, handshake, polling, control        [clean]
-    manager.ts          — camera lifecycle                                     [clean]
-    constants.ts        — prop codes, opcodes, button values                   [clean]
-    packet-builder.ts   — PTP packet construction                              [clean]
+      raw.ts            — ATEMRawState, AtemTallyEntry                                      [wired via getRawState()]
+      derived.ts        — ATEMDerivedState + deriveATEMState()                               [wired via uiAtemState()]
+    actions/index.ts    — AtemActionId, ATEM_ACTIONS                                        [skeleton, Phase 8]
+    variables/index.ts  — AtemVariableId, ATEM_VARIABLES                                    [skeleton, Phase 8]
+    feedbacks/index.ts  — AtemFeedbackId, ATEM_FEEDBACKS                                    [skeleton, Phase 8]
     models/
-      types.ts          — SonyModelSpec, SonyCapabilities, SonyPtpVersion      [skeleton]
-      fx30.ts           — FX30 confirmed spec (PTP3 v1.0+)                     [skeleton]
-      zve10m2.ts        — ZV-E10 II confirmed spec (PTP3 v1.2)                 [skeleton]
-      fx6.ts            — FX6 stub spec (PTP3 v1.0, unverified)                [stub]
-      z200.ts           — PXW-Z200 stub spec (PTP3 v1.3, unverified)           [stub]
-      index.ts          — getSonyModelSpec() / getAllSonyModelSpecs()           [skeleton]
+      types.ts          — ATEMModelSpec, ATEMCapabilities                                   [skeleton, Phase 8]
+      index.ts          — getATEMModelSpec()                                                [skeleton, Phase 8]
+
+  bridge/
+    runtime.ts          — wireBridgeRuntime() — orchestration core
+    mapper.ts           — pure ATEM→Sony value converters                                   [clean]
+    atem-decoder.ts     — ATEM command decoder helpers                                      [clean]
+    policies/
+      throttle.ts       — canSend() — 200ms per camera/property
+      anti-loop.ts      — enterCooldown() / isInCooldown() — 500ms sync guard
+    intents/
+      types.ts          — BridgeProperty, ControlIntent, AtemControlPayload
+      decoder.ts        — decodeControlIntent() — ATEM cmd → ControlIntent
+    executors/
+      sony-command-executor.ts — executeSonyIntent() + clearPrevFocus()                     [127 lines]
+    sync/
+      atem-sync.ts      — syncCameraStateToAtem() — reverse sync push to ATEM
+    actions/index.ts    — skeleton                                                          [Phase 8]
+    variables/index.ts  — skeleton                                                          [Phase 8]
+    feedbacks/index.ts  — skeleton                                                          [Phase 8]
+
+  sony/
+    ptp-client.ts       — PTP/IP transport, handshake, polling, control                    [932 lines, core]
+    manager.ts          — CameraManager — camera lifecycle                                  [175 lines]
+    constants.ts        — PROP_CODES, OPCODES, BUTTON_VALUES, PROP_CODES_EXT
+    packet-builder.ts   — PTP packet construction
+    protocol/
+      prop-knowledge.ts — central knowledge table: 150+ PTP3 props, semantics, safety      [1625 lines]
+    runtime/
+      types.ts          — RuntimePropDescriptor, RuntimeCapabilities (34 flags), RuntimeCameraModel
+      builder.ts        — buildRuntimeCameraModel() + updateRuntimeModel()                  [376 lines, wired v0.11.0]
+    polling/
+      strategy.ts       — getPollPriority(), filterSafeToRead(), getPollSummary()           [118 lines, wired in ptp-client]
+    models/
+      types.ts          — SonyModelSpec, SonyCapabilities (display metadata types)
+      fx30.ts           — FX30 display metadata + PTP version hint
+      zve10m2.ts        — ZV-E10 II display metadata
+      fx6.ts            — FX6 metadata stub
+      z200.ts           — PXW-Z200 metadata stub
+      index.ts          — getSonyModelSpec() — used only by debug endpoint
     state/
-      raw.ts            — SonyRawState interface                                [skeleton]
-      derived.ts        — SonyDerivedState + deriveSonyState()                  [skeleton]
-      alerts.ts         — SonyAlertState + deriveSonyAlerts()                   [skeleton]
-    actions/
-      index.ts          — SonyActionId, SonyActionDefinition, SONY_ACTIONS      [skeleton]
-    variables/
-      index.ts          — SonyVariableId, SonyVariableDefinition, SONY_VARIABLES [skeleton]
-    feedbacks/
-      index.ts          — SonyFeedbackId, SonyFeedbackDefinition, SONY_FEEDBACKS [skeleton]
-    presets/
-      index.ts          — SonyPresetDefinition, SONY_PRESETS (empty)            [skeleton]
+      raw.ts            — SonyRawState interface
+      derived.ts        — SonyDerivedState + deriveSonyState()
+      alerts.ts         — SonyAlertState + deriveSonyAlerts()
+      runtime.ts        — getSonyRuntimeState() — assembles all three layers                [wired v0.12.0]
+    actions/index.ts    — SonyActionId, SONY_ACTIONS                                        [skeleton, Phase 8]
+    variables/index.ts  — SonyVariableId, SONY_VARIABLES                                    [skeleton, Phase 8]
+    feedbacks/index.ts  — SonyFeedbackId, SONY_FEEDBACKS                                    [skeleton, Phase 8]
+    presets/index.ts    — SonyPresetDefinition, SONY_PRESETS (empty)                        [skeleton, Phase 8]
 ```
 
 ---
 
-## Domain violations (as of Phase 1 complete)
+## Domain violations
 
-### src/index.ts — RESOLVED ✅
-All bridge logic extracted. Now contains only: bootstrap, tally sync, ATEM event wiring,
-and the three-line handleCameraControl pipeline (decode → intent → executor).
+### Resolved ✅
+- `src/index.ts` — all bridge logic extracted (Phase 1)
+- `src/api/server.ts` — all viewmodel/routing logic extracted (Phase 3)
+- `src/atem/listener.ts` — `syncCameraStateToAtem()` extracted to `bridge/sync/` (Phase 2)
 
-### src/api/server.ts — RESOLVED ✅
-HTTP bootstrap is now lean and delegates to:
-- `api/routes/cameras.ts`
-- `api/routes/atem.ts`
-- `api/routes/status.ts`
-- `api/ws/broadcaster.ts`
-- `api/viewmodels/camera.ts`
-
-### src/atem/listener.ts — mixed (Phase 2 target)
-
-| Symbol | Correct domain |
-|--------|---------------|
-| Initial connect suppression timestamp (`readyAfter`) surfaced to bridge | bridge/runtime policy |
-
-Note: `syncCameraStateToAtem()` and anti-loop policy are no longer owned by the listener.
+### Remaining: `src/atem/listener.ts` — minor mix
+`readyAfterMs` timestamp is a bridge policy value surfaced via `getRawState()` — architecturally belongs in bridge layer. Low priority — functionally clean, no behavior issue.
 
 ---
 
 ## Known structural issues
 
-- Single polling tier at 200ms for all Sony properties (Phase 7 target)
-- Model spec skeleton added (Phase 4 Step 1) — not yet wired to runtime (Phase 8 target)
-- State layer skeletons added (Phase 5) — not yet wired to runtime (Phase 8 target)
-- Command path still uses flat `CameraState`; read path now derives `SonyRawState`/`SonyDerivedState`/`SonyAlertState`
-- Sony registry skeletons added (Phase 6 Step 1) — not yet wired to runtime (Phase 8 target)
-- ATEM state and registry skeletons added (Phase 6 Step 2) — not yet wired to runtime (Phase 8 target)
-- No action, variable, feedback, or preset execution wiring yet
+- Single polling tier at 200ms for all Sony properties — **Phase 7 target**
+- `sony/models/` static specs not wired to runtime capability gating — **Phase 8 target**
+- Action/variable/feedback/preset registries exist as skeletons, not wired to execution — **Phase 8 target**
+- Command path still uses flat `CameraState`; read path uses derived state layers (correct direction)
 
 ---
 
-## File sizes (approximate, post Phase 1)
+## Key file sizes
 
 | File | Lines | Status |
 |------|-------|--------|
-| src/index.ts | ~60 | Clean |
-| src/api/server.ts | ~75 | Clean |
-| src/atem/listener.ts | ~190 | Mixed |
-| src/bridge/policies/throttle.ts | ~13 | Clean |
-| src/bridge/policies/anti-loop.ts | ~22 | Clean |
-| src/bridge/intents/types.ts | ~78 | Clean |
-| src/bridge/intents/decoder.ts | ~70 | Clean |
-| src/bridge/executors/sony-command-executor.ts | ~115 | Clean |
-| src/sony/ptp-client.ts | ~600 | Clean |
-| src/sony/manager.ts | ~150 | Clean |
-| src/bridge/mapper.ts | ~80 | Clean |
-| src/bridge/atem-decoder.ts | ~60 | Clean |
-| src/sony/constants.ts | ~80 | Clean |
-| src/sony/packet-builder.ts | ~100 | Clean |
-| src/config.ts | ~50 | Clean |
-| src/logger.ts | ~80 | Clean |
+| src/sony/ptp-client.ts | 932 | Core transport |
+| src/sony/protocol/prop-knowledge.ts | 1625 | Protocol knowledge table |
+| src/sony/runtime/builder.ts | 376 | Runtime model builder |
+| src/bridge/executors/sony-command-executor.ts | 127 | Intent executor |
+| src/sony/manager.ts | 175 | Camera lifecycle |
+| src/atem/listener.ts | 163 | ATEM transport |
+| src/sony/polling/strategy.ts | 118 | Poll tier logic |
+| src/index.ts | ~60 | Bootstrap only |
+| src/api/server.ts | 68 | HTTP bootstrap only |
 
 ---
 
-## Working capabilities (verified)
+## Working capabilities (verified v0.12.2)
 
-- Sony PTP/IP handshake and session establishment
-- Sony property polling (ISO, shutter, aperture, focus, battery, record state)
-- Sony camera control (iris, focus, shutter, ISO, WB, recording)
-- ATEM connection and tally reception
-- ATEM camera-control command reception and dispatch to Sony
-- HTTP API for camera state and ATEM state
-- WebSocket broadcast of camera state to UI
-- Operator web console (public/index.html)
-- Config file I/O (config.json)
+- Sony PTP/IP: handshake, session, polling (ISO/shutter/aperture/WB/battery/recState/recRemain)
+- Sony camera control: iris, focus, AF, shutter, ISO, WB, recording toggle
+- Live runtime camera model: 34 capability flags, 150+ prop codes, discovered per-camera at connect
+- State layers: raw → derived → alerts, wired to WS broadcast and UI
+- ATEM: connection, tally capture, camera-control command dispatch
+- Bi-directional sync: ATEM → Sony + reverse Sony → ATEM on connect
+- HTTP API: camera management, ATEM management, status, diagnostics
+- WebSocket: 500ms state broadcast + 150ms log flush
+- Operator web console (public/index.html): live camera cards with capabilities badges
+- Config: config.json with SAB_CONFIG_PATH env override support
 
 ---
 
-## Files that must not be modified during Phases 1–3
+## Files that must not be modified
 
 | File | Reason |
 |------|--------|
@@ -145,7 +152,7 @@ Note: `syncCameraStateToAtem()` and anti-loop policy are no longer owned by the 
 | `src/sony/manager.ts` | Working camera lifecycle |
 | `src/sony/packet-builder.ts` | Working packet construction |
 | `src/sony/constants.ts` | Single source of Sony constants |
-| `src/bridge/mapper.ts` | Clean converter — do not disturb |
-| `src/bridge/atem-decoder.ts` | Clean decoder — do not disturb |
-| `src/config.ts` | Config I/O — do not disturb |
-| `src/logger.ts` | Logger — do not disturb |
+| `src/bridge/mapper.ts` | Clean converter |
+| `src/bridge/atem-decoder.ts` | Clean decoder |
+| `src/config.ts` | Config I/O |
+| `src/logger.ts` | Logger |
