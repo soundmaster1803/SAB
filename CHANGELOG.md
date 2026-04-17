@@ -2,6 +2,31 @@
 
 ---
 
+## v0.15.0 — 2026-04-17 (Frontend UI — F0–F6 complete + cutover)
+
+### Added
+- `frontend/` — Vite + React + TypeScript frontend scaffold (F0).
+- `frontend/src/types/ws.ts` — TypeScript types for all WS message shapes.
+- `frontend/src/stores/ws.ts`, `cameras.ts`, `atem.ts`, `logs.ts` — Zustand stores wired to WS broadcast (F1).
+- `frontend/src/components/Header.tsx`, `Dot.tsx` — logo, WS indicator, version badge, ATEM status (F2).
+- `frontend/src/panels/logs/LogPanel.tsx` — fixed bottom log drawer (F2).
+- `frontend/src/panels/TallyBar.tsx` — fixed bottom tally strip (F2).
+- `frontend/src/panels/cameras/CameraGrid.tsx`, `CameraCard.tsx`, `OfflineOverlay.tsx`, `RuntimeBadges.tsx` — live camera panel grid (F3).
+- `frontend/src/panels/cameras/DebugModal.tsx` — prop table, runtime model, stats overlay (F4).
+- `frontend/src/panels/cameras/AddCameraWizard.tsx` — multi-step add camera wizard (F5).
+- `frontend/src/panels/atem/AtemPanel.tsx`, `TallyStrip.tsx` — ATEM connection panel + per-input tally strip (F6).
+
+### Changed
+- `public/index.html` — replaced legacy hand-written UI with Vite build output (cutover). Legacy UI no longer served.
+
+### Migration notes
+- Backend API and WS shapes unchanged.
+- Dev server: `npm run dev:ui` (port 5173, proxies `/api` to `localhost:7777`).
+- Production: `npm run build:ui` — outputs to `public/`, served by Express as static.
+- `public/assets/` is gitignored; build must be run locally before starting the backend.
+
+---
+
 ## v0.14.0 — 2026-04-17 (Phase 8 — RuntimeCapabilities gating wired)
 
 ### Changed
