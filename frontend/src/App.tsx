@@ -12,6 +12,7 @@ import { Header } from './components/Header'
 import { CameraGrid } from './panels/cameras/CameraGrid'
 import { DebugModal } from './panels/cameras/DebugModal'
 import { AddCameraWizard } from './panels/cameras/AddCameraWizard'
+import { AtemPanel } from './panels/atem/AtemPanel'
 import { LogPanel } from './panels/logs/LogPanel'
 import { TallyBar } from './panels/TallyBar'
 
@@ -38,6 +39,7 @@ function App() {
       <Header onAddCamera={openWizard} onRecAll={recAll} onStopAll={stopAll} />
 
       <main style={{ padding: '16px' }}>
+        <AtemPanel />
         <CameraGrid onDebug={openDebug} />
       </main>
 
