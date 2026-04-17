@@ -1,0 +1,35 @@
+/* ── Design tokens ─────────────────────────────────────────────────────────────
+ *
+ * Single source of truth for all visual design variables.
+ * Extracted from the legacy public/index.html style block.
+ * All components import this file via globals.css.
+ */
+
+:root {
+  /* ── Palette ───────────────────────────────────────────────────────────── */
+  --bg:      #0a0a0a;
+  --accent:  #007AFF;
+  --red:     #FF3B30;
+  --green:   #34C759;
+  --orange:  #FF9500;
+  --yellow:  #FFD60A;
+
+  /* ── Surface ──────────────────────────────────────────────────────────── */
+  --card:    rgba(255, 255, 255, 0.05);
+  --border:  rgba(255, 255, 255, 0.08);
+
+  /* ── Text ─────────────────────────────────────────────────────────────── */
+  --t1: #ffffff;
+  --t2: rgba(255, 255, 255, 0.5);
+  --t3: rgba(255, 255, 255, 0.25);
+
+  /* ── Layout ───────────────────────────────────────────────────────────── */
+  --tally-h:       56px;
+  --log-toolbar-h: 38px;
+  --log-body-h:    210px;
+  --header-h:      52px;
+
+  /* ── Motion ───────────────────────────────────────────────────────────── */
+  --transition-fast:   0.12s ease;
+  --transition-normal: 0.22s ease;
+}

@@ -1,7 +1,7 @@
 # SAB — Claude Operating Manual
 
-Version: 0.4.0
-Last updated: 2026-04-11
+Version: 0.5.0
+Last updated: 2026-04-17
 
 This document is the single authoritative operating manual for Claude working on the SAB project.
 It supersedes all previous CLAUDE.md versions and informal instruction fragments.
@@ -536,76 +536,73 @@ Subagents must be used when:
 
 ---
 
-## 10. Migration Phases
+## 10. Frontend Phases
 
-Migration proceeds in eight ordered phases. Each phase must leave the runtime fully operational before the next begins.
+Backend architecture (Phases 0–8) is complete as of v0.14.0.
+Current work focuses on the operator UI frontend.
 
-### Phase 0 — Documentation and scaffolding
-- Update CLAUDE.md (this file)
-- Create `docs/architecture/` (5 files)
-- Create `.claude/agents/` (7 files)
-- Create `knowledge/` scaffolding
-- **No source files modified**
+### Stack
+| Component | Choice |
+|-----------|--------|
+| Build tool | Vite |
+| Framework | React + TypeScript |
+| State | Zustand |
+| CSS | CSS custom properties (design tokens) |
 
-### Phase 1 — Extract bridge logic from `src/index.ts`
-- `src/bridge/policies/throttle.ts` — extract `canSend()`
-- `src/bridge/policies/anti-loop.ts` — extract `syncCooldowns`
-- `src/bridge/intents/types.ts` — `ControlIntent` interface
-- `src/bridge/intents/decoder.ts` — ATEM command → intent
-- `src/bridge/executors/sony-command-executor.ts` — extract `handleCameraControl()`
-- Update `src/index.ts` to import from bridge modules
-- **No behavior change**
+### F0 — Scaffold ✅ complete (v0.15.0)
+- `frontend/` directory with Vite + React + TypeScript
+- `frontend/src/styles/tokens.css` — design tokens extracted from legacy UI
+- `frontend/src/styles/globals.css` — reset + base typography
+- `frontend/src/main.tsx`, `frontend/src/App.tsx` — entry point shell
+- Root `package.json` — `dev:ui`, `build:ui`, `install:ui` scripts
+- Build output: `frontend/` → `../public/` (backend serves as static)
+- Dev server: `http://localhost:5173` with `/api` proxy to `localhost:7777`
+- **Legacy `public/index.html` still served until cutover**
 
-### Phase 2 — Extract sync logic from `src/atem/listener.ts`
-- `src/bridge/sync/atem-sync.ts` — extract `syncCameraStateToAtem()`
-- Update `src/atem/listener.ts` to import from bridge/sync
-- **No behavior change**
+### F1 — WS store + types
+- `frontend/src/types/ws.ts` — TypeScript types for all WS message shapes
+- `frontend/src/stores/ws.ts` — WS connection, reconnect, message dispatch
+- `frontend/src/stores/cameras.ts` — camera state map from WS
+- `frontend/src/stores/atem.ts` — ATEM state from WS
+- `frontend/src/stores/logs.ts` — log entry buffer (capped)
 
-### Phase 3 — Split `src/api/server.ts`
-- `src/api/viewmodels/camera.ts` — extract `uiState()`, `decodeShutter()`, `decodeISO()`, `PROP_MAP`
-- `src/api/ws/broadcaster.ts` — extract WS setup and broadcast logic
-- `src/api/routes/cameras.ts` — extract camera routes
-- `src/api/routes/atem.ts` — extract ATEM routes
-- `src/api/routes/status.ts` — extract status/interfaces routes
-- Update `src/api/server.ts` to import from modules
-- **No API response shape change**
+### F2 — Shell + layout
+- `frontend/src/App.tsx` — root layout (header + main + panels)
+- `frontend/src/components/Header.tsx` — logo, WS dot, version badge, ATEM panel
+- `frontend/src/components/Dot.tsx` — connection indicator dot
+- `frontend/src/panels/logs/LogPanel.tsx` — fixed bottom log drawer
+- `frontend/src/panels/TallyBar.tsx` — fixed bottom tally strip
 
-### Phase 4 — Sony model metadata (optional, not source of truth)
-- `src/sony/models/types.ts` — `SonyModelSpec` interfaces (display metadata only)
-- `src/sony/models/fx30.ts`, `zve10m2.ts` etc. — optional label/hint entries
-- `src/sony/models/index.ts` — `getSonyModelSpec()` used only for debug/diagnostics
-- **Not wired to runtime capability gating — runtime uses `RuntimeCameraModel` instead**
+### F3 — Camera panels
+- `frontend/src/panels/cameras/CameraGrid.tsx` — responsive grid container
+- `frontend/src/panels/cameras/CameraCard.tsx` — live camera card
+- `frontend/src/panels/cameras/OfflineOverlay.tsx` — disconnected state overlay
+- `frontend/src/panels/cameras/RuntimeBadges.tsx` — capability/PTP version badges
 
-### Phase 5 — Sony state layers ✅ complete (v0.12.0)
-- `src/sony/state/raw.ts` — `SonyRawState`
-- `src/sony/state/derived.ts` — `SonyDerivedState`, `deriveSonyState()`
-- `src/sony/state/alerts.ts` — `SonyAlertState`, `deriveSonyAlerts()`
-- `src/sony/state/runtime.ts` — `getSonyRuntimeState()` — assembles all three layers
-- **Wired to runtime — used by WS broadcast and viewmodels**
+### F4 — Debug modal
+- `frontend/src/panels/cameras/DebugModal.tsx` — prop table, runtime model, stats
 
-### Phase 6 — Registry skeletons
-- `src/sony/actions/index.ts`
-- `src/sony/variables/index.ts`
-- `src/sony/feedbacks/index.ts`
-- `src/sony/presets/index.ts`
-- `src/atem/actions/index.ts`
-- `src/atem/variables/index.ts`
-- `src/atem/feedbacks/index.ts`
-- `src/bridge/actions/index.ts`
-- `src/bridge/variables/index.ts`
-- `src/bridge/feedbacks/index.ts`
-- **Skeleton exports only**
+### F5 — Add Camera wizard
+- `frontend/src/panels/cameras/AddCameraWizard.tsx` — multi-step: IP → connect → name → confirm
 
-### Phase 7 — Split Sony polling
-- `src/sony/polling/high-priority.ts`
-- `src/sony/polling/low-priority.ts`
-- Update `src/sony/ptp-client.ts` to use two-tier polling
-- **Behavior change: low-priority props poll at 1000ms instead of 200ms**
+### F6 — ATEM panel
+- `frontend/src/panels/atem/AtemPanel.tsx` — connection, model, topology
+- `frontend/src/panels/atem/TallyStrip.tsx` — per-input tally indicators
 
-### Phase 8 — Wire RuntimeCapabilities to action gating
-- Gate actions, feedbacks, and presets by `RuntimeCapabilities` (protocol-discovered, from `src/sony/runtime/`)
-- Connect `SonyDerivedState` and `SonyAlertState` to WS broadcast
-- **First phase that adds new runtime behavior**
+### Cutover
+- `npm run build:ui` replaces `public/index.html` with Vite output
+- Legacy UI no longer served
+- Run after F1–F6 are complete and verified
+
+---
+
+### Frontend rules
+
+- All WS state must flow through Zustand stores — never read directly from WS in components
+- Components must not import from `src/` (backend) — use `frontend/src/types/` for shared shapes
+- CSS: use design tokens from `tokens.css` — no hardcoded colors in component files
+- Each panel lives in its own file — no panel logic in `App.tsx`
+- `App.tsx` is layout only — no data fetching, no business logic
 
 ---
 
@@ -635,18 +632,18 @@ A phase is complete only when all of the following are true:
 - Do not change behavior during structural phases
 - First explain affected files and reason before writing any code
 
-### Files that must not be modified in Phases 1–3
+### Backend files that must not be modified during frontend phases
 
 | File | Reason |
 |------|--------|
-| `src/sony/ptp-client.ts` | Working PTP transport — extraction only |
+| `src/sony/ptp-client.ts` | Working PTP transport |
 | `src/sony/manager.ts` | Working camera lifecycle |
 | `src/sony/packet-builder.ts` | Working packet construction |
 | `src/sony/constants.ts` | Single source of Sony constants |
-| `src/bridge/mapper.ts` | Clean — do not disturb |
-| `src/bridge/atem-decoder.ts` | Clean — do not disturb |
-| `src/config.ts` | Config I/O — do not disturb |
-| `src/logger.ts` | Logger — do not disturb |
+| `src/bridge/mapper.ts` | Clean converter |
+| `src/bridge/atem-decoder.ts` | Clean decoder |
+| `src/config.ts` | Config I/O |
+| `src/logger.ts` | Logger |
 
 ---
 

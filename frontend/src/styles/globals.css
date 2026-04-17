@@ -1,0 +1,24 @@
+@import './tokens.css';
+
+/* ── Reset ─────────────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── Base ──────────────────────────────────────────────────────────────────── */
+body {
+  background: var(--bg);
+  color: var(--t1);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+  min-height: 100dvh;
+}
+
+/* ── Typography helpers ────────────────────────────────────────────────────── */
+.tabular { font-variant-numeric: tabular-nums; }
+.mono { font-family: 'SF Mono', ui-monospace, monospace; }
