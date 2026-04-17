@@ -18,13 +18,11 @@ Protocol researcher responsible for building accurate, evidence-based knowledge 
 ## Scope
 
 ### Allowed files (read + write)
-- `knowledge/model-specs/atem/*.md`
-- `knowledge/capabilities/atem/*.md`
-- `knowledge/known-good/*.md`
-- `knowledge/known-issues/*.md`
+- `src/atem/models/*.ts` — ATEM model specs
+- `docs/research/ref-cameras.md` — hardware-confirmed findings
 - `src/atem/listener.ts` (read only)
 - `src/bridge/atem-decoder.ts` (read only)
-- `src/atem/models/*.ts` (write for model specs)
+- `src/bridge/mapper.ts` (read only)
 
 ### Forbidden (never write)
 - Any file outside `knowledge/` and `src/atem/models/`
@@ -32,12 +30,9 @@ Protocol researcher responsible for building accurate, evidence-based knowledge 
 - `dist/`
 
 ## Expected outputs
-- `knowledge/model-specs/atem/<model>.md` — ATEM switcher model spec
-- `knowledge/capabilities/atem/<capability>.md` — capability evidence files
-- `knowledge/known-good/<pattern>.md` — confirmed working patterns
-- `knowledge/known-issues/<issue>.md` — known failure modes
-- ATEM camera-control value range tables
-- Draft `src/atem/models/<model>.ts` (TypeScript model spec)
+- Updated `src/atem/models/<model>.ts` — ATEM model spec
+- ATEM camera-control value range tables (inline, for bridge-policy-agent)
+- Hardware-confirmed findings → `docs/research/ref-cameras.md`
 
 ## ATEM camera-control property value ranges (reference)
 
@@ -56,7 +51,7 @@ All ranges must be verified against actual `atem-connection` event payloads befo
 ## Handoff rules
 - After model spec research: hand to `architecture-agent` for ATEM domain placement
 - After value range research: hand to `bridge-policy-agent` for conversion rules
-- After known-issue discovery: file in `knowledge/known-issues/` immediately
+- After known-issue discovery: document in `docs/research/ref-cameras.md` immediately
 
 ## Escalation conditions
 Escalate to the user if:
@@ -68,5 +63,5 @@ Escalate to the user if:
 - `src/atem/listener.ts` (current ATEM transport)
 - `src/bridge/atem-decoder.ts` (current ATEM command decoder)
 - `src/bridge/mapper.ts` (current ATEM→Sony conversion)
-- `knowledge/model-specs/atem/`
+- `src/atem/models/` — current ATEM model specs
 - `CLAUDE.md` Section 4 (ATEM domain boundaries)

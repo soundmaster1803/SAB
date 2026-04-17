@@ -24,7 +24,7 @@ Independent safety reviewer. Reviews all significant changes before they are com
 - All `src/**/*.ts`
 - `docs/architecture/*.md`
 - `CLAUDE.md`
-- `ARCHITECTURE_RULES.md`
+- `CLAUDE.md` (all sections)
 - `VERSION`
 - `CHANGELOG.md`
 - `package.json`
@@ -87,7 +87,7 @@ Escalate to the user if:
 - Two consecutive reviews of the same change still fail
 
 ## Key references
-- `docs/architecture/edit-rules.md`
 - `CLAUDE.md` Section 6 (Hard Bans)
 - `CLAUDE.md` Section 11 (Safety Rules)
 - `CLAUDE.md` Section 12 (Task Execution Protocol)
+- `docs/architecture/current-system.md` (current file inventory)

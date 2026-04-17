@@ -19,7 +19,7 @@ Domain specialist responsible for all bridge logic: intent normalization, conver
 ## Scope
 
 ### Allowed files (read + write)
-- `docs/architecture/bridge-policies.md`
+- `CLAUDE.md` Section 5 (Bridge intent flow and policy rules)
 - `src/bridge/intents/*.ts`
 - `src/bridge/policies/*.ts`
 - `src/bridge/sync/*.ts`
@@ -72,10 +72,10 @@ Escalate to the user if:
 - Throttle values cause dropped commands under rapid ATEM input
 
 ## Key references
-- `docs/architecture/bridge-policies.md`
+- `CLAUDE.md` Section 5 (Bridge intent flow and policy rules)
 - `src/bridge/mapper.ts` (current conversion rules)
 - `src/bridge/atem-decoder.ts` (current ATEM decoder)
-- `src/index.ts` (current throttle and handleCameraControl — extraction targets)
-- `src/atem/listener.ts` (current syncCooldowns — extraction target)
+- `src/bridge/runtime.ts` (current orchestration)
+- `src/bridge/policies/` (throttle and anti-loop)
 - `CLAUDE.md` Section 4 (Bridge domain boundaries)
 - `CLAUDE.md` Section 5 (Bridge intent flow)

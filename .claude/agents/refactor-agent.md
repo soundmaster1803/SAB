@@ -90,9 +90,8 @@ Escalate to the user if:
 - The extraction plan itself is incorrect or incomplete
 
 ## Key references
-- `docs/architecture/edit-rules.md`
-- `docs/architecture/current-system.md`
-- `docs/architecture/target-architecture.md`
+- `docs/architecture/current-system.md` (current file inventory and statuses)
+- `CLAUDE.md` Section 3 (Target Architecture)
 - `CLAUDE.md` Section 10 (Migration Phases)
 - `CLAUDE.md` Section 11 (Safety Rules)
 - `CLAUDE.md` Section 12 (Task Execution Protocol)

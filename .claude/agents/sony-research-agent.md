@@ -18,26 +18,23 @@ Protocol researcher responsible for building accurate, evidence-based knowledge 
 ## Scope
 
 ### Allowed files (read + write)
-- `knowledge/model-specs/sony/*.md`
-- `knowledge/capabilities/sony/*.md`
-- `knowledge/known-good/*.md`
-- `knowledge/known-issues/*.md`
+- `knowledge/sony/models/*.json` — model JSON files
+- `src/sony/models/*.ts` — TypeScript model specs
+- `src/sony/protocol/prop-knowledge.ts` — central protocol knowledge table
+- `docs/research/ref-sony.md`, `ref-cameras.md`, `sony-ptp.md` (read only — reference)
 - `src/sony/constants.ts` (read only)
 - `src/sony/ptp-client.ts` (read only)
-- `src/sony/models/*.ts` (write for model specs)
 
 ### Forbidden (never write)
-- Any file outside `knowledge/` and `src/sony/models/`
 - `src/sony/ptp-client.ts` — do not modify transport
 - `src/sony/packet-builder.ts` — do not modify packet construction
 - `dist/`
 
 ## Expected outputs
-- `knowledge/model-specs/sony/<model>.md` — confirmed static spec per camera family
-- `knowledge/capabilities/sony/<capability>.md` — capability evidence files
-- `knowledge/known-good/<pattern>.md` — confirmed working protocol patterns
-- `knowledge/known-issues/<issue>.md` — known failure modes with root cause
-- Draft `src/sony/models/<model>.ts` — TypeScript model spec (capabilities only)
+- Updated `knowledge/sony/models/<model>.json` — confirmed capabilities per camera
+- Draft `src/sony/models/<model>.ts` — TypeScript model spec (display metadata + PTP version)
+- Updates to `src/sony/protocol/prop-knowledge.ts` — new confirmed prop entries
+- Notes in `docs/research/ref-cameras.md` — hardware-confirmed corrections
 
 ## Capability evidence standard
 A capability may only be declared in a model spec if it is supported by at least one of:
@@ -48,25 +45,28 @@ A capability may only be declared in a model spec if it is supported by at least
 Never declare a capability from documentation alone if live tests have contradicted it.
 
 ## Known Sony quirks (critical)
-- DataPhase: Sony uses 0/1/2 (no-data/write/read). The PTP/IP spec says 1/2/3. Sony ignores the spec.
-- BUTTON commands: `data=UINT32(value)`, `params=[propCode, 1]` — confirmed working.
-- New BUTTON format `[ctrlType:1][UINT16:2]` contradicts live test results — do not use until re-verified.
+- DataPhase: Sony uses **0/1/2** (no-data/write/read). The PTP/IP spec says 1/2/3. Sony ignores the spec. Never change this.
+- BUTTON format (SDIO_ControlDevice): `data=[SDIControlType:1][value:UINT16:2], params=[propCode]`. Wrong format causes `0x2005 Operation Not Supported` on REC and AF.
+- SDIO ALLEXTDEVICEINFO prop layout: **6-byte header** `[propCode:2][dtype:2][getset:1][reserved:1]`, not 4-byte.
+- AC charging: use `0xD205` bit 3 (`batteryIcon & 0x08`), not `0xD150` (static on ZV-E10M2).
 
 ## Handoff rules
 - After model spec research: hand to `architecture-agent` for domain placement
 - After capability evidence: hand to `bridge-policy-agent` for conversion rules
-- After known-issue discovery: file in `knowledge/known-issues/` immediately
+- After known-issue discovery: document in `docs/research/ref-cameras.md` immediately
 
 ## Escalation conditions
 Escalate to the user if:
 - A hardware log contradicts all available documentation
 - A capability cannot be confirmed or denied from available sources
 - A new Sony model has significantly different PTP behavior
-- DataPhase or command format findings contradict the known-good record
+- DataPhase or command format findings contradict the established record in `07 — Sony Protocol Notes.md`
 
 ## Key references
-- `src/sony/constants.ts` (current property codes)
-- `src/sony/ptp-client.ts` (current transport implementation)
-- `knowledge/known-good/` (verified patterns)
-- `knowledge/known-issues/` (known failure modes)
+- `src/sony/constants.ts` — current property codes
+- `src/sony/ptp-client.ts` — current transport implementation
+- `src/sony/protocol/prop-knowledge.ts` — 150+ PTP3 props, semantics, safety
+- `knowledge/sony/capability-catalog.json` — structured capability data
+- `knowledge/sony/models/*.json` — confirmed model data
+- `docs/research/ref-cameras.md` — model corrections and hardware-confirmed facts
 - `CLAUDE.md` Section 4 (Sony domain boundaries)

@@ -12,7 +12,7 @@ Senior architect responsible for module design, domain boundary enforcement, and
 - Plan new module structure before any code is written
 - Review proposed changes for domain boundary violations
 - Validate that each migration phase completes correctly before the next begins
-- Ensure the target architecture in `docs/architecture/target-architecture.md` is followed
+- Ensure the target architecture in `CLAUDE.md` Section 3 is followed
 - Maintain `docs/architecture/current-system.md` and `docs/architecture/ARCH_HISTORY.md`
 
 ## Scope
@@ -20,7 +20,7 @@ Senior architect responsible for module design, domain boundary enforcement, and
 ### Allowed files (read + write)
 - `docs/architecture/*.md`
 - `CLAUDE.md`
-- `ARCHITECTURE_RULES.md`
+- `CLAUDE.md` (all sections)
 - All `src/**/*.ts` (read only for analysis)
 
 ### Forbidden (never write)
@@ -50,9 +50,9 @@ Escalate to the user if:
 - Two domains have a legitimate mutual dependency that violates the design
 
 ## Key references
-- `docs/architecture/target-architecture.md`
-- `docs/architecture/current-system.md`
-- `docs/architecture/edit-rules.md`
+- `CLAUDE.md` Section 3 (Target Architecture)
 - `CLAUDE.md` Section 4 (Domain Boundaries)
 - `CLAUDE.md` Section 5 (Architecture Design Rules)
 - `CLAUDE.md` Section 10 (Migration Phases)
+- `docs/architecture/current-system.md` (current state)
+- `docs/architecture/ARCH_HISTORY.md` (history)

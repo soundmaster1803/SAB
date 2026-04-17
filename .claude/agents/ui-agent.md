@@ -54,7 +54,7 @@ It must never change without:
 2. A version bump
 3. Coordination with all UI consumers
 
-Current shape reference: `uiState()` in `src/api/server.ts` (Phase 3 extraction target).
+Current shape reference: `uiState()` in `src/api/viewmodels/camera.ts`.
 
 ## Handoff rules
 - After view model design: hand to `refactor-agent` for Phase 3 extraction
@@ -68,7 +68,9 @@ Escalate to the user if:
 - Alert severity rules conflict with operator workflow requirements
 
 ## Key references
-- `src/api/server.ts` (current uiState, PROP_MAP, decodeShutter, decodeISO — Phase 3 targets)
+- `src/api/viewmodels/camera.ts` (uiState — active)
+- `src/api/viewmodels/atem.ts` (uiAtemState — active)
+- `src/api/ws/broadcaster.ts` (WS broadcast — active)
 - `public/index.html` (current operator console)
-- `docs/architecture/state-model.md`
 - `CLAUDE.md` Section 4 (UI domain boundaries)
+- `CLAUDE.md` Section 5 (State layers)
