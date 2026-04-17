@@ -1,0 +1,193 @@
+/* ── Overlay ───────────────────────────────────────────────────────────────── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 120;
+  padding: 16px;
+}
+
+/* ── Modal ─────────────────────────────────────────────────────────────────── */
+.modal {
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  background: rgba(28, 28, 30, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  padding: 24px;
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── Heading ───────────────────────────────────────────────────────────────── */
+.heading {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+/* ── Form fields ───────────────────────────────────────────────────────────── */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.label {
+  font-size: 11px;
+  color: var(--t2);
+}
+
+.input {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--t1);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+}
+.input:focus { border-color: var(--accent); }
+.input::placeholder { color: var(--t3); }
+
+/* ── Error message ─────────────────────────────────────────────────────────── */
+.errorMsg {
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 9px 13px;
+  border-radius: 10px;
+  background: rgba(255, 59, 48, 0.1);
+  border: 1px solid rgba(255, 59, 48, 0.3);
+  color: var(--red);
+}
+
+/* ── Buttons ───────────────────────────────────────────────────────────────── */
+.actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 2px;
+}
+
+.btn {
+  padding: 9px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.btnGhost {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--border);
+  color: var(--t2);
+}
+.btnGhost:hover { background: rgba(255, 255, 255, 0.13); color: var(--t1); }
+
+.btnPrimary {
+  background: var(--accent);
+  border: 1px solid transparent;
+  color: #fff;
+}
+.btnPrimary:hover { opacity: 0.85; }
+
+/* ── Connecting step ───────────────────────────────────────────────────────── */
+.connectingBody {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+.connectingIp {
+  font-size: 13px;
+  color: var(--t2);
+  font-variant-numeric: tabular-nums;
+}
+
+.hintBox {
+  font-size: 12px;
+  line-height: 1.55;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(0, 122, 255, 0.1);
+  border: 1px solid rgba(0, 122, 255, 0.3);
+  color: #4da3ff;
+  text-align: center;
+  animation: pulseFade 2s ease-in-out infinite;
+}
+
+@keyframes pulseFade {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+
+/* ── Result step (success / error) ────────────────────────────────────────── */
+.resultBody {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  text-align: center;
+}
+
+.successIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(52, 199, 89, 0.15);
+  border: 1.5px solid rgba(52, 199, 89, 0.45);
+  color: var(--green);
+  font-size: 22px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.errorIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 59, 48, 0.12);
+  border: 1.5px solid rgba(255, 59, 48, 0.4);
+  color: var(--red);
+  font-size: 20px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.resultText {
+  font-size: 13px;
+  color: var(--t2);
+  line-height: 1.5;
+}
