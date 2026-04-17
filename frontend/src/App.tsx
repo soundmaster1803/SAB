@@ -1,21 +1,31 @@
 /**
- * App.tsx — root component shell.
+ * App.tsx — root layout shell.
  *
- * F1: WS connection started here. Real layout wired in F2.
+ * F2: Header + main content area + LogPanel + TallyBar.
+ * Camera grid (F3), wizard (F5), debug modal (F4) mount inside main.
  */
 import { useEffect } from 'react'
 import { useWsStore } from './stores/ws'
+import { Header } from './components/Header'
+import { LogPanel } from './panels/logs/LogPanel'
+import { TallyBar } from './panels/TallyBar'
 
 function App() {
   const connect = useWsStore((s) => s.connect)
-  const status  = useWsStore((s) => s.status)
 
   useEffect(() => { connect() }, [connect])
 
   return (
-    <div style={{ padding: '24px', color: 'var(--t2)', fontSize: '14px' }}>
-      CineLink Bridge — WS: {status}
-    </div>
+    <>
+      <Header />
+
+      <main style={{ padding: '16px' }}>
+        {/* CameraGrid mounts here in F3 */}
+      </main>
+
+      <LogPanel />
+      <TallyBar />
+    </>
   )
 }
 

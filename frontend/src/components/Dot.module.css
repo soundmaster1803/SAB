@@ -1,0 +1,13 @@
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--t3);
+  flex-shrink: 0;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+.on {
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+}
