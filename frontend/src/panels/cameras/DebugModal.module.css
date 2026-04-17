@@ -1,0 +1,324 @@
+/* ── Overlay ───────────────────────────────────────────────────────────────── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  background: rgba(4, 6, 10, 0.74);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 18px;
+}
+
+/* ── Modal shell ───────────────────────────────────────────────────────────── */
+.modal {
+  width: min(1320px, 100%);
+  height: min(88vh, 920px);
+  background: linear-gradient(180deg, rgba(18, 20, 26, 0.98), rgba(9, 11, 15, 0.98));
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Header ────────────────────────────────────────────────────────────────── */
+.head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  flex-shrink: 0;
+}
+
+.titleWrap {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.subtitle {
+  font-size: 10px;
+  color: var(--t3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.spacer { flex: 1; }
+
+.headBtn {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--t2);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+  flex-shrink: 0;
+}
+.headBtn:hover { color: var(--t1); background: rgba(255, 255, 255, 0.1); }
+
+/* ── Body ──────────────────────────────────────────────────────────────────── */
+.body {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.loading {
+  font-size: 10px;
+  color: var(--t3);
+  text-align: center;
+  padding: 6px 0;
+}
+
+/* ── Stats grid ────────────────────────────────────────────────────────────── */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.statCard {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.statLabel {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--t3);
+  font-weight: 700;
+}
+
+.statValue {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--t1);
+}
+
+.statNote {
+  font-size: 10px;
+  color: var(--t3);
+  line-height: 1.3;
+}
+
+/* ── Panels row ────────────────────────────────────────────────────────────── */
+.panels {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 12px;
+}
+
+.panelCard {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.035);
+  border-radius: 14px;
+  padding: 12px;
+  overflow: hidden;
+}
+
+/* ── Section title ─────────────────────────────────────────────────────────── */
+.sectionTitle {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--t3);
+  margin-bottom: 8px;
+}
+
+/* ── Key-value grid ────────────────────────────────────────────────────────── */
+.kv {
+  display: grid;
+  grid-template-columns: minmax(110px, 150px) 1fr;
+  gap: 6px 10px;
+  font-size: 11px;
+  align-items: start;
+}
+.kv > div:nth-child(odd)  { color: var(--t3); font-weight: 600; }
+.kv > div:nth-child(even) { color: var(--t1); min-width: 0; word-break: break-word; }
+
+.noSpec {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--orange);
+  background: rgba(255, 149, 0, 0.08);
+  border: 1px solid rgba(255, 149, 0, 0.2);
+  border-radius: 5px;
+  padding: 1px 6px;
+}
+
+/* ── Capability badges ─────────────────────────────────────────────────────── */
+.capsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.capBadge {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 5px;
+}
+.capOn  { background: rgba(52, 199, 89, 0.1);  color: var(--green);  border: 1px solid rgba(52, 199, 89, 0.25); }
+.capOff { background: rgba(255, 255, 255, 0.04); color: var(--t3);   border: 1px solid var(--border); }
+
+/* ── Runtime state chips ───────────────────────────────────────────────────── */
+.runtimeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+}
+
+.runtimeChip {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  padding: 8px 9px;
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--t2);
+}
+
+.runtimeChip strong {
+  display: block;
+  color: var(--t1);
+  margin-bottom: 2px;
+  font-size: 11px;
+}
+
+.mono { font-family: 'SF Mono', ui-monospace, monospace; }
+
+/* ── Props table ───────────────────────────────────────────────────────────── */
+.tableWrap {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  overflow: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 1080px;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.table th,
+.table td {
+  padding: 8px 9px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  vertical-align: top;
+  text-align: left;
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: rgba(15, 18, 25, 0.98);
+  color: var(--t3);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.table td { color: var(--t2); }
+
+.table td code {
+  font-family: 'SF Mono', ui-monospace, monospace;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* ── Badges ────────────────────────────────────────────────────────────────── */
+.badges { display: flex; flex-wrap: wrap; gap: 4px; }
+
+.badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--t2);
+  white-space: nowrap;
+}
+
+.badgeLive  { color: var(--green);  border-color: rgba(52, 199, 89, 0.32);  background: rgba(52, 199, 89, 0.1);  }
+.badgeWrite { color: var(--accent); border-color: rgba(0, 122, 255, 0.35);  background: rgba(0, 122, 255, 0.12); }
+.badgeWarn  { color: var(--orange); border-color: rgba(255, 149, 0, 0.35);  background: rgba(255, 149, 0, 0.12); }
+.badgeMuted { color: var(--t3); }
+
+/* ── Enum options ──────────────────────────────────────────────────────────── */
+.opts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 320px;
+}
+
+.opt {
+  font-size: 9px;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--t2);
+  white-space: nowrap;
+}
+
+.optCurrent {
+  color: var(--accent);
+  border-color: rgba(0, 122, 255, 0.35);
+  background: rgba(0, 122, 255, 0.1);
+  font-weight: 700;
+}
+
+/* ── Notes ─────────────────────────────────────────────────────────────────── */
+.notes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 340px;
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--t3);
+}
+
+/* ── Responsive ────────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .overlay { padding: 8px; }
+  .modal   { height: 92vh; border-radius: 14px; }
+  .head    { padding: 12px; flex-wrap: wrap; }
+  .panels  { grid-template-columns: 1fr; }
+}
