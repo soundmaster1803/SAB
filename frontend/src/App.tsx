@@ -7,6 +7,7 @@
 import { useEffect } from 'react'
 import { useWsStore } from './stores/ws'
 import { Header } from './components/Header'
+import { CameraGrid } from './panels/cameras/CameraGrid'
 import { LogPanel } from './panels/logs/LogPanel'
 import { TallyBar } from './panels/TallyBar'
 
@@ -20,7 +21,7 @@ function App() {
       <Header />
 
       <main style={{ padding: '16px' }}>
-        {/* CameraGrid mounts here in F3 */}
+        <CameraGrid />
       </main>
 
       <LogPanel />

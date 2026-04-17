@@ -1,0 +1,527 @@
+/* ── Card shell ────────────────────────────────────────────────────────────── */
+.card {
+  position: relative;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  overflow: hidden;
+}
+
+.recording {
+  border-color: rgba(255, 59, 48, 0.45);
+  box-shadow: 0 0 28px rgba(255, 59, 48, 0.07);
+}
+
+.tallyPgm {
+  border-color: rgba(255, 59, 48, 0.85);
+  box-shadow: 0 0 0 2px rgba(255, 59, 48, 0.4), 0 0 24px rgba(255, 59, 48, 0.25);
+}
+
+.tallyPvw {
+  border-color: rgba(52, 199, 89, 0.85);
+  box-shadow: 0 0 0 2px rgba(52, 199, 89, 0.4), 0 0 24px rgba(52, 199, 89, 0.2);
+}
+
+/* ── Offline overlay ───────────────────────────────────────────────────────── */
+.offlineOverlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  background: rgba(10, 10, 10, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.offlineLabel {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 7px 16px;
+  border-radius: 10px;
+}
+
+/* ── Card head ─────────────────────────────────────────────────────────────── */
+/* z-index 11 keeps head above the offline overlay */
+.head {
+  position: relative;
+  z-index: 11;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.name {
+  font-size: 15px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: -0.2px;
+}
+
+.model {
+  font-size: 10px;
+  color: var(--accent);
+  margin-top: 1px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.8;
+}
+
+.ip {
+  font-size: 10px;
+  color: var(--t3);
+  margin-top: 1px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Runtime capability badges */
+.runtimeBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 4px;
+}
+
+.badge {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--t3);
+  white-space: nowrap;
+}
+.badgePtp { color: var(--accent); border-color: rgba(0, 122, 255, 0.3);   background: rgba(0, 122, 255, 0.1);   }
+.badgeCap { color: var(--green);  border-color: rgba(52, 199, 89, 0.25);  background: rgba(52, 199, 89, 0.08);  }
+.badgeUnk { color: var(--orange); border-color: rgba(255, 149, 0, 0.3);   background: rgba(255, 149, 0, 0.1);   }
+
+.headActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.connDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--t3);
+  transition: all 0.3s;
+  flex-shrink: 0;
+}
+.connDotOn {
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+}
+
+.btnIcon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--t2);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+  touch-action: manipulation;
+}
+.btnIcon:hover { background: rgba(255, 255, 255, 0.13); color: var(--t1); }
+.btnIcon:active { transform: scale(0.9); }
+.btnIcon:disabled { opacity: 0.3; cursor: default; }
+
+/* ── Inline edit form ──────────────────────────────────────────────────────── */
+.editForm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(0, 122, 255, 0.3);
+  border-radius: 12px;
+  padding: 12px;
+  position: relative;
+  z-index: 11;
+}
+
+.editField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.editLabel {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--t3);
+}
+
+.editInput {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--t1);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+}
+.editInput:focus { border-color: var(--accent); }
+
+.editActions {
+  display: flex;
+  gap: 7px;
+  margin-top: 2px;
+}
+
+.btnEditSave {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btnEditSave:hover { opacity: 0.85; }
+
+.btnEditCancel {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--t2);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btnEditCancel:hover { background: rgba(255, 255, 255, 0.12); color: var(--t1); }
+
+/* ── Battery row ───────────────────────────────────────────────────────────── */
+.batRow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.batBody {
+  position: relative;
+  width: 24px;
+  height: 12px;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  border-radius: 3px;
+  padding: 1.5px;
+  flex-shrink: 0;
+}
+.batBody::after {
+  content: '';
+  position: absolute;
+  right: -5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 0 2px 2px 0;
+}
+
+.batLevel {
+  height: 100%;
+  border-radius: 1.5px;
+  background: var(--green);
+  transition: width 0.5s ease, background 0.3s;
+}
+.batLow { background: var(--red); }
+
+.batPct {
+  font-size: 11px;
+  color: var(--t2);
+  font-variant-numeric: tabular-nums;
+}
+
+.batPower {
+  font-size: 12px;
+  color: var(--green);
+  line-height: 1;
+}
+
+/* ── Rec timer ─────────────────────────────────────────────────────────────── */
+.recTimer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-left: auto;
+  gap: 1px;
+}
+
+.recElapsed {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--red);
+  animation: blinkDot 1s step-start infinite;
+}
+
+@keyframes blinkDot {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+.recRemain {
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 59, 48, 0.55);
+  font-weight: 600;
+}
+
+/* ── Params grid ───────────────────────────────────────────────────────────── */
+.params {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 7px;
+}
+
+/* ── Param pill ────────────────────────────────────────────────────────────── */
+.pill {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 9px 6px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.pillFlex { flex: 1; }
+
+.pillLabel {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: var(--t3);
+}
+
+.pillControls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 2px;
+}
+
+.adjBtn {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--t2);
+  font-size: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  transition: background 0.12s, color 0.12s;
+  touch-action: manipulation;
+}
+.adjBtn:hover  { background: rgba(255, 255, 255, 0.14); color: var(--t1); }
+.adjBtn:active { transform: scale(0.85); }
+
+.pillValue {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Focus row ─────────────────────────────────────────────────────────────── */
+.focusRow {
+  display: flex;
+  gap: 7px;
+  align-items: stretch;
+}
+
+.afBtn {
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 122, 255, 0.35);
+  background: rgba(0, 122, 255, 0.1);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
+  touch-action: manipulation;
+}
+.afBtn:hover  { background: rgba(0, 122, 255, 0.2); border-color: rgba(0, 122, 255, 0.6); }
+.afBtn:active { transform: scale(0.94); }
+
+/* ── ATEM section ──────────────────────────────────────────────────────────── */
+.atemSection {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.atemRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.atemRowLabel { font-size: 12px; color: var(--t2); }
+
+/* Toggle switch */
+.toggleWrap {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.toggleWrap input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+.toggleTrack {
+  position: absolute;
+  inset: 0;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.toggleTrack::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  top: 3px;
+  left: 3px;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+.toggleWrap input:checked + .toggleTrack { background: var(--accent); }
+.toggleWrap input:checked + .toggleTrack::after { transform: translateX(16px); }
+
+.atemIdInput {
+  width: 58px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 6px;
+  color: var(--t1);
+  font-size: 13px;
+  text-align: center;
+  outline: none;
+  font-variant-numeric: tabular-nums;
+  transition: border-color 0.15s;
+}
+.atemIdInput:focus { border-color: var(--accent); }
+
+/* ── Card bottom ───────────────────────────────────────────────────────────── */
+.cardBottom {
+  display: flex;
+  gap: 7px;
+  align-items: stretch;
+}
+
+.btnRec {
+  flex: 1;
+  padding: 10px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 59, 48, 0.3);
+  background: rgba(255, 59, 48, 0.08);
+  color: rgba(255, 59, 48, 0.75);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.3px;
+  transition: all 0.2s;
+  touch-action: manipulation;
+}
+.btnRec:hover { background: rgba(255, 59, 48, 0.16); border-color: rgba(255, 59, 48, 0.5); color: var(--red); }
+
+.btnRecActive {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+  animation: pulseRec 1.5s ease-in-out infinite;
+}
+@keyframes pulseRec {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.5); }
+  50%       { box-shadow: 0 0 0 6px rgba(255, 59, 48, 0); }
+}
+
+.btnDel {
+  width: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 59, 48, 0.4);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+  touch-action: manipulation;
+}
+.btnDel:hover { background: rgba(255, 59, 48, 0.1); color: var(--red); }
