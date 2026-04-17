@@ -16,6 +16,8 @@ import {
   updateRuntimeModel,
 } from './runtime/builder.js';
 import type { RuntimeCameraModel } from './runtime/types.js';
+import { HIGH_PRIORITY_INTERVAL_MS } from './polling/high-priority.js';
+import { LOW_PRIORITY_INTERVAL_MS } from './polling/low-priority.js';
 
 export interface CameraState {
   id: string;
@@ -93,8 +95,10 @@ export class SonyPTPClient extends EventEmitter {
   // Each enqueued fn is chained onto the tail; a failed task doesn't poison the chain.
   private commandQueue: Promise<any> = Promise.resolve();
 
-  private pollActive = false;
-  private pollIntervalMs = 200;
+  private highPollActive = false;
+  private lowPollActive  = false;
+  private highPollIntervalMs = HIGH_PRIORITY_INTERVAL_MS;
+  private lowPollIntervalMs  = LOW_PRIORITY_INTERVAL_MS;
   private pollErrorCount = 0;
 
   constructor(ip: string, guid: Buffer) {
@@ -248,21 +252,32 @@ export class SonyPTPClient extends EventEmitter {
 
   // ─── Polling ───────────────────────────────────────────────────────────────
 
-  startPolling(intervalMs = 200): void {
-    this.pollIntervalMs = intervalMs;
-    this.pollActive = true;
+  startPolling(highMs = HIGH_PRIORITY_INTERVAL_MS, lowMs = LOW_PRIORITY_INTERVAL_MS): void {
+    this.highPollIntervalMs = highMs;
+    this.lowPollIntervalMs  = lowMs;
+    this.highPollActive = true;
+    this.lowPollActive  = true;
     this.pollErrorCount = 0;
-    this.pollLoop();
+    this.highPriorityPollLoop();
+    this.lowPriorityPollLoop();
   }
 
   stopPolling(): void {
-    this.pollActive = false;
+    this.highPollActive = false;
+    this.lowPollActive  = false;
   }
 
   private pollCount = 0;
 
-  private async pollLoop(): Promise<void> {
-    while (this.pollActive) {
+  /**
+   * High-priority poll cycle (~200 ms).
+   *
+   * Fetches the full prop blob via 0x9209 and parses all high-priority state
+   * fields (ISO, shutter, aperture, battery, rec state, remaining time).
+   * Stores the blob in lastPollBlob for the low-priority cycle to consume.
+   */
+  private async highPriorityPollLoop(): Promise<void> {
+    while (this.highPollActive) {
       try {
         const blob = await this.sendCmdReadData(0x9209, [0, 1]);
         this.pollCount++;
@@ -284,7 +299,27 @@ export class SonyPTPClient extends EventEmitter {
           this.err(`Poll error #${this.pollErrorCount}: ${e.message}`);
         }
       }
-      await this.delay(this.pollIntervalMs);
+      await this.delay(this.highPollIntervalMs);
+    }
+  }
+
+  /**
+   * Low-priority poll cycle (~1000 ms).
+   *
+   * Reads from the cached lastPollBlob written by the high-priority cycle.
+   * Issues no additional PTP calls — the blob is always fresh enough for
+   * low-priority props (WB mode, focus mode, metering mode, exposure mode).
+   *
+   * State fields for these props will be added in Phase 8.
+   * This loop establishes the structural boundary and timing now.
+   */
+  private async lowPriorityPollLoop(): Promise<void> {
+    while (this.lowPollActive) {
+      await this.delay(this.lowPollIntervalMs);
+      if (!this.lowPollActive) break;
+      if (!this.lastPollBlob) continue;
+      // Low-priority prop extraction will be wired here in Phase 8.
+      // The blob is available via this.lastPollBlob for all prop codes.
     }
   }
 

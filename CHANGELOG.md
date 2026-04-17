@@ -2,6 +2,26 @@
 
 ---
 
+## v0.13.0 — 2026-04-17 (Phase 7 — Two-tier Sony polling)
+
+### Added
+- `src/sony/polling/high-priority.ts` — `HIGH_PRIORITY_INTERVAL_MS` (200ms) and `HIGH_PRIORITY_PROP_CODES` (ISO, shutter, aperture, battery, rec state, remaining time).
+- `src/sony/polling/low-priority.ts` — `LOW_PRIORITY_INTERVAL_MS` (1000ms) and `LOW_PRIORITY_PROP_CODES` (WB mode, focus mode, metering mode, exposure mode, drive mode).
+
+### Changed
+- `src/sony/ptp-client.ts` — replaced single `pollLoop()` with two separate cycles:
+  - `highPriorityPollLoop()`: fetches `0x9209` blob and parses high-priority state at 200ms.
+  - `lowPriorityPollLoop()`: reads cached `lastPollBlob` (no extra PTP call) at 1000ms. State field extraction wired in Phase 8.
+- `startPolling()` now accepts `(highMs, lowMs)` and starts both loops.
+- `stopPolling()` stops both loops.
+
+### Migration notes
+- High-priority polling behavior is unchanged (same props, same 200ms interval).
+- Low-priority props do not yet update state fields — that is Phase 8.
+- `startPolling()` signature changed: `startPolling(intervalMs?)` → `startPolling(highMs?, lowMs?)`. All existing callers pass no arguments and are unaffected.
+
+---
+
 ## v0.12.2 — 2026-04-15 (Fix CloseSession on camera remove + race guard in connectWithRetry)
 
 ### Fixed
