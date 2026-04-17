@@ -2,6 +2,23 @@
 
 ---
 
+## v0.14.0 — 2026-04-17 (Phase 8 — RuntimeCapabilities gating wired)
+
+### Changed
+- `src/sony/actions/index.ts` — migrated `requiredCapability` from `keyof SonyCapabilities` (static model spec) to `keyof RuntimeCapabilities` (protocol-discovered). Updated all keys: `'iso'` → `'hasISO'`, `'shutterSpeed'` → `'hasShutter'`, `'fNumber'` → `'hasFNumber'`, `'colorTemp'` → `'hasColorTemp'`, `'focusMode'` → `'hasFocusMode'`, `'movieRecButton'` → `'hasMovieRecButton'`.
+- `src/bridge/executors/sony-command-executor.ts` — added `hasCapability()` gate before each intent case. Each command now checks the corresponding `RuntimeCapabilities` flag before execution. If the runtime model is not yet built (first poll cycle), commands pass through to avoid blocking cold-start. Unknown cameras are fully supported — capability surface is discovered, not assumed.
+
+### Behavior
+- For cameras whose runtime model confirms a capability: no change.
+- For cameras that do not expose the required prop code: the command is silently skipped and logged.
+- Commands issued before the first successful poll cycle are unaffected.
+
+### Migration notes
+- No API shape changes. No WS message shape changes.
+- `SonyDerivedState` and `SonyAlertState` were already in the WS broadcast via `uiState()` (Phase 5, v0.12.0). Phase 8 confirms this is complete.
+
+---
+
 ## v0.13.0 — 2026-04-17 (Phase 7 — Two-tier Sony polling)
 
 ### Added

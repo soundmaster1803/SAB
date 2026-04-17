@@ -1,24 +1,23 @@
 /**
  * sony/actions/index.ts
  *
- * Sony camera action registry skeleton.
+ * Sony camera action registry.
  *
  * An action represents a named, capability-gated operation that can be invoked
  * against a Sony camera. This registry defines the available actions and their
  * metadata — it does not implement execution.
  *
  * Execution is handled by the bridge executor (bridge/executors/sony-command-executor.ts).
- * Capability gating (Phase 8) will use SonyCapabilities from sony/models/types.ts.
+ * Capability gating uses RuntimeCapabilities from sony/runtime/types.ts — flags are
+ * derived from live protocol data observed during polling, not static model specs.
  *
  * Grounded in:
  *   - Current bridge executor: iso, shutter, iris (fnumber), wb, af, focus
  *   - Current PTP client: toggleRecord(), stepProp(), setExtDeviceProp()
- *   - SonyCapabilities flags from sony/models/types.ts
- *
- * Phase: skeleton only — not wired into runtime yet (Phase 6).
+ *   - RuntimeCapabilities flags from sony/runtime/types.ts
  */
 
-import type { SonyCapabilities } from '../models/types';
+import type { RuntimeCapabilities } from '../runtime/types';
 
 // ─── Action IDs ───────────────────────────────────────────────────────────────
 
@@ -49,9 +48,10 @@ export type SonyActionId =
 /**
  * Metadata for a single Sony camera action.
  *
- * `requiredCapability` is the SonyCapabilities key that must be true on the
- * connected camera's model spec before this action is permitted. Phase 8 will
- * enforce this gate at runtime.
+ * `requiredCapability` is the RuntimeCapabilities flag that must be true for
+ * the connected camera before this action is permitted. The flag is derived
+ * from live polling data — if the camera exposes the required prop code, the
+ * capability is set and the action is allowed.
  */
 export interface SonyActionDefinition {
   /** Stable identifier — used as throttle key and log label. */
@@ -60,8 +60,8 @@ export interface SonyActionDefinition {
   name: string;
   /** One-sentence description of what the action does. */
   description: string;
-  /** SonyCapabilities key that gates this action. */
-  requiredCapability: keyof SonyCapabilities;
+  /** RuntimeCapabilities flag that gates this action. */
+  requiredCapability: keyof RuntimeCapabilities;
 }
 
 // ─── Registry ─────────────────────────────────────────────────────────────────
@@ -71,44 +71,44 @@ export interface SonyActionDefinition {
  *
  * Add new actions here. Do not add an action unless:
  *   1. The Sony transport (ptp-client.ts) can execute it today, OR
- *   2. A confirmed capability flag exists in SonyCapabilities.
+ *   2. A confirmed RuntimeCapabilities flag exists for the required prop.
  */
 export const SONY_ACTIONS: Record<SonyActionId, SonyActionDefinition> = {
   iso: {
     id: 'iso',
     name: 'Set ISO',
     description: 'Step ISO up or down one position via the camera enumeration list.',
-    requiredCapability: 'iso',
+    requiredCapability: 'hasISO',
   },
   shutter: {
     id: 'shutter',
     name: 'Set Shutter Speed',
     description: 'Step shutter speed up or down one position via the camera enumeration list.',
-    requiredCapability: 'shutterSpeed',
+    requiredCapability: 'hasShutter',
   },
   fnumber: {
     id: 'fnumber',
     name: 'Set Aperture',
     description: 'Step aperture (f-number) up or down one position via the camera enumeration list.',
-    requiredCapability: 'fNumber',
+    requiredCapability: 'hasFNumber',
   },
   colorTemp: {
     id: 'colorTemp',
     name: 'Set Color Temperature',
     description: 'Set color temperature to an absolute Kelvin value.',
-    requiredCapability: 'colorTemp',
+    requiredCapability: 'hasColorTemp',
   },
   af: {
     id: 'af',
     name: 'Trigger Autofocus',
     description: 'Send a push autofocus pulse (S1 button down → 150ms → up).',
-    requiredCapability: 'focusMode',
+    requiredCapability: 'hasFocusMode',
   },
   record: {
     id: 'record',
     name: 'Toggle Recording',
     description: 'Toggle recording state via MovieRec button hold pulse (down → 100ms → up).',
-    requiredCapability: 'movieRecButton',
+    requiredCapability: 'hasMovieRecButton',
   },
 };
 
