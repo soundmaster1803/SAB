@@ -14,10 +14,6 @@ interface WsStore {
 
 // ─── WS URL ───────────────────────────────────────────────────────────────────
 
-/**
- * In development (Vite dev server on :5173) connect directly to the backend.
- * In production the frontend is served by the same process, so use the page host.
- */
 function getWsUrl(): string {
   if (import.meta.env.DEV) return 'ws://localhost:7777'
   return `ws://${window.location.host}`

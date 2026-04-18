@@ -49,8 +49,7 @@
 
 ### Migration notes
 - Backend API and WS shapes unchanged.
-- Dev server: `npm run dev:ui` (port 5173, proxies `/api` to `localhost:7777`).
-- Production: `npm run build:ui` — outputs to `public/`, served by Express as static.
+- Build: `npm run build:ui` — outputs to `public/`, served by Express on port 7777.
 - `public/assets/` is gitignored; build must be run locally before starting the backend.
 
 ---

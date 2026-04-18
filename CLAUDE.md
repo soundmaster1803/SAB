@@ -554,9 +554,8 @@ Current work focuses on the operator UI frontend.
 - `frontend/src/styles/tokens.css` — design tokens extracted from legacy UI
 - `frontend/src/styles/globals.css` — reset + base typography
 - `frontend/src/main.tsx`, `frontend/src/App.tsx` — entry point shell
-- Root `package.json` — `dev:ui`, `build:ui`, `install:ui` scripts
-- Build output: `frontend/` → `../public/` (backend serves as static)
-- Dev server: `http://localhost:5173` with `/api` proxy to `localhost:7777`
+- Root `package.json` — `build:ui`, `install:ui` scripts
+- Build output: `frontend/` → `../public/` (backend serves as static on port 7777)
 - **Legacy `public/index.html` still served until cutover**
 
 ### F1 — WS store + types
