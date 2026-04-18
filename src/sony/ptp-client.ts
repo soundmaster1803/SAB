@@ -824,11 +824,13 @@ export class SonyPTPClient extends EventEmitter {
   // Set absolute focus position (prop 0xE042). PTP3 cameras only.
   // position: 0x0000 = near limit, 0xFFFF = infinity.
   // Camera must be in MF or DMF mode — AF cameras silently reject this.
+  // Data sent as UINT32 (4 bytes) even though the value range is 0–0xFFFF;
+  // Sony vendor props in 0xE000+ range use UINT32 on the wire.
   async setFocusPositionAbsolute(position: number): Promise<void> {
     const clamped = Math.max(0, Math.min(0xFFFF, position));
     this.log(`SetFocusPosition 0x${clamped.toString(16)}`);
-    const data = Buffer.alloc(2);
-    data.writeUInt16LE(clamped, 0);
+    const data = Buffer.alloc(4);
+    data.writeUInt32LE(clamped, 0);
     await this.sendCmdWithData(0x9205, [0xE042], data);
   }
 

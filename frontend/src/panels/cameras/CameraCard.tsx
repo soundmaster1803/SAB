@@ -189,9 +189,6 @@ export function CameraCard({ cam, onDebug, usedAtemIds = [] }: Props) {
       post(`/api/cameras/${id}/focus-mode`, { mode: 'MF' })
     }
   }
-  function stepFocus(direction: 'near' | 'far') {
-    post(`/api/cameras/${id}/focus-step`, { direction })
-  }
   function triggerAF()   { post(`/api/cameras/${id}/af`) }
   function toggleRec()   { post(`/api/cameras/${id}/record`) }
   function reconnect()   { post(`/api/cameras/${id}/connect`) }
@@ -430,14 +427,7 @@ export function CameraCard({ cam, onDebug, usedAtemIds = [] }: Props) {
               disabled={off}
             />
             <div className={styles.focusTrack}>
-              <button
-                className={styles.focusStepBtn}
-                onClick={() => stepFocus('near')}
-                disabled={off || !focusIsManual}
-                title="Step Near"
-              >
-                <img src={focusCloseup} className={styles.focusEndIcon} alt="near" />
-              </button>
+              <img src={focusCloseup} className={styles.focusEndIcon} alt="near" />
               <input
                 type="range"
                 min={0}
@@ -452,14 +442,7 @@ export function CameraCard({ cam, onDebug, usedAtemIds = [] }: Props) {
                 onTouchEnd={() => { setIsDragging(false); commitFocus(focusPos) }}
                 disabled={off || !focusIsManual}
               />
-              <button
-                className={styles.focusStepBtn}
-                onClick={() => stepFocus('far')}
-                disabled={off || !focusIsManual}
-                title="Step Far"
-              >
-                <img src={focusMountain} className={styles.focusEndIcon} alt="far" />
-              </button>
+              <img src={focusMountain} className={styles.focusEndIcon} alt="far" />
             </div>
             <div className={styles.focusBottom}>
               {cam.derived?.focalDistanceDisplay && cam.derived.focalDistanceDisplay !== '—' && (
