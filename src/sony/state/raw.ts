@@ -18,8 +18,10 @@
  *   - `shutter`      prop 0xD20D — UINT32 fraction: (numerator<<16)|denominator
  *   - `expComp`      prop 0x5010 — INT16 raw value; divide by 1000 to get EV
  *   - `colorTemp`    prop 0xD20F — Kelvin (e.g. 5500)
- *   - `battery`      prop 0xD218 — percentage 0–100 (clamped; >100 signals charging)
- *   - `charging`     derived from battery > 100 in transport
+ *   - `battery`      prop 0xD218 — percentage 0–100 (clamped; >100 signals charging on older models)
+ *   - `powerSource`  prop 0xD03A — 0=unknown, 1=DC, 2=Battery, 3=PoE
+ *   - `batteryMinutes` prop 0xD038 — remaining minutes; 0=unknown
+ *   - `charging`     derived: powerSource ∈ {1,3} if available, else batteryIcon bit 3
  *   - `recState`     prop 0xD21D — 0 = idle, 1 = recording
  *   - `recRemainSec` props 0xD3C2/0xD3C4 — remaining card capacity in seconds; 0 = unknown
  *   - `tally`        written by bridge sync — 0 = none, 1 = program, 2 = preview
@@ -55,7 +57,15 @@ export interface SonyRawState {
   // --- Power ---
   /** Battery remaining as percentage 0–100 (clamped). */
   battery: number;
-  /** True when camera is on AC power / charging (raw battery > 100). */
+  /**
+   * Power source from prop 0xD03A.
+   * 0 = unknown (not yet polled), 1 = DC/AC adapter, 2 = Battery, 3 = PoE.
+   */
+  powerSource: number;
+  /** Battery remaining in minutes from prop 0xD038. 0 = unknown. */
+  batteryMinutes: number;
+  /** True when camera is on AC power or PoE (derived from powerSource when available,
+   *  falls back to batteryIcon bit 3 heuristic). */
   charging: boolean;
 
   // --- Recording ---
@@ -63,6 +73,24 @@ export interface SonyRawState {
   recState: number;
   /** Remaining recordable time in seconds; 0 = unknown. */
   recRemainSec: number;
+
+  // --- Focus ---
+  /**
+   * Focus mode from prop 0x500A.
+   * 0x0001=MF, 0x0002=AF-S, 0x8004=AF-C, 0x8005=AF-A, 0x8006=DMF, 0x8009=PF.
+   * 0 = not yet polled.
+   */
+  focusMode: number;
+  /**
+   * AF status (Focus Indication) from prop 0xD213.
+   * 0x02=focused, 0x03=not focused, 0x05=tracking. 0 = not yet polled.
+   */
+  afStatus: number;
+  /**
+   * Focal distance from prop 0xD004 (raw value; divide by 100 for meters).
+   * 0xFFFF or 0 = infinity / not available.
+   */
+  focalDistanceM: number;
 
   // --- Tally (written by bridge sync) ---
   /** Tally state: 0 = none, 1 = program, 2 = preview. */

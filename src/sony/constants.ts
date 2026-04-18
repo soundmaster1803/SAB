@@ -27,18 +27,24 @@ export const PROP_CODES = {
   WB_AB: 0xD21C,
   ISO: 0xD21E,
 
-  // Sony vendor — battery / status
+  // Sony vendor — battery / power
   BATTERY_ICON: 0xD205,
   BATTERY_LEVEL: 0xD20E,
   BATTERY_REMAIN: 0xD218,
+  POWER_SOURCE: 0xD03A,        // 0x01=DC, 0x02=Battery, 0x03=PoE
+  BATTERY_REMAIN_MIN: 0xD038,  // remaining minutes (UINT32)
+  USB_POWER_SUPPLY: 0xD150,    // 0x01=Off, 0x02=On, 0x03=Auto
 
   // Sony vendor — recording
   REC_STATE: 0xD21D,
   MOVIE_REC_BUTTON: 0xD2C8,
 
   // Sony vendor — focus
+  FOCUS_AREA: 0xD22C,
   AF_STATUS: 0xD213,
   NEAR_FAR: 0xD2D1,
+  FOCUS_STEP_NEAR: 0xD2D7,
+  FOCUS_STEP_FAR: 0xD2D8,
   FOCUS_MAGNIFIER: 0xD2CB,
   FOCUS_MAGNIFIER_CANCEL: 0xD2CC,
 
@@ -170,6 +176,14 @@ export const PROP_CODES_EXT = {
   EMBED_LUT_FILE:              0xD196,
   MEDIA_SLOT1_WRITING:         0xD197,
 
+  // --- Focus distance / position ---
+  FOCAL_DISTANCE_METER:        0xD004,  // raw / 100 = meters (e.g. 20 → 0.20m)
+  FOCAL_DISTANCE_FEET:         0xD005,  // raw / 100 = feet
+  FOCUS_BRACKET_SHOT_NUM:      0xD2A1,
+  AF_AREA_POSITION:            0xD2DC,  // (x, y) touch focus position
+  FOCUS_POSITION_SETTING:      0xE042,  // absolute position 0x0000=near 0xFFFF=far (PTP3)
+  FOCUS_POSITION_CURRENT:      0xE043,  // current lens position readback (PTP3)
+
   // --- Focus absolute ---
   FOCUS_DRIVING_STATUS:        0xD19C,
   ZOOM_DRIVING_STATUS:         0xD19D,
@@ -300,6 +314,36 @@ export const BUTTON = {
 
 // SDI Extension Version
 export const SDI_EXTENSION_VERSION = 0xC8;
+
+// Focus mode values (prop 0x500A)
+export const FOCUS_MODE_VALUES = {
+  MANUAL: 0x0001,  // MF
+  AF_S:   0x0002,  // AF-S (single-shot)
+  AF_C:   0x8004,  // AF-C (continuous)
+  AF_A:   0x8005,  // AF-A (automatic switch S/C)
+  DMF:    0x8006,  // DMF (direct manual focus after AF)
+  PF:     0x8009,  // Preset Focus
+} as const;
+
+// Focus area values (prop 0xD22C)
+export const FOCUS_AREA_VALUES = {
+  WIDE:         0x0001,
+  ZONE:         0x0002,
+  CENTER:       0x0003,
+  FLEXIBLE_S:   0x0101,
+  FLEXIBLE_M:   0x0102,
+  FLEXIBLE_L:   0x0103,
+  FLEXIBLE_XS:  0x0104,
+  FLEXIBLE_XL:  0x0105,
+  LOCK_ON_AF:   0x0202,
+} as const;
+
+// AF status values (prop 0xD213 — Focus Indication)
+export const AF_STATUS_VALUES = {
+  FOCUSED:     0x02,  // focus locked
+  NOT_FOCUSED: 0x03,  // searching / not in focus
+  TRACKING:    0x05,  // subject tracking active
+} as const;
 
 // Kelvin scale fallback for cameras that don't enumerate ColorTemp (e.g. FX30)
 export const KELVIN_SCALE: number[] = [

@@ -22,12 +22,17 @@ export function toSonyRawState(state: CameraState): SonyRawState {
     expComp: state.expComp,
     colorTemp: state.colorTemp,
     battery: state.battery,
+    powerSource: state.powerSource,
+    batteryMinutes: state.batteryMinutes,
     charging: state.charging,
     recState: state.recState,
     recRemainSec: state.recRemainSec,
     tally: state.tally,
     ...(state.fps !== undefined ? { fps: state.fps } : {}),
     lastUpdate: state.lastUpdate,
+    focusMode:      state.focusMode,
+    afStatus:       state.afStatus,
+    focalDistanceM: state.focalDistanceM,
   };
 }
 

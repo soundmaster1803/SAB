@@ -11,6 +11,9 @@
  *   POST   /api/cameras/:id/record       — toggle record on a camera
  *   POST   /api/cameras/:id/adjust       — step a camera property (iso/iris/shutter/etc.)
  *   POST   /api/cameras/:id/af           — trigger autofocus
+ *   POST   /api/cameras/:id/focus-position — set absolute focus position (0-100%)
+ *   POST   /api/cameras/:id/focus-mode  — set focus mode (MF/AF-S/AF-C/AF-A/DMF/PF)
+ *   POST   /api/cameras/:id/focus-step  — single focus step near or far
  *   POST   /api/cameras/:id/color-temp   — step color temperature
  *   PATCH  /api/cameras/:id             — update camera config (name/ip/atemInput/control)
  *   DELETE /api/cameras/:id             — unpair camera
@@ -184,6 +187,84 @@ export function createCameraRoutes({ manager, atemListener, getConfig, setConfig
       res.json({ ok: true });
     } catch (e: any) {
       err(`AF trigger failed: ${e.message}`);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // ── Camera: set absolute focus position (0-100%) ─────────────────────────
+  // Accepts { position: 0-100 }. Converts to 0x0000–0xFFFF for prop 0xE042.
+  // Camera must be in MF or DMF mode; AF cameras will reject the command.
+  router.post('/api/cameras/:id/focus-position', async (req, res) => {
+    const id = req.params.id;
+    const { position } = req.body as { position: number };
+    const client = manager.getClient(id);
+    if (!client) { res.status(404).json({ error: 'not found' }); return; }
+    if (!client.state.connected) { res.status(503).json({ error: 'not connected' }); return; }
+    if (typeof position !== 'number' || position < 0 || position > 100) {
+      res.status(400).json({ error: 'position must be a number 0–100' }); return;
+    }
+    const raw = Math.round((position / 100) * 0xFFFF);
+    log(`Focus position cam="${id}" pct=${position} raw=0x${raw.toString(16)}`);
+    try {
+      await client.setFocusPositionAbsolute(raw);
+      res.json({ ok: true });
+    } catch (e: any) {
+      err(`Focus position failed: ${e.message}`);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // ── Camera: set focus mode ────────────────────────────────────────────────
+  // Accepts { mode: "MF" | "AF-S" | "AF-C" | "AF-A" | "DMF" | "PF" }
+  router.post('/api/cameras/:id/focus-mode', async (req, res) => {
+    const id = req.params.id;
+    const { mode } = req.body as { mode: string };
+    const client = manager.getClient(id);
+    if (!client) { res.status(404).json({ error: 'not found' }); return; }
+    if (!client.state.connected) { res.status(503).json({ error: 'not connected' }); return; }
+    const FOCUS_MODE_MAP: Record<string, number> = {
+      'MF':   0x0001,
+      'AF-S': 0x0002,
+      'AF-C': 0x8004,
+      'AF-A': 0x8005,
+      'DMF':  0x8006,
+      'PF':   0x8009,
+    };
+    const modeVal = FOCUS_MODE_MAP[mode];
+    if (modeVal === undefined) {
+      res.status(400).json({ error: `unknown focus mode "${mode}"; valid: MF, AF-S, AF-C, AF-A, DMF, PF` }); return;
+    }
+    log(`Focus mode cam="${id}" mode=${mode} (0x${modeVal.toString(16)})`);
+    try {
+      await client.setFocusMode(modeVal);
+      res.json({ ok: true });
+    } catch (e: any) {
+      err(`Focus mode failed: ${e.message}`);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // ── Camera: single focus step ─────────────────────────────────────────────
+  // Accepts { direction: "near" | "far" }. Steps focus one increment.
+  router.post('/api/cameras/:id/focus-step', async (req, res) => {
+    const id = req.params.id;
+    const { direction } = req.body as { direction: string };
+    const client = manager.getClient(id);
+    if (!client) { res.status(404).json({ error: 'not found' }); return; }
+    if (!client.state.connected) { res.status(503).json({ error: 'not connected' }); return; }
+    if (direction !== 'near' && direction !== 'far') {
+      res.status(400).json({ error: 'direction must be "near" or "far"' }); return;
+    }
+    log(`Focus step cam="${id}" direction=${direction}`);
+    try {
+      if (direction === 'near') {
+        await client.stepFocusNear();
+      } else {
+        await client.stepFocusFar();
+      }
+      res.json({ ok: true });
+    } catch (e: any) {
+      err(`Focus step failed: ${e.message}`);
       res.status(500).json({ error: e.message });
     }
   });

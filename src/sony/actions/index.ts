@@ -32,8 +32,13 @@ import type { RuntimeCapabilities } from '../runtime/types';
  *   shutter   — step shutter speed up/down via supported enumeration list
  *   fnumber   — step aperture up/down via supported enumeration list
  *   colorTemp — set color temperature to an absolute Kelvin value
- *   af        — trigger a push autofocus pulse (S1 button down → up)
- *   record    — toggle recording state (MovieRec button hold pulse)
+ *   af                   — trigger a push autofocus pulse (S1 button down → up)
+ *   record               — toggle recording state (MovieRec button hold pulse)
+ *   setFocusMode         — set focus mode (MF / AF-S / AF-C / AF-A / DMF / PF)
+ *   setFocusArea         — set focus area (Wide / Zone / Center / Flexible S–XL / Lock-on)
+ *   setFocusPosition     — set absolute focus position (0x0000 near → 0xFFFF infinity)
+ *   stepFocusNear        — single focus step toward near limit
+ *   stepFocusFar         — single focus step toward infinity
  */
 export type SonyActionId =
   | 'iso'
@@ -41,7 +46,12 @@ export type SonyActionId =
   | 'fnumber'
   | 'colorTemp'
   | 'af'
-  | 'record';
+  | 'record'
+  | 'setFocusMode'
+  | 'setFocusArea'
+  | 'setFocusPosition'
+  | 'stepFocusNear'
+  | 'stepFocusFar';
 
 // ─── Action Definition ────────────────────────────────────────────────────────
 
@@ -109,6 +119,36 @@ export const SONY_ACTIONS: Record<SonyActionId, SonyActionDefinition> = {
     name: 'Toggle Recording',
     description: 'Toggle recording state via MovieRec button hold pulse (down → 100ms → up).',
     requiredCapability: 'hasMovieRecButton',
+  },
+  setFocusMode: {
+    id: 'setFocusMode',
+    name: 'Set Focus Mode',
+    description: 'Switch focus mode: MF, AF-S, AF-C, AF-A, DMF, or PF.',
+    requiredCapability: 'hasFocusMode',
+  },
+  setFocusArea: {
+    id: 'setFocusArea',
+    name: 'Set Focus Area',
+    description: 'Set the AF area: Wide, Zone, Center, Flexible S/M/L/XS/XL, or Lock-on AF.',
+    requiredCapability: 'hasFocusMode',
+  },
+  setFocusPosition: {
+    id: 'setFocusPosition',
+    name: 'Set Focus Position',
+    description: 'Set absolute lens position (0x0000=near, 0xFFFF=infinity). Requires MF or DMF mode. PTP3 cameras only.',
+    requiredCapability: 'hasFocusPosition',
+  },
+  stepFocusNear: {
+    id: 'stepFocusNear',
+    name: 'Focus Step Near',
+    description: 'Move focus one step toward the near limit (0xD2D7 button pulse).',
+    requiredCapability: 'hasMfNearFar',
+  },
+  stepFocusFar: {
+    id: 'stepFocusFar',
+    name: 'Focus Step Far',
+    description: 'Move focus one step toward infinity (0xD2D8 button pulse).',
+    requiredCapability: 'hasMfNearFar',
   },
 };
 

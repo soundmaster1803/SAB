@@ -9,6 +9,7 @@
  */
 
 import type { SonyRawState } from './raw';
+import { FOCUS_MODE_VALUES, AF_STATUS_VALUES } from '../constants';
 
 /**
  * Derived Sony state — human-readable and computed values.
@@ -34,6 +35,12 @@ export interface SonyDerivedState {
   expCompEv: number;
   /** Exposure compensation as formatted display string — e.g. "+1.3", "-0.7", "0". */
   expCompDisplay: string;
+  /** Focus mode as display string — "MF", "AF-S", "AF-C", "AF-A", "DMF", "PF", or "—". */
+  focusModeDisplay: string;
+  /** AF status as display string — "Focused", "Tracking", "Searching", or "—". */
+  afStatusDisplay: string;
+  /** Focal distance as display string — e.g. "0.20m", "∞", or "—". */
+  focalDistanceDisplay: string;
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -93,6 +100,43 @@ function formatEv(ev: number): string {
   return `${sign}${ev.toFixed(1)}`;
 }
 
+/**
+ * Decode focus mode raw value (prop 0x500A) to a display string.
+ */
+function decodeFocusMode(raw: number): string {
+  switch (raw) {
+    case FOCUS_MODE_VALUES.MANUAL: return 'MF';
+    case FOCUS_MODE_VALUES.AF_S:   return 'AF-S';
+    case FOCUS_MODE_VALUES.AF_C:   return 'AF-C';
+    case FOCUS_MODE_VALUES.AF_A:   return 'AF-A';
+    case FOCUS_MODE_VALUES.DMF:    return 'DMF';
+    case FOCUS_MODE_VALUES.PF:     return 'PF';
+    default: return '—';
+  }
+}
+
+/**
+ * Decode AF status (Focus Indication, prop 0xD213) to a display string.
+ */
+function decodeAfStatus(raw: number): string {
+  switch (raw) {
+    case AF_STATUS_VALUES.FOCUSED:     return 'Focused';
+    case AF_STATUS_VALUES.NOT_FOCUSED: return 'Searching';
+    case AF_STATUS_VALUES.TRACKING:    return 'Tracking';
+    default: return '—';
+  }
+}
+
+/**
+ * Decode focal distance (prop 0xD004, raw / 100 = meters) to display string.
+ * 0xFFFF = infinity. 0 = not available.
+ */
+function decodeFocalDistance(raw: number): string {
+  if (!raw || raw === 0) return '—';
+  if (raw === 0xFFFF) return '∞';
+  return `${(raw / 100).toFixed(2)}m`;
+}
+
 // ─── Main derivation function ──────────────────────────────────────────────────
 
 /**
@@ -103,11 +147,14 @@ export function deriveSonyState(raw: SonyRawState): SonyDerivedState {
   const expCompEv = raw.expComp / 1000;
 
   return {
-    isoDisplay:       decodeISO(raw.iso),
-    shutterDisplay:   decodeShutter(raw.shutter),
-    fnumberDisplay:   decodeFNumber(raw.fnumber),
-    colorTempDisplay: decodeColorTemp(raw.colorTemp),
+    isoDisplay:          decodeISO(raw.iso),
+    shutterDisplay:      decodeShutter(raw.shutter),
+    fnumberDisplay:      decodeFNumber(raw.fnumber),
+    colorTempDisplay:    decodeColorTemp(raw.colorTemp),
     expCompEv,
-    expCompDisplay:   formatEv(expCompEv),
+    expCompDisplay:      formatEv(expCompEv),
+    focusModeDisplay:    decodeFocusMode(raw.focusMode),
+    afStatusDisplay:     decodeAfStatus(raw.afStatus),
+    focalDistanceDisplay: decodeFocalDistance(raw.focalDistanceM),
   };
 }

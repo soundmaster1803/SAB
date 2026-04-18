@@ -1,26 +1,25 @@
 /**
  * CameraCard — per-camera state card.
- *
- * Sections:
- *  - Card head: name / model / IP / connection dot / action buttons
- *  - Inline edit form (name, IP)
- *  - Battery row + rec timer
- *  - Params grid: ISO / Shutter / Iris (with ± step)
- *  - Focus row: Color Temp (with ± step) + PUSH AF button
- *  - ATEM section: control toggle + input number
- *  - Card bottom: REC toggle + delete button
- *  - Offline overlay (shown when disconnected)
+ * Layout matches SAB Figma design (node 21:231).
  */
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { CameraUIState } from '../../types/ws'
+import { useAtemStore } from '../../stores/atem'
 import { OfflineOverlay } from './OfflineOverlay'
-import { RuntimeBadges } from './RuntimeBadges'
 import styles from './CameraCard.module.css'
+
+import iconDebug     from '../../assets/icons/icon-debug.png'
+import iconEdit      from '../../assets/icons/icon-edit.png'
+import iconReconnect from '../../assets/icons/icon-reconnect.png'
+import iconTrash     from '../../assets/icons/icon-trash.png'
+import iconBattery   from '../../assets/icons/icon-battery.png'
+import focusCloseup  from '../../assets/icons/focus-closeup.png'
+import focusMountain from '../../assets/icons/focus-mountain.png'
 
 interface Props {
   cam: CameraUIState
-  /** Called when the gear/debug button is clicked. F4 wires up the actual modal. */
   onDebug?: (id: string) => void
+  usedAtemIds?: number[]
 }
 
 // ── API helpers ───────────────────────────────────────────────────────────────
@@ -57,72 +56,117 @@ function del(path: string): Promise<void> {
   return api(path, { method: 'DELETE' })
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
+// ── ModeToggle — single-button sliding pill ───────────────────────────────────
 
-export function CameraCard({ cam, onDebug }: Props) {
-  const { id, connected, recState, tally, battery, charging, alerts } = cam
-  const rec = recState === 1
+interface ModeToggleProps {
+  isAuto: boolean
+  onManual: () => void
+  onAuto: () => void
+  disabled?: boolean
+}
 
-  // ── Edit form state ──────────────────────────────────────────────────────
-  const [editOpen,  setEditOpen]  = useState(false)
-  const [editName,  setEditName]  = useState(cam.name)
-  const [editIp,    setEditIp]    = useState(cam.ip)
+function ModeToggle({ isAuto, onManual, onAuto, disabled }: ModeToggleProps) {
+  return (
+    <button
+      className={`${styles.modeToggle} ${isAuto ? styles.modeToggleAuto : ''}`}
+      onClick={() => (isAuto ? onManual() : onAuto())}
+      disabled={disabled}
+      title={isAuto ? 'Auto — tap for Manual' : 'Manual — tap for Auto'}
+    >
+      <div className={styles.modePill} />
+      <span className={styles.modeLabel}>M</span>
+      <span className={styles.modeLabel}>A</span>
+    </button>
+  )
+}
 
-  // Keep edit fields in sync with incoming WS data when not open
+// ── ParamControls — UP / value / DOWN column ──────────────────────────────────
+
+interface ParamControlsProps {
+  value: string
+  onUp: () => void
+  onDown: () => void
+  disabled?: boolean
+}
+
+function ParamControls({ value, onUp, onDown, disabled }: ParamControlsProps) {
+  return (
+    <div className={styles.paramControls}>
+      <button className={styles.arrowBtn} onClick={onUp} disabled={disabled}>▲</button>
+      <span className={styles.paramValue}>{value}</span>
+      <button className={styles.arrowBtn} onClick={onDown} disabled={disabled}>▼</button>
+    </div>
+  )
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
+
+export function CameraCard({ cam, onDebug, usedAtemIds = [] }: Props) {
+  const { id, connected, tally, battery, alerts, recState } = cam
+  const atemTopology = useAtemStore((s) => s.topology)
+  const atemConnected = useAtemStore((s) => s.connected)
+  const off = !connected
+
+  // ── Edit form ─────────────────────────────────────────────────────────────
+  const [editOpen, setEditOpen] = useState(false)
+  const [editName, setEditName] = useState(cam.name)
+  const [editIp,   setEditIp]   = useState(cam.ip)
+
   useEffect(() => {
-    if (!editOpen) {
-      setEditName(cam.name)
-      setEditIp(cam.ip)
-    }
+    if (!editOpen) { setEditName(cam.name); setEditIp(cam.ip) }
   }, [cam.name, cam.ip, editOpen])
 
-  // ── ATEM input local state (allows typing without immediate PATCH) ────────
-  const [atemInputVal, setAtemInputVal] = useState(String(cam.atemInput ?? 1))
-  useEffect(() => {
-    setAtemInputVal(String(cam.atemInput ?? 1))
-  }, [cam.atemInput])
+  // ── Shutter manual entry ──────────────────────────────────────────────────
+  const [shutterEdit, setShutterEdit] = useState(false)
+  const [shutterInput, setShutterInput] = useState('')
 
-  // ── Recording elapsed timer ───────────────────────────────────────────────
-  const recStartRef = useRef<number | null>(null)
-  const [elapsed, setElapsed] = useState('0:00')
+  // ── Focus ─────────────────────────────────────────────────────────────────
+  const focusMode    = cam.raw?.focusMode ?? 0
+  const focusIsManual = focusMode === 0x0001 || focusMode === 0x8006  // MF or DMF
+  const [focusPos, setFocusPos] = useState(50)
 
-  useEffect(() => {
-    if (rec) {
-      if (recStartRef.current === null) recStartRef.current = Date.now()
-      const intervalId = setInterval(() => {
-        const secs = Math.floor((Date.now() - recStartRef.current!) / 1000)
-        const m = Math.floor(secs / 60)
-        const s = String(secs % 60).padStart(2, '0')
-        setElapsed(`${m}:${s}`)
-      }, 1000)
-      return () => clearInterval(intervalId)
-    } else {
-      recStartRef.current = null
-      setElapsed('0:00')
-    }
-  }, [rec])
+  // ── ATEM input ────────────────────────────────────────────────────────────
+  const [atemInputVal, setAtemInputVal] = useState(String(cam.atemInput ?? 0))
+  useEffect(() => { setAtemInputVal(String(cam.atemInput ?? 0)) }, [cam.atemInput])
 
-  // ── Action handlers ───────────────────────────────────────────────────────
+  // ── Derived ───────────────────────────────────────────────────────────────
+  const isoIsAuto  = cam.iso === 'AUTO'
+  const irisIsAuto = !cam.fnumber || cam.fnumber === '—'
+  const bat        = battery ?? 0
+  const lowBat     = alerts?.lowBattery || alerts?.criticalBattery
+  const psLabel    = cam.powerSource === 1 ? 'DC' : cam.powerSource === 3 ? 'PoE' : null
+  const batMins    = cam.batteryMinutes > 0 ? cam.batteryMinutes : null
+  const atemNone   = atemInputVal === '0'
 
+  // ── Handlers ─────────────────────────────────────────────────────────────
   function adjust(param: string, delta: 1 | -1) {
     post(`/api/cameras/${id}/adjust`, { param, delta })
   }
-
-  function stepColorTemp(direction: 1 | -1) {
-    post(`/api/cameras/${id}/color-temp`, { direction })
+  function stepColorTemp(dir: 1 | -1) {
+    post(`/api/cameras/${id}/color-temp`, { direction: dir })
   }
-
-  function triggerAF() {
-    post(`/api/cameras/${id}/af`)
+  function setMode(param: string, mode: 'auto' | 'manual') {
+    post(`/api/cameras/${id}/mode`, { param, mode })
   }
-
-  function toggleRec() {
-    post(`/api/cameras/${id}/record`)
+  function commitShutter() {
+    const v = shutterInput.trim()
+    if (!v) return
+    post(`/api/cameras/${id}/shutter-set`, { value: v })
+    setShutterInput('')
+    setShutterEdit(false)
   }
-
-  function reconnect() {
-    post(`/api/cameras/${id}/connect`)
+  function commitFocus(pos: number) {
+    post(`/api/cameras/${id}/focus-position`, { position: pos })
   }
+  function setFocusMode(mode: string) {
+    post(`/api/cameras/${id}/focus-mode`, { mode })
+  }
+  function stepFocus(direction: 'near' | 'far') {
+    post(`/api/cameras/${id}/focus-step`, { direction })
+  }
+  function triggerAF()   { post(`/api/cameras/${id}/af`) }
+  function toggleRec()   { post(`/api/cameras/${id}/record`) }
+  function reconnect()   { post(`/api/cameras/${id}/connect`) }
 
   function saveEdit() {
     const name = editName.trim()
@@ -131,80 +175,75 @@ export function CameraCard({ cam, onDebug }: Props) {
     patch(`/api/cameras/${id}`, { name, ip })
     setEditOpen(false)
   }
-
   function deleteCamera() {
     if (!confirm(`Remove camera "${cam.name}"?`)) return
     del(`/api/cameras/${id}`)
   }
-
-  function patchToggle(atemControlEnabled: boolean) {
-    patch(`/api/cameras/${id}`, { atemControlEnabled })
+  function patchAtemToggle(v: boolean) {
+    patch(`/api/cameras/${id}`, { atemControlEnabled: v })
   }
-
-  function commitAtemInput() {
-    const n = parseInt(atemInputVal, 10)
-    if (!isNaN(n) && n >= 1 && n <= 20) {
-      patch(`/api/cameras/${id}`, { atemInput: n })
+  function handleAtemSelect(e: React.ChangeEvent<HTMLSelectElement>) {
+    const val = e.target.value
+    setAtemInputVal(val)
+    const n = parseInt(val, 10)
+    if (n === 0) {
+      patch(`/api/cameras/${id}`, { atemInput: 0, atemControlEnabled: false })
     } else {
-      setAtemInputVal(String(cam.atemInput ?? 1))
+      patch(`/api/cameras/${id}`, { atemInput: n })
     }
   }
 
-  // ── Derived display values ─────────────────────────────────────────────────
-  const bat    = battery ?? 0
-  const lowBat = (alerts?.lowBattery || alerts?.criticalBattery) ?? bat < 20
-
-  const remainSec = cam.recRemainSec ?? 0
-  const remainMin = Math.floor(remainSec / 60)
-  const remainS   = String(remainSec % 60).padStart(2, '0')
-  const remainStr = remainSec > 0 ? `${remainMin}:${remainS} left` : ''
-
-  // ── CSS class composition ──────────────────────────────────────────────────
-  const cardClass = [
+  const cardCls = [
     styles.card,
-    rec                  ? styles.recording : '',
-    !connected           ? styles.offline   : '',
-    tally === 1          ? styles.tallyPgm  : '',
-    tally === 2          ? styles.tallyPvw  : '',
+    tally === 1 ? styles.tallyPgm : '',
+    tally === 2 ? styles.tallyPvw : '',
   ].filter(Boolean).join(' ')
 
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className={cardClass}>
-      {/* Offline overlay — sits below z-index:11 of card head */}
-      {!connected && <OfflineOverlay />}
+    <div className={cardCls}>
+      {off && <OfflineOverlay />}
 
       {/* ── Head ── */}
       <div className={styles.head}>
-        <div className={styles.meta}>
+        <div className={styles.headLeft}>
           <div className={styles.name}>{cam.name}</div>
           {cam.model && <div className={styles.model}>{cam.model}</div>}
-          <RuntimeBadges runtimeInfo={cam.runtimeInfo} capabilities={cam.capabilities} />
-          <div className={styles.ip}>{cam.ip}</div>
+          <div className={styles.ipRow}>
+            <span className={styles.ip}>{cam.ip}</span>
+            <div className={`${styles.connDot} ${connected ? styles.connDotOn : ''}`} />
+          </div>
+          <div className={styles.batRow}>
+            <img src={iconBattery} className={styles.batIcon} alt="" />
+            <span className={`${styles.batPct} ${lowBat ? styles.batPctLow : ''}`}>{bat}%</span>
+            {cam.charging && <span className={styles.batCharging}>⚡︎</span>}
+            {psLabel && <span className={styles.batSource}>{psLabel}</span>}
+            {!cam.charging && batMins !== null && (
+              <span className={styles.batMins}>{batMins}m</span>
+            )}
+          </div>
         </div>
 
-        <div className={styles.headActions}>
-          <div className={`${styles.connDot} ${connected ? styles.connDotOn : ''}`} title={connected ? 'Connected' : 'Disconnected'} />
-          <button
-            className={styles.btnIcon}
-            onClick={() => onDebug?.(id)}
-            title="Debug info"
-          >⚙</button>
+        <div className={styles.headRight}>
+          <button className={styles.btnIcon} onClick={() => onDebug?.(id)} title="Debug">
+            <img src={iconDebug} className={styles.btnIconImg} alt="debug" />
+          </button>
           <button
             className={styles.btnIcon}
             onClick={() => { setEditOpen((v) => !v); setEditName(cam.name); setEditIp(cam.ip) }}
             title="Edit"
-          >✎</button>
-          <button
-            className={styles.btnIcon}
-            onClick={reconnect}
-            title="Reconnect"
-            disabled={connected}
-          >↻</button>
+          >
+            <img src={iconEdit} className={styles.btnIconImg} alt="edit" />
+          </button>
+          <button className={styles.btnIcon} onClick={reconnect} disabled={connected} title="Reconnect">
+            <img src={iconReconnect} className={styles.btnIconImg} alt="reconnect" />
+          </button>
+          <button className={styles.btnIcon} onClick={deleteCamera} title="Remove">
+            <img src={iconTrash} className={styles.btnIconImg} alt="remove" />
+          </button>
         </div>
       </div>
 
-      {/* ── Inline edit form ── */}
+      {/* ── Edit form ── */}
       {editOpen && (
         <div className={styles.editForm}>
           <div className={styles.editField}>
@@ -228,125 +267,252 @@ export function CameraCard({ cam, onDebug }: Props) {
           </div>
           <div className={styles.editActions}>
             <button className={styles.btnEditCancel} onClick={() => setEditOpen(false)}>Cancel</button>
-            <button className={styles.btnEditSave}   onClick={saveEdit}>Save</button>
+            <button className={styles.btnEditSave} onClick={saveEdit}>Save</button>
           </div>
         </div>
       )}
 
-      {/* ── Battery + rec timer ── */}
-      <div className={styles.batRow}>
-        <div className={styles.batBody} title={`Battery ${bat}%`}>
-          <div
-            className={`${styles.batLevel} ${lowBat ? styles.batLow : ''}`}
-            style={{ width: `${Math.min(100, bat)}%` }}
-          />
-        </div>
-        <span className={styles.batPct}>{bat}%</span>
-        {charging && (
-          <span className={styles.batPower} title="AC power">⚡</span>
-        )}
+      {/* ── Row 1: ISO | SHUTTER | IRIS ── */}
+      <div className={styles.paramGrid}>
 
-        {rec && (
-          <div className={styles.recTimer}>
-            <span className={styles.recElapsed}>⏺ {elapsed}</span>
-            {remainStr && <span className={styles.recRemain}>{remainStr}</span>}
-          </div>
-        )}
-      </div>
-
-      {/* ── Params grid: ISO / Shutter / Iris ── */}
-      <div className={styles.params}>
-        <ParamPill
-          label="ISO"
-          value={cam.derived?.isoDisplay || cam.iso || '—'}
-          onMinus={() => adjust('iso', -1)}
-          onPlus={() => adjust('iso', 1)}
-        />
-        <ParamPill
-          label="Shutter"
-          value={cam.derived?.shutterDisplay || cam.shutter || '—'}
-          onMinus={() => adjust('shutter', -1)}
-          onPlus={() => adjust('shutter', 1)}
-        />
-        <ParamPill
-          label="Iris"
-          value={cam.fnumber ? `f/${cam.fnumber}` : '—'}
-          onMinus={() => adjust('fnumber', -1)}
-          onPlus={() => adjust('fnumber', 1)}
-        />
-      </div>
-
-      {/* ── Focus row: Color Temp + AF button ── */}
-      <div className={styles.focusRow}>
-        <ParamPill
-          label="Color Temp"
-          value={cam.derived?.colorTempDisplay || '—'}
-          onMinus={() => stepColorTemp(-1)}
-          onPlus={() => stepColorTemp(1)}
-          flex
-        />
-        <button className={styles.afBtn} onClick={triggerAF}>PUSH AF</button>
-      </div>
-
-      {/* ── ATEM section ── */}
-      <div className={styles.atemSection}>
-        <div className={styles.atemRow}>
-          <span className={styles.atemRowLabel}>ATEM Control</span>
-          <label className={styles.toggleWrap}>
-            <input
-              type="checkbox"
-              checked={cam.atemControlEnabled}
-              onChange={(e) => patchToggle(e.target.checked)}
+        {/* ISO */}
+        <div className={styles.paramModule}>
+          <span className={styles.paramLabel}>ISO</span>
+          <div className={styles.paramBox}>
+            <ModeToggle
+              isAuto={isoIsAuto}
+              onManual={() => setMode('iso', 'manual')}
+              onAuto={() => setMode('iso', 'auto')}
+              disabled={off}
             />
-            <span className={styles.toggleTrack} />
-          </label>
+            <ParamControls
+              value={cam.derived?.isoDisplay || cam.iso || '—'}
+              onUp={() => adjust('iso', 1)}
+              onDown={() => adjust('iso', -1)}
+              disabled={off || isoIsAuto}
+            />
+          </div>
         </div>
-        <div className={styles.atemRow}>
-          <span className={styles.atemRowLabel}>ATEM Input</span>
+
+        {/* SHUTTER */}
+        <div className={styles.paramModule}>
+          <span className={styles.paramLabel}>SHUTTER</span>
+          <div className={styles.paramBox}>
+            <div className={styles.shutterLeft}>
+              <ModeToggle
+                isAuto={false}
+                onManual={() => setMode('shutter', 'manual')}
+                onAuto={() => setMode('shutter', 'auto')}
+                disabled={off}
+              />
+              <button
+                className={styles.setBtn}
+                onClick={() => setShutterEdit((v) => !v)}
+                disabled={off}
+              >SET</button>
+            </div>
+            <ParamControls
+              value={cam.derived?.shutterDisplay || cam.shutter || '—'}
+              onUp={() => adjust('shutter', 1)}
+              onDown={() => adjust('shutter', -1)}
+              disabled={off}
+            />
+          </div>
+        </div>
+
+        {/* IRIS */}
+        <div className={styles.paramModule}>
+          <span className={styles.paramLabel}>IRIS</span>
+          <div className={styles.paramBox}>
+            <ModeToggle
+              isAuto={irisIsAuto}
+              onManual={() => setMode('iris', 'manual')}
+              onAuto={() => setMode('iris', 'auto')}
+              disabled={off}
+            />
+            <ParamControls
+              value={cam.fnumber ? `f ${cam.fnumber}` : '—'}
+              onUp={() => adjust('fnumber', 1)}
+              onDown={() => adjust('fnumber', -1)}
+              disabled={off || irisIsAuto}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Shutter manual input (expands below row1 when SET clicked) ── */}
+      {shutterEdit && (
+        <div className={styles.shutterEditPanel}>
+          <span className={styles.shutterEditLabel}>SHUTTER</span>
           <input
-            type="number"
-            className={styles.atemIdInput}
-            min={1}
-            max={20}
-            value={atemInputVal}
-            onChange={(e) => setAtemInputVal(e.target.value)}
-            onBlur={commitAtemInput}
+            className={styles.shutterEditInput}
+            value={shutterInput}
+            onChange={(e) => setShutterInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && commitShutter()}
+            placeholder={cam.derived?.shutterDisplay || cam.shutter || '1/100'}
+            autoFocus
+            disabled={off}
           />
+          <button
+            className={styles.shutterEditCommit}
+            onClick={commitShutter}
+            disabled={off || !shutterInput.trim()}
+          >SET</button>
+          <button className={styles.shutterEditClose} onClick={() => setShutterEdit(false)}>✕</button>
+        </div>
+      )}
+
+      {/* ── Row 2: WB | FOCUS ── */}
+      <div className={`${styles.paramGrid} ${styles.paramGridLast}`}>
+
+        {/* WB */}
+        <div className={styles.paramModule}>
+          <span className={styles.paramLabel}>WB</span>
+          <div className={styles.paramBox}>
+            <ModeToggle
+              isAuto={false}
+              onManual={() => setMode('wb', 'manual')}
+              onAuto={() => setMode('wb', 'auto')}
+              disabled={off}
+            />
+            <ParamControls
+              value={cam.derived?.colorTempDisplay || '—'}
+              onUp={() => stepColorTemp(1)}
+              onDown={() => stepColorTemp(-1)}
+              disabled={off}
+            />
+          </div>
+        </div>
+
+        {/* FOCUS — spans 2 columns */}
+        <div className={`${styles.paramModule} ${styles.focusModule}`}>
+          <div className={styles.focusLabelRow}>
+            <span className={styles.paramLabel}>FOCUS</span>
+            {cam.derived?.afStatusDisplay && cam.derived.afStatusDisplay !== '—' && (
+              <span className={`${styles.afStatus} ${styles[`afStatus_${cam.derived.afStatusDisplay.toLowerCase()}`] ?? ''}`}>
+                {cam.derived.afStatusDisplay}
+              </span>
+            )}
+          </div>
+          <div className={`${styles.paramBox} ${styles.focusBox}`}>
+            <ModeToggle
+              isAuto={!focusIsManual}
+              onManual={() => setFocusMode('MF')}
+              onAuto={() => setFocusMode('AF-C')}
+              disabled={off}
+            />
+            <div className={styles.focusTrack}>
+              <button
+                className={styles.focusStepBtn}
+                onClick={() => stepFocus('near')}
+                disabled={off || !focusIsManual}
+                title="Step Near"
+              >
+                <img src={focusCloseup} className={styles.focusEndIcon} alt="near" />
+              </button>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={focusPos}
+                className={styles.focusSlider}
+                style={{ '--fp': `${focusPos}%` } as React.CSSProperties}
+                onChange={(e) => setFocusPos(+e.target.value)}
+                onMouseUp={() => commitFocus(focusPos)}
+                onTouchEnd={() => commitFocus(focusPos)}
+                disabled={off || !focusIsManual}
+              />
+              <button
+                className={styles.focusStepBtn}
+                onClick={() => stepFocus('far')}
+                disabled={off || !focusIsManual}
+                title="Step Far"
+              >
+                <img src={focusMountain} className={styles.focusEndIcon} alt="far" />
+              </button>
+            </div>
+            <div className={styles.focusBottom}>
+              {cam.derived?.focalDistanceDisplay && cam.derived.focalDistanceDisplay !== '—' && (
+                <span className={styles.focalDist}>{cam.derived.focalDistanceDisplay}</span>
+              )}
+              <button className={styles.afBtn} onClick={triggerAF} disabled={off}>
+                AF
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* ── Card bottom: REC + delete ── */}
-      <div className={styles.cardBottom}>
-        <button
-          className={`${styles.btnRec} ${rec ? styles.btnRecActive : ''}`}
-          onClick={toggleRec}
-        >
-          {rec ? '⏹ STOP' : '● REC'}
-        </button>
-        <button className={styles.btnDel} onClick={deleteCamera} title="Remove camera">✕</button>
-      </div>
-    </div>
-  )
-}
+      {/* ── Bottom: ATEM CONTROL | REC ── */}
+      <div className={styles.bottomGrid}>
 
-// ── ParamPill sub-component ───────────────────────────────────────────────────
+        {/* ATEM CONTROL */}
+        <div className={styles.bottomModule}>
+          <span className={styles.bottomLabel}>ATEM</span>
+          <div className={styles.bottomBox}>
+            <div className={styles.atemRow}>
+              <span className={styles.atemRowLabel}>Link</span>
+              <label className={`${styles.toggleWrap} ${atemNone ? styles.toggleWrapDisabled : ''}`}>
+                <input
+                  type="checkbox"
+                  checked={cam.atemControlEnabled && !atemNone}
+                  onChange={(e) => patchAtemToggle(e.target.checked)}
+                  disabled={off || atemNone}
+                />
+                <span className={styles.toggleTrack} />
+              </label>
+            </div>
+            <div className={styles.atemRow}>
+              <span className={styles.atemRowLabel}>Camera</span>
+              <div className={styles.atemIdWrap}>
+                <select
+                  className={styles.atemIdSelect}
+                  value={atemInputVal}
+                  onChange={handleAtemSelect}
+                  disabled={off}
+                >
+                  <option value="0">None</option>
+                  {atemConnected && atemTopology.length > 0
+                    ? atemTopology.map((n) => {
+                        const taken = usedAtemIds.includes(n)
+                        return (
+                          <option key={n} value={String(n)} disabled={taken}>
+                            {n}{taken ? ' — taken' : ''}
+                          </option>
+                        )
+                      })
+                    : null
+                  }
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
 
-interface PillProps {
-  label: string
-  value: string | number
-  onMinus: () => void
-  onPlus: () => void
-  flex?: boolean
-}
-
-function ParamPill({ label, value, onMinus, onPlus, flex }: PillProps) {
-  return (
-    <div className={`${styles.pill} ${flex ? styles.pillFlex : ''}`}>
-      <span className={styles.pillLabel}>{label}</span>
-      <div className={styles.pillControls}>
-        <button className={styles.adjBtn} onClick={onMinus}>‹</button>
-        <span className={styles.pillValue}>{value}</span>
-        <button className={styles.adjBtn} onClick={onPlus}>›</button>
+        {/* REC */}
+        <div className={styles.bottomModule}>
+          <span className={styles.bottomLabel}>REC</span>
+          <div className={styles.bottomBox}>
+            <div className={styles.recBtns}>
+              <button
+                className={`${styles.recBtn} ${styles.recBtnRecord}`}
+                onClick={toggleRec}
+                disabled={off || recState === 1}
+              >
+                <span className={styles.recDot} />
+                REC
+              </button>
+              <button
+                className={`${styles.recBtn} ${styles.recBtnStop}`}
+                onClick={toggleRec}
+                disabled={off || recState === 0}
+              >
+                <span className={styles.recSquare} />
+                STOP
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )

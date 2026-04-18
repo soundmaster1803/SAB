@@ -50,7 +50,11 @@ export interface SonyRawState {
   colorTemp: number;
   /** Battery remaining as percentage 0–100. */
   battery: number;
-  /** True when camera is on AC power / charging. */
+  /** Power source from prop 0xD03A. 0=unknown, 1=DC/AC, 2=Battery, 3=PoE. */
+  powerSource: number;
+  /** Battery remaining in minutes from prop 0xD038. 0=unknown. */
+  batteryMinutes: number;
+  /** True when camera is on AC power or PoE. */
   charging: boolean;
   /** Recording state: 0 = idle, 1 = recording. */
   recState: number;
@@ -61,6 +65,15 @@ export interface SonyRawState {
   fps?: number;
   /** Epoch ms of the last poll cycle that produced a state change. */
   lastUpdate: number;
+  /**
+   * Focus mode from prop 0x500A.
+   * 0x0001=MF, 0x0002=AF-S, 0x8004=AF-C, 0x8005=AF-A, 0x8006=DMF, 0x8009=PF. 0=unknown.
+   */
+  focusMode: number;
+  /** AF status from prop 0xD213. 0x02=focused, 0x03=not focused, 0x05=tracking. 0=unknown. */
+  afStatus: number;
+  /** Focal distance raw from prop 0xD004. Divide by 100 for meters. 0=unknown, 0xFFFF=∞. */
+  focalDistanceM: number;
 }
 
 /** Derived display values computed from SonyRawState. */
@@ -71,6 +84,12 @@ export interface SonyDerivedState {
   colorTempDisplay: string;
   expCompEv: number;
   expCompDisplay: string;
+  /** Focus mode as display string — "MF", "AF-S", "AF-C", "AF-A", "DMF", "PF", or "—". */
+  focusModeDisplay: string;
+  /** AF status as display string — "Focused", "Tracking", "Searching", or "—". */
+  afStatusDisplay: string;
+  /** Focal distance as display string — e.g. "0.20m", "∞", or "—". */
+  focalDistanceDisplay: string;
 }
 
 /** Alert conditions derived from raw + derived Sony state. */
@@ -162,6 +181,8 @@ export interface CameraUIState {
   // ── Raw numeric values still present at top level ────────────────────────────
   expComp: number;
   battery: number;
+  powerSource: number;
+  batteryMinutes: number;
   charging: boolean;
   recState: number;
   recRemainSec: number;

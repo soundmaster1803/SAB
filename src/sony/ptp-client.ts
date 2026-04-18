@@ -30,13 +30,18 @@ export interface CameraState {
   shutter: number;    // raw Sony UINT32: (num<<16)|den, e.g. 0x00010064 = 1/100
   expComp: number;    // INT16 raw, /1000 = EV
   colorTemp: number;  // Kelvin
-  battery: number;    // 0–100 %
-  charging: boolean;      // AC power / charging (battery > 100 heuristic or future prop)
+  battery: number;      // 0–100 %
+  powerSource: number;  // 0=unknown, 1=DC, 2=Battery, 3=PoE  (prop 0xD03A)
+  batteryMinutes: number; // remaining minutes (prop 0xD038); 0=unknown
+  charging: boolean;    // true when powerSource∈{1,3} or icon-bit fallback
   recState: number;       // 0=idle, 1=recording
   recRemainSec: number;   // remaining card capacity in seconds (0 = unknown)
   tally: number;      // 0=none, 1=program, 2=preview
   fps?: number;       // current frame rate (from camera or config)
   lastUpdate: number;
+  focusMode:      number;  // 0x500A: 0x0001=MF, 0x0002=AF-S, 0x8004=AF-C, 0x8005=AF-A, 0x8006=DMF, 0x8009=PF
+  afStatus:       number;  // 0xD213: 0x02=focused, 0x03=not focused, 0x05=tracking
+  focalDistanceM: number;  // 0xD004: raw value; /100 = meters, 0xFFFF = infinity
 }
 
 const TYPE_SIZE: Record<number, number> = {
@@ -109,8 +114,9 @@ export class SonyPTPClient extends EventEmitter {
       connected: false,
       iso: 0, fnumber: 0, shutter: 0,
       expComp: 0, colorTemp: 5500,
-      battery: 0, charging: false, recState: 0, recRemainSec: 0,
+      battery: 0, powerSource: 0, batteryMinutes: 0, charging: false, recState: 0, recRemainSec: 0,
       tally: 0, lastUpdate: 0,
+      focusMode: 0, afStatus: 0, focalDistanceM: 0,
     };
   }
 
@@ -530,7 +536,12 @@ export class SonyPTPClient extends EventEmitter {
     const [battery]                = this.hunterExtractWithList(blob, 0xD218);
     const [batteryIcon]            = this.hunterExtractWithList(blob, 0xD205);
     const [batteryStep]            = this.hunterExtractWithList(blob, 0xD20E);
+    const [powerSource]            = this.hunterExtractWithList(blob, 0xD03A);
+    const [batteryMinutes]         = this.hunterExtractWithList(blob, 0xD038);
     const [recState]               = this.hunterExtractWithList(blob, 0xD21D);
+    const [focusMode]              = this.hunterExtractWithList(blob, 0x500A);
+    const [afStatus]               = this.hunterExtractWithList(blob, 0xD213);
+    const [focalDistM]             = this.hunterExtractWithList(blob, 0xD004);
     // Remaining recordable time in seconds — PTP3 cameras (ZV-E10 II, FX30, etc.)
     // 0xD3C4 = Slot3RemainingTime, 0xD3C2 = Slot1RemainingTime (inferred from SDK pattern)
     const [remSec3]                = this.hunterExtractWithList(blob, 0xD3C4);
@@ -557,21 +568,41 @@ export class SonyPTPClient extends EventEmitter {
     if (colorList.length) this.supportedLists.set(0xD20F, colorList);
 
     // ── Power-source / charging detection ────────────────────────────────────
-    // Confirmed via raw blob analysis (ZV-E10M2 fw 1.02):
+    // Evaluated in priority order — first truthy match wins:
     //
-    //   0xD205 (Battery Level Icon): bit 3 (0x08) is set when AC power is connected.
-    //     AC connected:    0x0F (0b00001111) — bit 3 set
-    //     Battery only:    0x07 (0b00000111) — bit 3 clear
+    // 1. 0xD03A (Power Source) — authoritative when present.
+    //      0x01 = DC/AC adapter, 0x02 = Battery (not charging), 0x03 = PoE.
+    //      If camera sends 0x02 explicitly → definitely NOT charging.
     //
-    //   0xD150 (USB Power Supply): static on ZV-E10M2 — always 2 during PTP session.
-    //     NOT a reliable dynamic charging indicator. Ignored for state decisions.
+    // 2. 0xD20E (Battery Level Indicator) — secondary:
+    //      0x10 = USB Bus Power only (AC via USB).
+    //      0x01 = Fake/dummy battery (DC coupler + AC adapter, common on FX30).
     //
-    //   Fallback: battery > 100 (some older Sony models signal AC this way).
-    const batRaw = battery;
+    // 3. 0xD205 (Battery Level Icon) bit 3 (0x08) — confirmed ZV-E10M2 fw 1.02:
+    //      AC: 0x0F (bit 3 set)  |  Battery only: 0x07 (bit 3 clear).
+    //
+    // 4. Legacy: battery > 100 or battery === 255 (older Sony models).
     const batPct = battery !== null ? Math.min(100, battery > 100 ? 100 : battery) : null;
-    const isCharging =
-      (batteryIcon !== null && (batteryIcon & 0x08) !== 0) ||
-      (battery !== null && (battery > 100 || battery === 255));
+    const ps = powerSource ?? 0;
+    const bs = batteryStep ?? 0;
+
+    let isCharging: boolean;
+    if (ps === 0x01 || ps === 0x03) {
+      isCharging = true;                                                       // 0xD03A: DC or PoE
+    } else if (ps === 0x02) {
+      isCharging = false;                                                      // 0xD03A: Battery (explicit)
+    } else if (bs === 0x10 || bs === 0x01) {
+      isCharging = true;                                                       // 0xD20E: USB Bus Power / DC coupler
+    } else if (bs !== 0 && (bs & 0x08) !== 0) {
+      isCharging = true;                                                       // 0xD20E bit 3: AC indicator (FX30 uses 0x0E, ZV-E10M2 uses 0x0F via 0xD205)
+    } else if (batteryIcon !== null && (batteryIcon & 0x08) !== 0) {
+      isCharging = true;                                                       // 0xD205 bit 3: ZV-E10M2 confirmed
+    } else {
+      isCharging = battery !== null && (battery > 100 || battery === 255);    // legacy fallback
+    }
+
+    const batMin = (batteryMinutes !== null && batteryMinutes > 0 && batteryMinutes < 9999)
+      ? batteryMinutes : 0;
 
     let changed = false;
     if (iso      !== null && iso      !== this.state.iso)       { this.state.iso       = iso;      changed = true; }
@@ -579,13 +610,18 @@ export class SonyPTPClient extends EventEmitter {
     if (shutter  !== null && shutter  !== this.state.shutter)   { this.state.shutter   = shutter;  changed = true; }
     if (expComp  !== null && expComp  !== this.state.expComp)   { this.state.expComp   = expComp;  changed = true; }
     if (colorT   !== null && colorT   !== this.state.colorTemp) { this.state.colorTemp = colorT;   changed = true; }
-    if (batPct   !== null && batPct   !== this.state.battery)   { this.state.battery   = batPct;   changed = true; }
+    if (batPct   !== null && batPct   !== this.state.battery)         { this.state.battery        = batPct;   changed = true; }
+    if (ps !== 0 && ps !== this.state.powerSource)                    { this.state.powerSource    = ps;       changed = true; }
+    if (batMin !== this.state.batteryMinutes)                         { this.state.batteryMinutes = batMin;   changed = true; }
     if (isCharging !== this.state.charging) {
-      this.log(`[PWR] charging ${this.state.charging} → ${isCharging}  d205=0x${(batteryIcon??0).toString(16)} bat=${battery}`);
+      this.log(`[PWR] charging ${this.state.charging}→${isCharging}  d03a=0x${ps.toString(16)} d20e=0x${bs.toString(16)} d205=0x${(batteryIcon??0).toString(16)} bat=${battery} pct=${batPct}`);
       this.state.charging = isCharging; changed = true;
     }
-    if (recState !== null && recState !== this.state.recState)        { this.state.recState      = recState;   changed = true; }
-    if (remSec   !== this.state.recRemainSec)                         { this.state.recRemainSec  = remSec;     changed = true; }
+    if (recState  !== null && recState  !== this.state.recState)       { this.state.recState      = recState;   changed = true; }
+    if (remSec    !== this.state.recRemainSec)                        { this.state.recRemainSec  = remSec;     changed = true; }
+    if (focusMode !== null && focusMode !== this.state.focusMode)     { this.state.focusMode     = focusMode;  changed = true; }
+    if (afStatus  !== null && afStatus  !== this.state.afStatus)      { this.state.afStatus      = afStatus;   changed = true; }
+    if (focalDistM !== null && focalDistM !== this.state.focalDistanceM) { this.state.focalDistanceM = focalDistM; changed = true; }
 
     if (changed) {
       this.state.lastUpdate = Date.now();
@@ -757,6 +793,51 @@ export class SonyPTPClient extends EventEmitter {
     await this.controlDevice(0xD2C1 /* S1_BUTTON */, 0x81 /* BUTTON */, 0x0002 /* DOWN */);
     await this.delay(150);
     await this.controlDevice(0xD2C1 /* S1_BUTTON */, 0x81 /* BUTTON */, 0x0001 /* UP */);
+  }
+
+  // Set focus mode (prop 0x500A). Use FOCUS_MODE_VALUES constants for the value.
+  // Camera must be in a mode that allows focus changes (e.g. not in auto-exposure lock).
+  async setFocusMode(mode: number): Promise<void> {
+    this.log(`SetFocusMode 0x${mode.toString(16)}`);
+    const data = Buffer.alloc(2);
+    data.writeUInt16LE(mode, 0);
+    await this.sendCmdWithData(0x9205, [0x500A], data);
+    this.state.focusMode = mode;
+  }
+
+  // Set focus area (prop 0xD22C). Use FOCUS_AREA_VALUES constants for the value.
+  async setFocusArea(area: number): Promise<void> {
+    this.log(`SetFocusArea 0x${area.toString(16)}`);
+    const data = Buffer.alloc(2);
+    data.writeUInt16LE(area, 0);
+    await this.sendCmdWithData(0x9205, [0xD22C], data);
+  }
+
+  // Set absolute focus position (prop 0xE042). PTP3 cameras only.
+  // position: 0x0000 = near limit, 0xFFFF = infinity.
+  // Camera must be in MF or DMF mode — AF cameras silently reject this.
+  async setFocusPositionAbsolute(position: number): Promise<void> {
+    const clamped = Math.max(0, Math.min(0xFFFF, position));
+    this.log(`SetFocusPosition 0x${clamped.toString(16)}`);
+    const data = Buffer.alloc(2);
+    data.writeUInt16LE(clamped, 0);
+    await this.sendCmdWithData(0x9205, [0xE042], data);
+  }
+
+  // Step focus one increment toward near (0xD2D7) — single button pulse.
+  async stepFocusNear(): Promise<void> {
+    this.log('FocusStep Near');
+    await this.controlDevice(0xD2D7, SDI_CONTROL_TYPE.BUTTON, 0x0002 /* DOWN */);
+    await this.delay(50);
+    await this.controlDevice(0xD2D7, SDI_CONTROL_TYPE.BUTTON, 0x0001 /* UP */);
+  }
+
+  // Step focus one increment toward far (0xD2D8) — single button pulse.
+  async stepFocusFar(): Promise<void> {
+    this.log('FocusStep Far');
+    await this.controlDevice(0xD2D8, SDI_CONTROL_TYPE.BUTTON, 0x0002 /* DOWN */);
+    await this.delay(50);
+    await this.controlDevice(0xD2D8, SDI_CONTROL_TYPE.BUTTON, 0x0001 /* UP */);
   }
 
   // ─── Low-level ─────────────────────────────────────────────────────────────

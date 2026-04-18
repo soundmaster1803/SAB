@@ -2,6 +2,34 @@
 
 ---
 
+## v0.15.2 — 2026-04-18 (Focus control — backend + frontend)
+
+### Added
+- `src/sony/constants.ts` — `FOCUS_AREA` (0xD22C), `FOCUS_STEP_NEAR` (0xD2D7), `FOCUS_STEP_FAR` (0xD2D8) added to `PROP_CODES`; `FOCAL_DISTANCE_METER`, `FOCAL_DISTANCE_FEET`, `FOCUS_BRACKET_SHOT_NUM`, `AF_AREA_POSITION`, `FOCUS_POSITION_SETTING` (0xE042), `FOCUS_POSITION_CURRENT` (0xE043) added to `PROP_CODES_EXT`; value-constant maps `FOCUS_MODE_VALUES`, `FOCUS_AREA_VALUES`, `AF_STATUS_VALUES`.
+- `src/sony/state/raw.ts` — `focusMode`, `afStatus`, `focalDistanceM` fields.
+- `src/sony/state/derived.ts` — `focusModeDisplay`, `afStatusDisplay`, `focalDistanceDisplay` fields + pure decoders.
+- `src/sony/state/runtime.ts` — `toSonyRawState()` passes through new focus fields.
+- `src/sony/ptp-client.ts` — focus props extracted in `parseSonyProps()` (0x500A, 0xD213, 0xD004); new methods: `setFocusMode()`, `setFocusArea()`, `setFocusPositionAbsolute()`, `stepFocusNear()`, `stepFocusFar()`.
+- `src/api/routes/cameras.ts` — three new endpoints: `POST /api/cameras/:id/focus-position`, `/focus-mode`, `/focus-step`.
+- `src/sony/actions/index.ts` — focus action entries: `setFocusMode`, `setFocusArea`, `setFocusPosition`, `stepFocusNear`, `stepFocusFar`.
+- `frontend/src/types/ws.ts` — `focusMode`, `afStatus`, `focalDistanceM` in `SonyRawState`; `focusModeDisplay`, `afStatusDisplay`, `focalDistanceDisplay` in `SonyDerivedState`.
+- `frontend/src/panels/cameras/CameraCard.tsx` — focus mode toggle wired to `/focus-mode`; step near/far buttons on icon clicks; AF status badge; focal distance display; slider posts to now-working `/focus-position`.
+- `frontend/src/panels/cameras/CameraCard.module.css` — `focusLabelRow`, `afStatus` badges (focused/tracking/searching), `focusStepBtn`, `focusBottom`, `focalDist`.
+
+### Migration notes
+- No API response shape changes. WS `state` message gains `focusMode`, `afStatus`, `focalDistanceM` in `raw` and three display strings in `derived` — additive only.
+
+---
+
+## v0.15.1 — 2026-04-17 (UI — CameraCard redesign)
+
+### Changed
+- `frontend/src/panels/cameras/CameraCard.tsx` — full redesign: Mode toggles (Manual/Auto) per param, SHUTTER manual text input + SET, FOCUS slider + PUSH AF, ATEM CONTROL and REC in 2-col bottom row.
+- `frontend/src/panels/cameras/CameraCard.module.css` — matching styles for new card layout.
+- `frontend/src/panels/cameras/OfflineOverlay.tsx` — label updated to "Camera not connected"; frosted-glass scrim retained.
+
+---
+
 ## v0.15.0 — 2026-04-17 (Frontend UI — F0–F6 complete + cutover)
 
 ### Added
