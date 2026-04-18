@@ -40,8 +40,10 @@ export interface CameraState {
   fps?: number;       // current frame rate (from camera or config)
   lastUpdate: number;
   focusMode:      number;  // 0x500A: 0x0001=MF, 0x0002=AF-S, 0x8004=AF-C, 0x8005=AF-A, 0x8006=DMF, 0x8009=PF
-  afStatus:       number;  // 0xD213: 0x02=focused, 0x03=not focused, 0x05=tracking
+  afStatus:       number;  // 0xD213: 0x01=not locked, 0x02=focused, 0x05=tracking
   focalDistanceM: number;  // 0xD004: raw value; /100 = meters, 0xFFFF = infinity
+  focusPosition:  number;  // 0xE043: 0x0000=near, 0xFFFF=far; PTP3 only; 0=not available
+  nearFarEnable:  number;  // 0xD235: 0x01=enabled (step commands allowed)
 }
 
 const TYPE_SIZE: Record<number, number> = {
@@ -116,7 +118,7 @@ export class SonyPTPClient extends EventEmitter {
       expComp: 0, colorTemp: 5500,
       battery: 0, powerSource: 0, batteryMinutes: 0, charging: false, recState: 0, recRemainSec: 0,
       tally: 0, lastUpdate: 0,
-      focusMode: 0, afStatus: 0, focalDistanceM: 0,
+      focusMode: 0, afStatus: 0, focalDistanceM: 0, focusPosition: 0, nearFarEnable: 0,
     };
   }
 
@@ -542,6 +544,8 @@ export class SonyPTPClient extends EventEmitter {
     const [focusMode]              = this.hunterExtractWithList(blob, 0x500A);
     const [afStatus]               = this.hunterExtractWithList(blob, 0xD213);
     const [focalDistM]             = this.hunterExtractWithList(blob, 0xD004);
+    const [focusPos]               = this.hunterExtractWithList(blob, 0xE043);  // current lens position (PTP3)
+    const [nearFarEn]              = this.hunterExtractWithList(blob, 0xD235);  // step enable flag
     // Remaining recordable time in seconds — PTP3 cameras (ZV-E10 II, FX30, etc.)
     // 0xD3C4 = Slot3RemainingTime, 0xD3C2 = Slot1RemainingTime (inferred from SDK pattern)
     const [remSec3]                = this.hunterExtractWithList(blob, 0xD3C4);
@@ -619,9 +623,11 @@ export class SonyPTPClient extends EventEmitter {
     }
     if (recState  !== null && recState  !== this.state.recState)       { this.state.recState      = recState;   changed = true; }
     if (remSec    !== this.state.recRemainSec)                        { this.state.recRemainSec  = remSec;     changed = true; }
-    if (focusMode !== null && focusMode !== this.state.focusMode)     { this.state.focusMode     = focusMode;  changed = true; }
-    if (afStatus  !== null && afStatus  !== this.state.afStatus)      { this.state.afStatus      = afStatus;   changed = true; }
-    if (focalDistM !== null && focalDistM !== this.state.focalDistanceM) { this.state.focalDistanceM = focalDistM; changed = true; }
+    if (focusMode !== null && focusMode !== this.state.focusMode)           { this.state.focusMode     = focusMode;   changed = true; }
+    if (afStatus  !== null && afStatus  !== this.state.afStatus)            { this.state.afStatus      = afStatus;    changed = true; }
+    if (focalDistM !== null && focalDistM !== this.state.focalDistanceM)    { this.state.focalDistanceM = focalDistM; changed = true; }
+    if (focusPos  !== null && focusPos  !== this.state.focusPosition)       { this.state.focusPosition = focusPos;    changed = true; }
+    if (nearFarEn !== null && nearFarEn !== this.state.nearFarEnable)       { this.state.nearFarEnable = nearFarEn;   changed = true; }
 
     if (changed) {
       this.state.lastUpdate = Date.now();
@@ -796,13 +802,15 @@ export class SonyPTPClient extends EventEmitter {
   }
 
   // Set focus mode (prop 0x500A). Use FOCUS_MODE_VALUES constants for the value.
-  // Camera must be in a mode that allows focus changes (e.g. not in auto-exposure lock).
+  // Per Sony protocol recommendation: 500ms settling time after mode change before
+  // sending follow-up commands (focus position, step, etc.).
   async setFocusMode(mode: number): Promise<void> {
     this.log(`SetFocusMode 0x${mode.toString(16)}`);
     const data = Buffer.alloc(2);
     data.writeUInt16LE(mode, 0);
     await this.sendCmdWithData(0x9205, [0x500A], data);
     this.state.focusMode = mode;
+    await this.delay(500);
   }
 
   // Set focus area (prop 0xD22C). Use FOCUS_AREA_VALUES constants for the value.
@@ -825,7 +833,12 @@ export class SonyPTPClient extends EventEmitter {
   }
 
   // Step focus one increment toward near (0xD2D7) — single button pulse.
+  // Checks 0xD235 Near/Far Enable Status before sending. Camera must be in MF or DMF.
   async stepFocusNear(): Promise<void> {
+    if (this.state.nearFarEnable !== 0 && this.state.nearFarEnable !== 0x01) {
+      this.warn(`stepFocusNear skipped — nearFarEnable=0x${this.state.nearFarEnable.toString(16)} (not enabled)`);
+      return;
+    }
     this.log('FocusStep Near');
     await this.controlDevice(0xD2D7, SDI_CONTROL_TYPE.BUTTON, 0x0002 /* DOWN */);
     await this.delay(50);
@@ -833,7 +846,12 @@ export class SonyPTPClient extends EventEmitter {
   }
 
   // Step focus one increment toward far (0xD2D8) — single button pulse.
+  // Checks 0xD235 Near/Far Enable Status before sending. Camera must be in MF or DMF.
   async stepFocusFar(): Promise<void> {
+    if (this.state.nearFarEnable !== 0 && this.state.nearFarEnable !== 0x01) {
+      this.warn(`stepFocusFar skipped — nearFarEnable=0x${this.state.nearFarEnable.toString(16)} (not enabled)`);
+      return;
+    }
     this.log('FocusStep Far');
     await this.controlDevice(0xD2D8, SDI_CONTROL_TYPE.BUTTON, 0x0002 /* DOWN */);
     await this.delay(50);

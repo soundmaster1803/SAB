@@ -70,10 +70,14 @@ export interface SonyRawState {
    * 0x0001=MF, 0x0002=AF-S, 0x8004=AF-C, 0x8005=AF-A, 0x8006=DMF, 0x8009=PF. 0=unknown.
    */
   focusMode: number;
-  /** AF status from prop 0xD213. 0x02=focused, 0x03=not focused, 0x05=tracking. 0=unknown. */
+  /** AF status from prop 0xD213. 0x01=not locked, 0x02=focused, 0x05=tracking. 0=unknown. */
   afStatus: number;
   /** Focal distance raw from prop 0xD004. Divide by 100 for meters. 0=unknown, 0xFFFF=∞. */
   focalDistanceM: number;
+  /** Current lens position from prop 0xE043 (PTP3). 0x0000=near, 0xFFFF=far. 0=unavailable. */
+  focusPosition: number;
+  /** Near/Far step enable from prop 0xD235. 0x01=enabled. 0=unavailable/disabled. */
+  nearFarEnable: number;
 }
 
 /** Derived display values computed from SonyRawState. */

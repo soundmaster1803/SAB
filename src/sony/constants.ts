@@ -184,6 +184,10 @@ export const PROP_CODES_EXT = {
   FOCUS_POSITION_SETTING:      0xE042,  // absolute position 0x0000=near 0xFFFF=far (PTP3)
   FOCUS_POSITION_CURRENT:      0xE043,  // current lens position readback (PTP3)
 
+  // --- Focus enable / drive status ---
+  NEAR_FAR_ENABLE:             0xD235,  // 0x01=enabled, 0x00=disabled — check before step commands
+  FOCUS_INT16_ENABLE:          0xE045,  // 0x01=enabled — required for 0xF004 continuous drive
+
   // --- Focus absolute ---
   FOCUS_DRIVING_STATUS:        0xD19C,
   ZOOM_DRIVING_STATUS:         0xD19D,

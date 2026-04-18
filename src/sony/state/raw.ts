@@ -91,6 +91,16 @@ export interface SonyRawState {
    * 0xFFFF or 0 = infinity / not available.
    */
   focalDistanceM: number;
+  /**
+   * Current lens position from prop 0xE043 (PTP3 only).
+   * 0x0000 = near limit, 0xFFFF = infinity. 0 = not yet polled / not supported.
+   */
+  focusPosition: number;
+  /**
+   * Near/Far drive enable status from prop 0xD235.
+   * 0x01 = enabled (step commands allowed). 0 = not polled / disabled.
+   */
+  nearFarEnable: number;
 
   // --- Tally (written by bridge sync) ---
   /** Tally state: 0 = none, 1 = program, 2 = preview. */

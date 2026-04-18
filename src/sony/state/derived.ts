@@ -120,9 +120,10 @@ function decodeFocusMode(raw: number): string {
  */
 function decodeAfStatus(raw: number): string {
   switch (raw) {
-    case AF_STATUS_VALUES.FOCUSED:     return 'Focused';
-    case AF_STATUS_VALUES.NOT_FOCUSED: return 'Searching';
-    case AF_STATUS_VALUES.TRACKING:    return 'Tracking';
+    case 0x01:                         return 'Searching';  // not locked
+    case AF_STATUS_VALUES.FOCUSED:     return 'Focused';    // 0x02
+    case AF_STATUS_VALUES.NOT_FOCUSED: return 'Searching';  // 0x03
+    case AF_STATUS_VALUES.TRACKING:    return 'Tracking';   // 0x05
     default: return '—';
   }
 }

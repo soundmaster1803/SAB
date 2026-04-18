@@ -124,12 +124,23 @@ export function CameraCard({ cam, onDebug, usedAtemIds = [] }: Props) {
   // Local optimistic state — updates immediately on toggle, syncs from camera when polled.
   const [localFocusMode, setLocalFocusMode] = useState(cam.raw?.focusMode ?? 0)
   const [focusPos, setFocusPos] = useState(50)
+  const [isDragging, setIsDragging] = useState(false)
 
-  // Sync from camera state when a real value arrives (non-zero means camera reported it).
+  // Sync focus mode from camera when a real value arrives (non-zero = camera reported it).
   useEffect(() => {
     const camMode = cam.raw?.focusMode ?? 0
     if (camMode !== 0) setLocalFocusMode(camMode)
   }, [cam.raw?.focusMode])
+
+  // Sync slider position from camera's actual lens position (0xE043, PTP3).
+  // Only sync when user is not actively dragging — don't fight the user's input.
+  useEffect(() => {
+    if (isDragging) return
+    const rawPos = cam.raw?.focusPosition ?? 0
+    if (rawPos > 0) {
+      setFocusPos(Math.round((rawPos / 0xFFFF) * 100))
+    }
+  }, [cam.raw?.focusPosition, isDragging])
 
   // MF (0x0001) and DMF (0x8006) are the manual modes where position control is valid.
   const focusIsManual = localFocusMode === 0x0001 || localFocusMode === 0x8006
@@ -435,8 +446,10 @@ export function CameraCard({ cam, onDebug, usedAtemIds = [] }: Props) {
                 className={styles.focusSlider}
                 style={{ '--fp': `${focusPos}%` } as React.CSSProperties}
                 onChange={(e) => setFocusPos(+e.target.value)}
-                onMouseUp={() => commitFocus(focusPos)}
-                onTouchEnd={() => commitFocus(focusPos)}
+                onMouseDown={() => setIsDragging(true)}
+                onTouchStart={() => setIsDragging(true)}
+                onMouseUp={() => { setIsDragging(false); commitFocus(focusPos) }}
+                onTouchEnd={() => { setIsDragging(false); commitFocus(focusPos) }}
                 disabled={off || !focusIsManual}
               />
               <button

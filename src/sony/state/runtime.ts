@@ -33,6 +33,8 @@ export function toSonyRawState(state: CameraState): SonyRawState {
     focusMode:      state.focusMode,
     afStatus:       state.afStatus,
     focalDistanceM: state.focalDistanceM,
+    focusPosition:  state.focusPosition,
+    nearFarEnable:  state.nearFarEnable,
   };
 }
 
