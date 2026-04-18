@@ -582,7 +582,7 @@
 /* PUSH AF — inset blue pill */
 .afBtn {
   align-self: auto;
-  margin: 0;
+  margin-left: auto;
   padding: 0 11px;
   border-radius: 7px;
   border: none;
