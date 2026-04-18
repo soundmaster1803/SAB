@@ -121,9 +121,18 @@ export function CameraCard({ cam, onDebug, usedAtemIds = [] }: Props) {
   const [shutterInput, setShutterInput] = useState('')
 
   // ── Focus ─────────────────────────────────────────────────────────────────
-  const focusMode    = cam.raw?.focusMode ?? 0
-  const focusIsManual = focusMode === 0x0001 || focusMode === 0x8006  // MF or DMF
+  // Local optimistic state — updates immediately on toggle, syncs from camera when polled.
+  const [localFocusMode, setLocalFocusMode] = useState(cam.raw?.focusMode ?? 0)
   const [focusPos, setFocusPos] = useState(50)
+
+  // Sync from camera state when a real value arrives (non-zero means camera reported it).
+  useEffect(() => {
+    const camMode = cam.raw?.focusMode ?? 0
+    if (camMode !== 0) setLocalFocusMode(camMode)
+  }, [cam.raw?.focusMode])
+
+  // MF (0x0001) and DMF (0x8006) are the manual modes where position control is valid.
+  const focusIsManual = localFocusMode === 0x0001 || localFocusMode === 0x8006
 
   // ── ATEM input ────────────────────────────────────────────────────────────
   const [atemInputVal, setAtemInputVal] = useState(String(cam.atemInput ?? 0))
@@ -158,8 +167,16 @@ export function CameraCard({ cam, onDebug, usedAtemIds = [] }: Props) {
   function commitFocus(pos: number) {
     post(`/api/cameras/${id}/focus-position`, { position: pos })
   }
-  function setFocusMode(mode: string) {
-    post(`/api/cameras/${id}/focus-mode`, { mode })
+  function toggleFocusMode() {
+    if (focusIsManual) {
+      // Manual → Auto (AF-C)
+      setLocalFocusMode(0x8004)
+      post(`/api/cameras/${id}/focus-mode`, { mode: 'AF-C' })
+    } else {
+      // Auto → Manual (MF)
+      setLocalFocusMode(0x0001)
+      post(`/api/cameras/${id}/focus-mode`, { mode: 'MF' })
+    }
   }
   function stepFocus(direction: 'near' | 'far') {
     post(`/api/cameras/${id}/focus-step`, { direction })
@@ -397,8 +414,8 @@ export function CameraCard({ cam, onDebug, usedAtemIds = [] }: Props) {
           <div className={`${styles.paramBox} ${styles.focusBox}`}>
             <ModeToggle
               isAuto={!focusIsManual}
-              onManual={() => setFocusMode('MF')}
-              onAuto={() => setFocusMode('AF-C')}
+              onManual={toggleFocusMode}
+              onAuto={toggleFocusMode}
               disabled={off}
             />
             <div className={styles.focusTrack}>
