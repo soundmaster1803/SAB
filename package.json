@@ -1,6 +1,6 @@
 {
-  "name": "cinelink-bridge",
-  "version": "1.0.0-beta.3",
+  "name": "sab",
+  "version": "0.15.2",
   "description": "SAB — Sony ATEM Bridge: modular camera control platform",
   "main": "dist/bridge.cjs",
   "scripts": {
@@ -10,11 +10,7 @@
     "dev:ui": "cd frontend && npm run dev",
     "build:ui": "cd frontend && npm run build",
     "install:ui": "cd frontend && npm install",
-    "pkg:arm64": "npx @yao-pkg/pkg dist/bridge.cjs --target node20-macos-arm64 --output dist/cinelink-bridge-arm64",
-    "pkg:x64":   "npx @yao-pkg/pkg dist/bridge.cjs --target node20-macos-x64   --output dist/cinelink-bridge-x64",
-    "pkg:universal": "npm run pkg:arm64 && npm run pkg:x64 && lipo -create dist/cinelink-bridge-arm64 dist/cinelink-bridge-x64 -output dist/cinelink-bridge-universal",
-    "bundle:app": "npm run pkg:universal && cp dist/cinelink-bridge-universal 'CineLink Bridge.app/Contents/MacOS/cinelink-bridge' && chmod +x 'CineLink Bridge.app/Contents/MacOS/cinelink-bridge'",
-    "release:zip": "ditto -c -k --sequesterRsrc --keepParent 'CineLink Bridge.app' 'CineLink-Bridge-beta2-macOS-universal.zip'"
+    "start": "node dist/bridge.cjs"
   },
   "dependencies": {
     "atem-connection": "^3.9.0",

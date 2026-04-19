@@ -1,7 +1,7 @@
 # SAB — Claude Operating Manual
 
-Version: 0.5.0
-Last updated: 2026-04-17
+Version: 0.6.0
+Last updated: 2026-04-19
 
 This document is the single authoritative operating manual for Claude working on the SAB project.
 It supersedes all previous CLAUDE.md versions and informal instruction fragments.
@@ -33,7 +33,7 @@ Architecture must evolve incrementally — never in a single large rewrite.
 
 ## 2. Current Architecture
 
-As of 2026-04-17 (v0.12.2), the actual source tree is:
+As of 2026-04-19 (v0.15.2), the actual source tree is:
 
 ```
 src/
@@ -394,11 +394,10 @@ These are absolute. No exceptions without an explicit architecture decision reco
 
 | Branch | Purpose |
 |--------|---------|
-| `main` | Production-ready code |
-| `stable` | Tested release candidates |
-| `dev` | Active development |
+| `main` | Single trunk — current working code, head of all development |
 
-New features must never be committed directly to `main`.
+Feature/fix branches are created from `main` and merged back via PR.
+There is no separate `dev` or `stable` branch.
 
 ### Branch naming
 
@@ -722,15 +721,13 @@ Runtime modules must never import from `src/platform/`.
 
 ---
 
-### Deferred files (do not modify during Phases 1–8)
+### Deferred packaging artifacts
 
-| File | Status | Reason |
-|------|--------|--------|
-| `scripts/launcher.swift` | Frozen | macOS-specific; deferred to platform phase |
-| `scripts/make-icon.swift` | Frozen | macOS-specific; deferred to platform phase |
-| `scripts/pack.sh` | Frozen | Broken + out of scope; deferred to platform phase |
-| `package.json` `bundle:app` | Frozen | References non-existent CineLink Bridge.app |
-| `package.json` `release:zip` | Frozen | References outdated app path |
+All beta-3 macOS launcher artifacts (Swift launcher, icon generator, pack.sh,
+`bundle:app` and `release:zip` npm scripts, `CineLink Bridge*.app` bundles) were
+removed in the v0.15.2 cleanup. When packaging work resumes it must live under
+`src/platform/` (per the platform layer rule above) and must not reintroduce
+top-level OS-specific scripts.
 
 ---
 

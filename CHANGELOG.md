@@ -2,6 +2,26 @@
 
 ---
 
+## v0.15.2 — 2026-04-19 (Repository cleanup)
+
+### Removed
+- `Camera Control PTP 2 Reference.pdf`, `Camera Control PTP 3 Reference.pdf` — Sony reference PDFs (knowledge already extracted into `docs/research/ref-sony.md` and `docs/research/ref-cameras.md`).
+- `scripts/launcher.swift`, `scripts/make-icon.swift`, `scripts/pack.sh` — beta-3 macOS launcher artifacts (deferred per Section 13; will return under `src/platform/macos/` when packaging phase resumes).
+- `package.json` scripts `bundle:app`, `release:zip` — referenced removed `.app` paths.
+- Obsolete `.gitignore` lines for `CineLink Bridge*.app/`, `CineLink-Bridge-*.zip`.
+
+### Changed
+- `package.json` `name` `cinelink-bridge` → `sab`; `version` `1.0.0-beta.3` → `0.15.2` (matches `VERSION` file); added `start` script (`node dist/bridge.cjs`).
+- `.gitignore` rewritten — concise; ignores `public/index.html` (vite-generated) and `.claude/launch.json` (per-machine).
+- `public/index.html` removed from git tracking — it is the vite build artifact.
+- `frontend/src/assets/icons/*.png` — added to git (previously untracked, blocked production build).
+- `CLAUDE.md` — Section 2 dated 2026-04-19, version snapshot v0.15.2; Section 7 branch table simplified to single trunk (`main`); Section 13 deferred-files list replaced with cleanup note.
+
+### Migration notes
+- After pulling: `npm install && npm run install:ui && npm run build:ui`. No source/runtime behavior changes — purely repo hygiene.
+
+---
+
 ## v0.15.2 — 2026-04-18 (Focus control — backend + frontend)
 
 ### Added
