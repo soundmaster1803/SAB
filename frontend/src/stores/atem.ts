@@ -10,12 +10,15 @@ interface AtemStore {
   tally: TallyCode[]
   /** Sorted camera input IDs. Positional index matches tally[]. */
   topology: number[]
+  /** When true, backend auto-connects to atemIp on startup. */
+  autoReconnect: boolean
   /** App version string from the last state message. */
   appVersion: string
 
   setAtemState: (state: {
     atemConnected: boolean
     atemIp: string
+    atemAutoReconnect: boolean
     atemModel: string
     inputCount: number
     tally: TallyCode[]
@@ -31,12 +34,14 @@ export const useAtemStore = create<AtemStore>((set) => ({
   inputCount: 0,
   tally: [],
   topology: [],
+  autoReconnect: true,
   appVersion: '',
 
-  setAtemState({ atemConnected, atemIp, atemModel, inputCount, tally, topology, version }) {
+  setAtemState({ atemConnected, atemIp, atemAutoReconnect, atemModel, inputCount, tally, topology, version }) {
     set({
       connected: atemConnected,
       ip: atemIp,
+      autoReconnect: atemAutoReconnect,
       model: atemModel,
       inputCount,
       tally,

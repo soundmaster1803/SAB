@@ -1,5 +1,5 @@
 // Identify this process immediately — helps detect zombie/duplicate instances
-console.log(`[SYSTEM] Starting CineLink Bridge (PID: ${process.pid})`);
+console.log(`[SYSTEM] Starting SAB (PID: ${process.pid})`);
 
 // Global crash guards — prevent Node 20 from exiting on unhandled rejections
 process.on('uncaughtException', (err) => {
@@ -22,8 +22,8 @@ import { APP_VERSION } from './version';
 function ts(): string { return new Date().toISOString().slice(11, 23); }
 async function main(): Promise<void> {
   initLogger();
-  appendLog('═══ CineLink Bridge starting ═══');
-  console.log(`[${ts()}] ═══ CineLink Bridge starting ═══`);
+  appendLog('═══ SAB starting ═══');
+  console.log(`[${ts()}] ═══ SAB starting ═══`);
   console.log(`[${ts()}] SAB version: ${APP_VERSION}`);
 
   const appConfig = loadConfig();
@@ -43,15 +43,18 @@ async function main(): Promise<void> {
     manager.addCamera(cam);
   }
 
-  if (appConfig.atemIp) {
+  const autoReconnect = appConfig.atemAutoReconnect !== false;
+  if (appConfig.atemIp && autoReconnect) {
     atemListener.connect(appConfig.atemIp);
-  } else {
+  } else if (!appConfig.atemIp) {
     console.warn(`[${ts()}] WARN: atemIp not set in config.json`);
+  } else {
+    console.log(`[${ts()}] ATEM auto-reconnect disabled — skipping startup connect to ${appConfig.atemIp}`);
   }
 
   startServer(manager, atemListener, appConfig);
 
-  console.log(`[${ts()}] ═══ CineLink Bridge ready — http://localhost:7777 ═══`);
+  console.log(`[${ts()}] ═══ SAB ready — http://localhost:7777 ═══`);
 }
 
 main().catch((e: any) => {

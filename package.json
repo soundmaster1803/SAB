@@ -1,6 +1,6 @@
 {
   "name": "sab",
-  "version": "0.15.2",
+  "version": "0.16.0",
   "description": "SAB — Sony ATEM Bridge: modular camera control platform",
   "main": "dist/bridge.cjs",
   "scripts": {

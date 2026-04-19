@@ -13,6 +13,8 @@ export interface CameraConfig {
 
 export interface AppConfig {
   atemIp: string;
+  /** When true, the bridge auto-connects to atemIp on startup. Default true. */
+  atemAutoReconnect?: boolean;
   cameras: CameraConfig[];
 }
 
@@ -35,6 +37,7 @@ if (process.env.SAB_CONFIG_PATH) {
 
 const DEFAULT_CONFIG: AppConfig = {
   atemIp: '',
+  atemAutoReconnect: true,
   cameras: [],
 };
 

@@ -2,6 +2,38 @@
 
 ---
 
+## v0.16.0 — 2026-04-19 (UI redesign — Header + AtemBar + Logs modal)
+
+### Added
+- `frontend/src/panels/atem/AtemBar.tsx` — new fixed bottom bar dedicated to ATEM. Three sections: connection row (IP + Connect/Disconnect + Auto-reconnect + detected model), per-input camera buttons with tally colors, and a per-button label showing the linked Sony camera name (or "not linked").
+- `src/api/routes/atem.ts` — `PATCH /api/atem/settings` toggles `atemAutoReconnect` and persists to `config.json`.
+- `src/api/routes/cameras.ts` — `POST /api/cameras/delete-all` disconnects and removes every camera in one shot (UI confirms).
+- `src/config.ts` — `atemAutoReconnect: boolean` field (default true) controls whether the bridge auto-connects to `atemIp` on startup.
+- `src/api/ws/broadcaster.ts` — `atemAutoReconnect` flag included in every WS state message so the UI checkbox stays in sync.
+
+### Changed
+- `frontend/src/components/Header.tsx` — full rewrite. Brand block is now `[SAB]` logo plate + "— Sony ATEM Bridge" + dynamic version badge. ATEM connect/disconnect controls moved out (to AtemBar). New right-side action group: REC ALL / Stop All / Delete All / Logs / Recall Settings (placeholder) / Camera Links (placeholder). `+ Add Camera` is in its own border-left group, easy to relocate later.
+- `frontend/src/panels/logs/LogPanel.tsx` — converted from always-visible bottom drawer into a modal opened from the new `Logs` button (Esc to close, click backdrop to close).
+- `frontend/src/App.tsx` — removed inline `<AtemPanel />` and bottom `<TallyBar />`. New layout: `Header` → `main` (camera grid) → fixed `AtemBar` + modal-rendered `LogPanel` / `DebugModal` / `AddCameraWizard`.
+- `src/atem/listener.ts` — `atemModel` getter now prefers `state.info.productIdentifier` (full name like "ATEM Mini Pro"), falls back to `deviceName`.
+- `src/index.ts` — startup ATEM auto-connect is gated by `atemAutoReconnect` flag. Renamed log labels from "CineLink Bridge" to "SAB".
+- `frontend/src/styles/tokens.css` — replaced `--tally-h` / `--log-toolbar-h` / `--log-body-h` with single `--atem-bar-h: 180px`.
+- `frontend/index.html` — title `CineLink Bridge` → `SAB — Sony ATEM Bridge`.
+- `frontend/package.json` — name `cinelink-bridge-ui` → `sab-ui`.
+
+### Removed
+- `frontend/src/panels/TallyBar.tsx` + `.module.css` — replaced by AtemBar's per-input row.
+- `frontend/src/panels/atem/AtemPanel.tsx` + `.module.css` — replaced by AtemBar.
+- `frontend/src/panels/atem/TallyStrip.tsx` + `.module.css` — replaced by AtemBar.
+
+### Migration notes
+- No backwards-incompatible API changes; new fields and routes are additive.
+- WS `state` message gains `atemAutoReconnect: boolean` (always present).
+- `config.json` may have a new `atemAutoReconnect` key after first run; missing key defaults to `true` (preserves prior behavior).
+- Old launcher / `npm run dev` users: backend serves the built UI from `public/`. Run `npm run build:ui` once after pulling, or use `npm run dev:ui` (Vite dev server on port 5173 with `/api` proxy → 7777) for hot reload.
+
+---
+
 ## v0.15.2 — 2026-04-19 (Repository cleanup)
 
 ### Removed

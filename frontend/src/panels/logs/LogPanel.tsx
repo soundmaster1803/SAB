@@ -23,53 +23,62 @@ function matchesFilter(entry: LogEntry, filter: Filter): boolean {
   return entry.category.toUpperCase().includes(filter)
 }
 
-export function LogPanel() {
+interface LogPanelProps {
+  open: boolean
+  onClose: () => void
+}
+
+export function LogPanel({ open, onClose }: LogPanelProps) {
   const entries = useLogsStore((s) => s.entries)
   const clear   = useLogsStore((s) => s.clear)
 
-  const [expanded, setExpanded] = useState(false)
-  const [filter,   setFilter]   = useState<Filter>('ALL')
+  const [filter, setFilter] = useState<Filter>('ALL')
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const visible = entries.filter((e) => matchesFilter(e, filter))
 
-  // Auto-scroll to bottom when new entries arrive and panel is expanded
   useEffect(() => {
-    if (!expanded) return
+    if (!open) return
     const el = scrollRef.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [visible.length, expanded])
+  }, [visible.length, open])
+
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [open, onClose])
+
+  if (!open) return null
 
   return (
-    <div className={styles.panel}>
-      <div className={styles.toolbar}>
-        <button
-          className={`${styles.toggleBtn} ${expanded ? '' : styles.collapsed}`}
-          onClick={() => setExpanded((v) => !v)}
-          title={expanded ? 'Collapse log' : 'Expand log'}
-        >
-          ▲
-        </button>
+    <div className={styles.backdrop} onClick={onClose}>
+      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.toolbar}>
+          <span className={styles.title}>System Log</span>
+          <span className={styles.count}>{visible.length}</span>
 
-        <span className={styles.title}>System Log</span>
-        <span className={styles.count}>{visible.length}</span>
+          <div className={styles.filters}>
+            {FILTERS.map((f) => (
+              <button
+                key={f}
+                className={`${styles.filterBtn} ${filter === f ? styles.active : ''}`}
+                onClick={() => setFilter(f)}
+              >
+                {f === 'ALL' ? 'All' : f.charAt(0) + f.slice(1).toLowerCase()}
+              </button>
+            ))}
+          </div>
 
-        {FILTERS.map((f) => (
-          <button
-            key={f}
-            className={`${styles.filterBtn} ${filter === f ? styles.active : ''}`}
-            onClick={() => setFilter(f)}
-          >
-            {f === 'ALL' ? 'All' : f.charAt(0) + f.slice(1).toLowerCase()}
-          </button>
-        ))}
+          <button className={styles.clearBtn} onClick={clear}>Clear</button>
+          <button className={styles.closeBtn} onClick={onClose} title="Close (Esc)">✕</button>
+        </div>
 
-        <button className={styles.clearBtn} onClick={clear}>Clear</button>
-      </div>
-
-      <div className={`${styles.bodyWrap} ${expanded ? '' : styles.collapsed}`}>
         <div className={styles.scroll} ref={scrollRef}>
-          {visible.map((entry, i) => (
+          {visible.length === 0 ? (
+            <div className={styles.empty}>No log entries</div>
+          ) : visible.map((entry, i) => (
             <div key={i} className={styles.entry}>
               <span className={styles.ts}>{entry.timestamp}</span>
               <span className={`${styles.cat} ${catClass(entry.category)}`}>

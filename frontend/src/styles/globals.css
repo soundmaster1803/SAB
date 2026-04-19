@@ -17,22 +17,8 @@ body {
   color: var(--t1);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
   min-height: 100dvh;
-  /* Reserve space for fixed TallyBar + collapsed LogPanel toolbar */
-  padding-bottom: calc(var(--tally-h) + var(--log-toolbar-h) + 12px);
-  transition: padding-bottom var(--transition-normal);
-}
-
-body.log-expanded {
-  padding-bottom: calc(var(--tally-h) + var(--log-toolbar-h) + var(--log-body-h) + 12px);
-}
-
-@media (max-width: 600px) {
-  body {
-    padding-bottom: calc(var(--tally-h) + var(--log-toolbar-h) + 8px);
-  }
-  body.log-expanded {
-    padding-bottom: calc(var(--tally-h) + var(--log-toolbar-h) + var(--log-body-h) + 8px);
-  }
+  /* Reserve space for the fixed AtemBar at the bottom (~3 rows when connected). */
+  padding-bottom: var(--atem-bar-h);
 }
 
 /* ── Typography helpers ────────────────────────────────────────────────────── */

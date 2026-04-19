@@ -36,7 +36,8 @@ export class ATEMListener extends EventEmitter {
   private readyAfter = 0
 
   get atemModel(): string {
-    return (this.atem.state as any)?.info?.deviceName ?? 'ATEM';
+    const info = (this.atem.state as any)?.info;
+    return info?.productIdentifier ?? info?.deviceName ?? 'ATEM';
   }
 
   get inputCount(): number {

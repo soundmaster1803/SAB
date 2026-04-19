@@ -45,5 +45,19 @@ export function createAtemRoutes({ atemListener, getConfig, setConfig }: AtemRou
     res.json({ ok: true });
   });
 
+  // ── ATEM: settings (auto-reconnect toggle) ────────────────────────────────
+  router.patch('/api/atem/settings', (req, res) => {
+    const { autoReconnect } = req.body as { autoReconnect?: boolean };
+    if (typeof autoReconnect !== 'boolean') {
+      res.status(400).json({ error: 'autoReconnect (boolean) required' }); return;
+    }
+    const appConfig = getConfig();
+    appConfig.atemAutoReconnect = autoReconnect;
+    saveConfig(appConfig);
+    setConfig(appConfig);
+    log(`ATEM auto-reconnect set to ${autoReconnect}`);
+    res.json({ ok: true });
+  });
+
   return router;
 }

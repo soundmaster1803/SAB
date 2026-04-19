@@ -116,6 +116,7 @@ export function createBroadcaster({
         };
       }),
       atemIp: appConfig.atemIp,
+      atemAutoReconnect: appConfig.atemAutoReconnect !== false,
       atemConnected: atem.connected,
       atemModel: atem.model,
       inputCount: atem.inputCount,

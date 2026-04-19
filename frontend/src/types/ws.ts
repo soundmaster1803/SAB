@@ -232,6 +232,7 @@ export interface WsStateMessage {
   version: string;
   cameras: CameraUIState[];
   atemIp: string;
+  atemAutoReconnect: boolean;
   atemConnected: boolean;
   atemModel: string;
   inputCount: number;

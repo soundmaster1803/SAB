@@ -27,6 +27,7 @@ function dispatch(msg: WsMessage): void {
     useAtemStore.getState().setAtemState({
       atemConnected: msg.atemConnected,
       atemIp: msg.atemIp,
+      atemAutoReconnect: msg.atemAutoReconnect,
       atemModel: msg.atemModel,
       inputCount: msg.inputCount,
       tally: msg.tally,

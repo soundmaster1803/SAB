@@ -63,6 +63,20 @@ export function createCameraRoutes({ manager, atemListener, getConfig, setConfig
     }
   });
 
+  // ── Camera: disconnect & delete all ───────────────────────────────────────
+  router.post('/api/cameras/delete-all', (_req, res) => {
+    const cfg = getConfig();
+    const ids = (cfg.cameras ?? []).map(c => c.id);
+    log(`DELETE ALL — removing ${ids.length} camera(s)`);
+    let next = cfg;
+    for (const id of ids) {
+      manager.removeCamera(id);
+      next = removeCamera(next, id);
+    }
+    setConfig(next);
+    res.json({ ok: true, removed: ids.length });
+  });
+
   router.post('/api/cameras/stop-all', async (_req, res) => {
     log('STOP ALL — stopping recording on all recording cameras');
     try {
