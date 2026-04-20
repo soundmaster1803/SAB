@@ -2,6 +2,7 @@
 .card {
   position: relative;
   width: 369px;
+  max-width: 100%;
   flex-shrink: 0;
   background: #1C1C1E;
   border: 1px solid rgba(84, 84, 88, 0.55);
@@ -246,7 +247,9 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
+  min-width: 0;
 }
+.paramGrid > * { min-width: 0; }
 .paramGridLast {
   margin-bottom: 4px;
 }
@@ -482,37 +485,32 @@
 .focusModule {
   grid-column: span 2;
 }
-.focusLabelRow {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 2px;
-}
-/* AF status badge */
-.afStatus {
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.3px;
-  padding: 1px 5px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.45);
-}
-.afStatus_focused  { background: rgba(48, 209, 88, 0.18); color: #30D158; }
-.afStatus_tracking { background: rgba(255, 214, 10, 0.18); color: #FFD60A; }
-.afStatus_searching { background: rgba(255, 159, 10, 0.18); color: #FF9F0A; }
 
-.focusBox {
+/* MF expanded box: column layout with slider below the toggle row */
+.focusBoxMf {
   flex-direction: column;
-  gap: 6px;
+  height: auto;
+  min-height: 76px;
+  align-items: stretch;
+  gap: 7px;
+  padding-top: 10px;
+  padding-bottom: 10px;
 }
-.focusTrack {
+
+/* Toggle + AF button always in one row */
+.focusCtrlRow {
+  display: flex;
+  align-items: center;
   width: 100%;
+}
+
+/* Slider row (only visible in MF mode) */
+.focusSliderRow {
   display: flex;
   align-items: center;
   gap: 6px;
+  width: 100%;
   min-width: 0;
-  padding-right: 6px;
 }
 .focusEndIcon {
   width: 10px;
@@ -564,26 +562,11 @@
 }
 .focusSlider:disabled { cursor: default; opacity: 0.25; }
 
-/* Focus bottom row: focal distance + AF button */
-.focusBottom {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-}
-.focalDist {
-  font-size: 10px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.4);
-  letter-spacing: 0.2px;
-  font-variant-numeric: tabular-nums;
-}
-
-/* PUSH AF — inset blue pill */
+/* PUSH AF — inset blue pill, pushed to right via margin-left:auto */
 .afBtn {
-  align-self: auto;
   margin-left: auto;
   padding: 0 11px;
+  height: 24px;
   border-radius: 7px;
   border: none;
   background: #0A84FF;
@@ -666,6 +649,11 @@
 .bottomModule {
   display: flex;
   flex-direction: column;
+}
+.bottomModuleDimmed {
+  opacity: 0.35;
+  pointer-events: none;
+  filter: blur(0.5px);
 }
 .bottomLabel {
   font-size: 10px;
@@ -785,3 +773,264 @@
 }
 .atemIdSelect:focus { border-color: #0A84FF; }
 .atemIdSelect:disabled { opacity: 0.35; cursor: default; }
+
+/* ── REC top row: slot selector + gear ──────────────────────────────────────── */
+.recTopRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.recSlotSelect {
+  flex: 1;
+  background: #2C2C2E;
+  border: 1px solid rgba(84, 84, 88, 0.5);
+  border-radius: 6px;
+  color: #E5E5EA;
+  font-size: 10px;
+  font-family: Inter, sans-serif;
+  padding: 0 6px;
+  height: 22px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23636366'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 5px center;
+  padding-right: 18px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recSlotSelect:disabled { opacity: 0.4; cursor: default; }
+.recSlotSelect:focus { outline: none; border-color: #0A84FF; }
+.recSlotStatic {
+  flex: 1;
+  font-size: 10px;
+  color: #8E8E93;
+  font-family: Inter, sans-serif;
+}
+.recGearBtn {
+  background: none;
+  border: none;
+  padding: 0 2px;
+  font-size: 13px;
+  color: #636366;
+  cursor: pointer;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  transition: color 0.12s;
+  touch-action: manipulation;
+}
+.recGearBtn:hover:not(:disabled) { color: #AEAEB2; }
+.recGearBtn:disabled { opacity: 0.3; cursor: default; }
+
+/* ── REC time row (inside bottomBox) ─────────────────────────────────────────── */
+.recTimeRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  min-height: 14px;
+}
+.recElapsed {
+  font-size: 11px;
+  font-weight: 600;
+  color: #FF453A;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.2px;
+}
+.recRemain {
+  font-size: 10px;
+  font-weight: 500;
+  color: #8E8E93;
+  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+}
+.recRemainWarn { color: #FF9F0A; }
+
+/* ── Rec settings panel (full-width, above bottom grid) ─────────────────────── */
+.recSettingsPanel {
+  background: #2C2C2E;
+  border: 1px solid rgba(84, 84, 88, 0.4);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.recSettingsCurrent {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 2px;
+}
+.recSettingsCurrent span {
+  font-size: 9px;
+  font-weight: 600;
+  color: #0A84FF;
+  background: rgba(10, 132, 255, 0.12);
+  border: 1px solid rgba(10, 132, 255, 0.25);
+  border-radius: 4px;
+  padding: 1px 6px;
+  letter-spacing: 0.2px;
+}
+
+.recSettingsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.recSettingsLabel {
+  font-size: 10px;
+  font-weight: 600;
+  color: #636366;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+  width: 46px;
+}
+.recSettingsSelect {
+  -webkit-appearance: none;
+  appearance: none;
+  background: #1C1C1E;
+  border: 1px solid rgba(84, 84, 88, 0.55);
+  border-radius: 6px;
+  color: #D1D1D6;
+  font-size: 10px;
+  font-weight: 500;
+  font-family: Inter, sans-serif;
+  padding: 4px 8px;
+  height: 22px;
+  cursor: pointer;
+  outline: none;
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  transition: border-color 0.12s;
+}
+.recSettingsSelect:focus { border-color: #0A84FF; }
+.recSettingsSelect:disabled { opacity: 0.35; cursor: default; }
+.recSettingsActions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  margin-top: 2px;
+}
+.recSettingsCancel {
+  background: #3A3A3C;
+  border: 1px solid rgba(84, 84, 88, 0.5);
+  border-radius: 7px;
+  color: #8E8E93;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: Inter, sans-serif;
+  padding: 0 12px;
+  height: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: background 0.1s;
+}
+.recSettingsCancel:hover { background: #48484A; }
+.recSettingsApply {
+  background: #0A84FF;
+  border: none;
+  border-radius: 7px;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: Inter, sans-serif;
+  padding: 0 14px;
+  height: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: opacity 0.12s;
+}
+.recSettingsApply:hover:not(:disabled) { opacity: 0.82; }
+.recSettingsApply:disabled { opacity: 0.3; cursor: default; }
+
+.recSettingsModeHint {
+  font-size: 9px;
+  color: rgba(255, 204, 0, 0.75);
+  padding: 2px 0 0;
+  line-height: 1.3;
+}
+
+/* ── Format danger zone ─────────────────────────────────────────────────────── */
+.formatZone {
+  border-top: 1px solid rgba(255, 69, 58, 0.25);
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.formatZoneRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.formatSelects {
+  display: flex;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+}
+.formatBtn {
+  background: transparent;
+  border: 1px solid rgba(255, 69, 58, 0.6);
+  border-radius: 7px;
+  color: #FF453A;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: Inter, sans-serif;
+  padding: 0 12px;
+  height: 24px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.12s, border-color 0.12s;
+  touch-action: manipulation;
+}
+.formatBtn:hover:not(:disabled) { background: rgba(255, 69, 58, 0.12); border-color: #FF453A; }
+.formatBtn:disabled { opacity: 0.3; cursor: default; }
+.formatConfirm {
+  background: rgba(255, 69, 58, 0.08);
+  border: 1px solid rgba(255, 69, 58, 0.35);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.formatConfirmText {
+  font-size: 10px;
+  font-weight: 500;
+  color: #FF453A;
+  line-height: 1.4;
+}
+.formatConfirmBtns {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.formatConfirmGo {
+  background: #FF453A;
+  border: none;
+  border-radius: 7px;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: Inter, sans-serif;
+  padding: 0 14px;
+  height: 24px;
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+.formatConfirmGo:hover:not(:disabled) { opacity: 0.82; }
+.formatConfirmGo:disabled { opacity: 0.3; cursor: default; }

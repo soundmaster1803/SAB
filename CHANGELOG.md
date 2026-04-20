@@ -2,6 +2,76 @@
 
 ---
 
+## v0.18.0 — 2026-04-20 (Recording settings UI + Sony state expansion + docs overhaul)
+
+### Added
+
+#### UI — CameraCard recording controls
+- File-format dropdown — lists only formats the connected camera reports (0xD241 enumeration). Selecting a format sends `PATCH /api/cameras/:id/file-format`.
+- Rec-setting dropdown — filters by selected format; lists only matching framerate/bitrate modes (0xD242 enumeration). Auto-selects first valid option when format changes.
+- Frame-rate dropdown — per-camera 0xD286 enumeration. Sends `PATCH /api/cameras/:id/rec-frame-rate`.
+- Slot selector — three-way button (Slot 1 / Slot 2 / Simultaneous) backed by 0xD160 `recMedia`. Optimistic local state, syncs from camera.
+- Format-card dialog — modal with slot choice (1 / 2) and type (Quick / Full). Confirmation step before sending.
+- Elapsed-recording timer — local `setInterval` counter seeded from `recDurationSec`; ticks while camera is recording; resets on stop.
+- Slot-status badges — color-coded indicators for both slots (OK / No Card / Error / Recognizing / Locked) driven by `slotStatus` / `slotStatus2`.
+- Remaining-time display for slot 2 (`recRemainSec2`).
+
+#### Sony — new raw state fields (ptp-client + state/raw)
+| Property | PTP code | Description |
+|---|---|---|
+| `recDurationSec` | 0xD120 | Elapsed recording seconds |
+| `slotStatus` | 0xD248 | Card-slot 1 status (0–7 codes) |
+| `slotStatus2` | 0xD256 | Card-slot 2 status |
+| `recRemainSec2` | 0xD258 | Remaining recordable seconds for slot 2 |
+| `movieFileFormat` + `movieFileFormatList` | 0xD241 | File format + supported-format enumeration |
+| `recSetting` + `recSettingList` | 0xD242 | Rec mode + per-format enumeration |
+| `recMedia` | 0xD160 | Active recording slot |
+| `recFrameRate` + `recFrameRateList` | 0xD286 | Frame rate + supported-rate enumeration |
+| `focalDistanceMin/Max/Step/Enabled` | 0xD004 | Focus range metadata |
+
+- `parseSonyPollEntries` — refactored into `detectSonyPollRecordCount` + `parseSonyPollEntriesFromOffset`; handles Sony's variable poll-blob layout more robustly.
+
+#### WS types
+- `ws.ts` expanded with all new raw state fields so the UI receives them over the existing WS channel without schema breakage.
+
+#### Documentation infrastructure (full overhaul)
+- `CLAUDE.md` — rewritten from scratch as a concise operating manual (≈80 lines vs 877).
+- `PROJECT_MAP.md`, `RUNBOOK.md`, `WORKFLOW.md`, `AI_TASK_PROTOCOL.md` — new canonical reference docs.
+- `docs/domains/sony.md`, `atem.md`, `bridge.md`, `ui.md`, `api.md` — per-domain knowledge files.
+- `AI_PROMPT_TEMPLATES.md`, `TASK_ROUTER_SPEC.md`, `LOCAL_RESEARCH_LAYER.md`, `ROUTER_STATE.md`, `RESEARCH_PACKET_SPEC.md` — AI workflow tooling specs.
+- `scripts/task-router.js`, `research-packet.js`, `local-llm-router.js`, `check-changed-files.js`, `execution-packet.js`, `router-normalizer.js`, `research-open-notebooklm.js` — local AI-assist scripts.
+- `router.config.json` — task-router configuration.
+- `knowledge/protocol/sony/README.md`, `knowledge/protocol/atem/README.md` — protocol knowledge stubs.
+
+### Changed
+- `frontend/src/components/Header.tsx` — action buttons collapse into an overflow dropdown menu on narrow viewports (hamburger `⋯` button, outside-click to dismiss).
+- `src/atem/models/index.ts` — expanded ATEM model lookup table.
+
+### Migration notes
+- No API shape changes; new `PATCH` endpoints are additive.
+- WS `raw` object gains new fields (all default to `0` / `[]` / `false` until camera reports them).
+- `config.json` shape unchanged.
+
+---
+
+## v0.17.0 — 2026-04-19 (ATEM mDNS discovery)
+
+### Added
+- `src/atem/discovery.ts` — Bonjour/mDNS browser for `_blackmagic._tcp` services on the LAN. Bounded scan (default 3s), dedupes by IPv4, returns `{ ip, name, hostname, port, model? }` for each device. Resolves cleanly to an empty list on socket-bind failures (sandboxed environments) so the UI can display a "no devices found" state.
+- `src/api/routes/atem.ts` — `GET /api/atem/discover?timeout=<ms>` exposes the discovery scan to the UI. Timeout clamped to `[500, 10000]` ms.
+- `frontend/src/panels/atem/AtemBar.tsx` — magnifier-glass scan button glued to the IP input. Opens an absolutely-positioned dropdown of discovered switchers with rescan; clicking a row pre-fills the IP field. Closes on outside click or Escape.
+- New dependency: `bonjour-service@^1.3.0` (pure-JS mDNS, no native build — keeps the runtime cross-platform per the deferred `src/platform/` plan).
+
+### Changed
+- `frontend/src/panels/atem/AtemBar.module.css` — IP input is now part of an `ipWrap` group with the scan button visually fused (radius split). New dropdown styles (`.dropdown`, `.dropdownItem`, `.ddIp`, `.ddName`, etc.) match the existing dark-glass aesthetic.
+
+### Migration notes
+- `config.json` shape unchanged.
+- WS state message shape unchanged.
+- All existing API endpoints unchanged in shape; one new `GET` added.
+
+---
+
 ## v0.16.0 — 2026-04-19 (UI redesign — Header + AtemBar + Logs modal)
 
 ### Added

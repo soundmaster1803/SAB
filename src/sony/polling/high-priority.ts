@@ -32,4 +32,7 @@ export const HIGH_PRIORITY_PROP_CODES: readonly number[] = [
   0xD21D, // Recording state
   0xD3C4, // Slot 3 remaining time
   0xD3C2, // Slot 1 remaining time
+  0xD120, // Recording duration (elapsed time in seconds)
+  0xD24A, // Slot 1 remaining recordable time in seconds (confirmed ZV-E10M2/FX30)
+  0xE043, // Focus position current value
 ] as const;

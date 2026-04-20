@@ -60,6 +60,28 @@ export interface SonyRawState {
   recState: number;
   /** Remaining recordable time in seconds; 0 = unknown. */
   recRemainSec: number;
+  /** Elapsed recording time in seconds from prop 0xD120; 0 = not recording / unknown. */
+  recDurationSec: number;
+  /** Media slot 1 status: 0=unknown, 1=OK, 2=NoCard, 3=Error, 4/6=Recognizing, 7=Locked. */
+  slotStatus: number;
+  /** Media slot 2 status from prop 0xD256; same codes as slotStatus. */
+  slotStatus2: number;
+  /** Remaining recordable seconds for slot 2 from prop 0xD258; 0=unknown. */
+  recRemainSec2: number;
+  /** Movie file format code from prop 0xD241; 0=unknown. */
+  movieFileFormat: number;
+  /** Enumerated list of file formats this camera supports; empty = unknown. */
+  movieFileFormatList: number[];
+  /** Recording setting (fps+bitrate) code from prop 0xD242; 0=unknown. */
+  recSetting: number;
+  /** Enumerated list of recording settings this camera supports; empty = unknown. */
+  recSettingList: number[];
+  /** Recording media (slot) from prop 0xD160; 0=unknown, 1=Slot1, 2=Slot2, 0x0101=Simultaneous. */
+  recMedia: number;
+  /** Rec video frame rate code from prop 0xD286; 0=unknown. */
+  recFrameRate: number;
+  /** Enumerated list of frame rates this camera supports; empty = unknown. */
+  recFrameRateList: number[];
   /** Tally state: 0 = none, 1 = program, 2 = preview. */
   tally: TallyCode;
   fps?: number;
@@ -74,6 +96,14 @@ export interface SonyRawState {
   afStatus: number;
   /** Focal distance raw from prop 0xD004. Divide by 100 for meters. 0=unknown, 0xFFFF=∞. */
   focalDistanceM: number;
+  /** 0xD004 range min (UINT32 raw; /100 = meters). 0 = unknown. */
+  focalDistanceMin: number;
+  /** 0xD004 range max (UINT32 raw; /100 = meters). 0 = unknown. */
+  focalDistanceMax: number;
+  /** 0xD004 range step (UINT32 raw). 0 = unknown. */
+  focalDistanceStep: number;
+  /** 0xD004 IsEnabled flag — true when direct set is accepted by the camera. */
+  focalDistanceEnabled: boolean;
   /** Current lens position from prop 0xE043 (PTP3). 0x0000=near, 0xFFFF=far. 0=unavailable. */
   focusPosition: number;
   /** Near/Far step enable from prop 0xD235. 0x01=enabled. 0=unavailable/disabled. */
@@ -190,6 +220,17 @@ export interface CameraUIState {
   charging: boolean;
   recState: number;
   recRemainSec: number;
+  recDurationSec: number;
+  slotStatus: number;
+  slotStatus2: number;
+  recRemainSec2: number;
+  movieFileFormat: number;
+  movieFileFormatList: number[];
+  recSetting: number;
+  recSettingList: number[];
+  recMedia: number;
+  recFrameRate: number;
+  recFrameRateList: number[];
   tally: TallyCode;
   fps?: number;
   lastUpdate: number;

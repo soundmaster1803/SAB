@@ -170,7 +170,7 @@ export interface RuntimeCapabilities {
   // --- Focus ---
   hasFocusMode: boolean;       // 0x500A observed
   hasMfNearFar: boolean;       // 0xD2D1 observed
-  hasFocusPosition: boolean;   // 0xD381 observed
+  hasFocusPosition: boolean;   // 0xE042 observed
   hasSubjectRecognition: boolean; // 0xD060 or 0xD157 observed
   hasAfTransitionSpeed: boolean;  // 0xD061 observed
 

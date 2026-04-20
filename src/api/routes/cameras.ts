@@ -9,6 +9,8 @@
  *   POST   /api/cameras/pair             — pair a new camera (blocking, up to 15s)
  *   POST   /api/cameras/:id/connect      — reconnect a disconnected camera
  *   POST   /api/cameras/:id/record       — toggle record on a camera
+ *   POST   /api/cameras/:id/rec-settings — set slot, file format, recording mode
+ *   POST   /api/cameras/:id/format-media — format a media slot (full or quick)
  *   POST   /api/cameras/:id/adjust       — step a camera property (iso/iris/shutter/etc.)
  *   POST   /api/cameras/:id/af           — trigger autofocus
  *   POST   /api/cameras/:id/focus-position — set absolute focus position (0-100%)
@@ -169,6 +171,66 @@ export function createCameraRoutes({ manager, atemListener, getConfig, setConfig
     }
   });
 
+  // ── Camera: set recording settings ────────────────────────────────────────
+  // Accepts { recMedia?, movieFileFormat?, recFrameRate?, recSetting? } — all optional numeric values.
+  router.post('/api/cameras/:id/rec-settings', async (req, res) => {
+    const id = req.params.id;
+    const body = req.body as Record<string, unknown>;
+    const recMedia        = typeof body.recMedia        === 'number' ? body.recMedia        : undefined;
+    const movieFileFormat = typeof body.movieFileFormat === 'number' ? body.movieFileFormat : undefined;
+    const recFrameRate    = typeof body.recFrameRate    === 'number' ? body.recFrameRate    : undefined;
+    const recSetting      = typeof body.recSetting      === 'number' ? body.recSetting      : undefined;
+    const client = manager.getClient(id);
+    if (!client) { res.status(404).json({ error: 'not found' }); return; }
+    if (!client.state.connected) { res.status(503).json({ error: 'not connected' }); return; }
+    if (client.state.recState === 1) {
+      res.status(409).json({ error: 'cannot change recording settings while recording' }); return;
+    }
+    log(`REC settings cam="${id}" media=${recMedia} format=${movieFileFormat} fps=${recFrameRate} setting=${recSetting}`);
+    const recOpts: { recMedia?: number; movieFileFormat?: number; recFrameRate?: number; recSetting?: number } = {};
+    if (recMedia !== undefined)        recOpts.recMedia = recMedia;
+    if (movieFileFormat !== undefined) recOpts.movieFileFormat = movieFileFormat;
+    if (recFrameRate !== undefined)    recOpts.recFrameRate = recFrameRate;
+    if (recSetting !== undefined)      recOpts.recSetting = recSetting;
+    try {
+      await client.setRecordingSettings(recOpts);
+      res.json({ ok: true });
+    } catch (e: any) {
+      err(`REC settings failed: ${e.message}`);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // ── Camera: format media slot ─────────────────────────────────────────────
+  // Accepts { slot: 1 | 2, type: "full" | "quick" }.
+  // Rejected while recording. Irreversible — frontend must confirm before calling.
+  router.post('/api/cameras/:id/format-media', async (req, res) => {
+    const id = req.params.id;
+    const body = req.body as Record<string, unknown>;
+    const slot = body.slot as unknown;
+    const type = body.type as unknown;
+    if (slot !== 1 && slot !== 2) {
+      res.status(400).json({ error: 'slot must be 1 or 2' }); return;
+    }
+    if (type !== 'full' && type !== 'quick') {
+      res.status(400).json({ error: 'type must be "full" or "quick"' }); return;
+    }
+    const client = manager.getClient(id);
+    if (!client) { res.status(404).json({ error: 'not found' }); return; }
+    if (!client.state.connected) { res.status(503).json({ error: 'not connected' }); return; }
+    if (client.state.recState === 1) {
+      res.status(409).json({ error: 'cannot format while recording' }); return;
+    }
+    log(`Format media cam="${id}" slot=${slot} type=${type}`);
+    try {
+      await client.formatMedia(slot as 1 | 2, type as 'full' | 'quick');
+      res.json({ ok: true });
+    } catch (e: any) {
+      err(`Format media failed: ${e.message}`);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   // ── Camera: adjust property ────────────────────────────────────────────────
   router.post('/api/cameras/:id/adjust', async (req, res) => {
     const { param, delta } = req.body as { param: string; delta: number };
@@ -216,6 +278,12 @@ export function createCameraRoutes({ manager, atemListener, getConfig, setConfig
     if (!client.state.connected) { res.status(503).json({ error: 'not connected' }); return; }
     if (typeof position !== 'number' || position < 0 || position > 100) {
       res.status(400).json({ error: 'position must be a number 0–100' }); return;
+    }
+    if (client.state.focusMode !== 0x0001 && client.state.focusMode !== 0x8006) {
+      res.status(400).json({ error: 'Camera must be in MF or DMF focus mode' }); return;
+    }
+    if (!client.runtimeModel?.capabilities.hasFocusPosition) {
+      res.status(400).json({ error: 'Camera does not support focus position control' }); return;
     }
     const raw = Math.round((position / 100) * 0xFFFF);
     log(`Focus position cam="${id}" pct=${position} raw=0x${raw.toString(16)}`);

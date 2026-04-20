@@ -36,14 +36,14 @@ async function main(): Promise<void> {
   });
 
   const manager = new CameraManager();
-  const atemListener = new ATEMListener();
+  const autoReconnect = appConfig.atemAutoReconnect !== false;
+  const atemListener = new ATEMListener(autoReconnect);
   wireBridgeRuntime(manager, atemListener);
 
   for (const cam of appConfig.cameras) {
     manager.addCamera(cam);
   }
 
-  const autoReconnect = appConfig.atemAutoReconnect !== false;
   if (appConfig.atemIp && autoReconnect) {
     atemListener.connect(appConfig.atemIp);
   } else if (!appConfig.atemIp) {

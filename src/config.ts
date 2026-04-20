@@ -15,6 +15,8 @@ export interface AppConfig {
   atemIp: string;
   /** When true, the bridge auto-connects to atemIp on startup. Default true. */
   atemAutoReconnect?: boolean;
+  /** List of favorite ATEM devices for quick reconnect. */
+  atemFavorites?: { ip: string; name?: string; model?: string }[];
   cameras: CameraConfig[];
 }
 
@@ -38,6 +40,7 @@ if (process.env.SAB_CONFIG_PATH) {
 const DEFAULT_CONFIG: AppConfig = {
   atemIp: '',
   atemAutoReconnect: true,
+  atemFavorites: [],
   cameras: [],
 };
 
@@ -82,4 +85,23 @@ export function updateCameraGuid(id: string, guid: string): void {
     cam.guid = guid;
     saveConfig(config);
   }
+}
+
+export function addAtemFavorite(ip: string, name?: string, model?: string): void {
+  const config = loadConfig();
+  const existing = config.atemFavorites?.find(f => f.ip === ip);
+  if (!existing) {
+    config.atemFavorites = config.atemFavorites || [];
+    const fav: { ip: string; name?: string; model?: string } = { ip };
+    if (name) fav.name = name;
+    if (model) fav.model = model;
+    config.atemFavorites.push(fav);
+    saveConfig(config);
+  }
+}
+
+export function removeAtemFavorite(ip: string): void {
+  const config = loadConfig();
+  config.atemFavorites = config.atemFavorites?.filter(f => f.ip !== ip) || [];
+  saveConfig(config);
 }

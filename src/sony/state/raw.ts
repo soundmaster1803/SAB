@@ -73,6 +73,28 @@ export interface SonyRawState {
   recState: number;
   /** Remaining recordable time in seconds; 0 = unknown. */
   recRemainSec: number;
+  /** Elapsed recording time in seconds from prop 0xD120; 0 = not recording / unknown. */
+  recDurationSec: number;
+  /** Media slot 1 status from prop 0xD248: 0=unknown, 1=OK, 2=NoCard, 3=Error, 4/6=Recognizing, 7=Locked. */
+  slotStatus: number;
+  /** Media slot 2 status from prop 0xD256; same codes as slotStatus. */
+  slotStatus2: number;
+  /** Remaining recordable seconds for slot 2 from prop 0xD258; 0=unknown. */
+  recRemainSec2: number;
+  /** Movie file format code from prop 0xD241; 0=unknown. */
+  movieFileFormat: number;
+  /** Enumerated list of file formats this camera supports (from 0xD241 blob); empty = unknown. */
+  movieFileFormatList: number[];
+  /** Recording setting (fps+bitrate) code from prop 0xD242; 0=unknown. */
+  recSetting: number;
+  /** Enumerated list of recording settings this camera supports (from 0xD242 blob); empty = unknown. */
+  recSettingList: number[];
+  /** Recording media (slot selection) from prop 0xD160; 0=unknown, 1=Slot1, 2=Slot2, 0x0101=Simultaneous. */
+  recMedia: number;
+  /** Rec video frame rate code from prop 0xD286; 0=unknown. */
+  recFrameRate: number;
+  /** Enumerated list of frame rates this camera supports (from 0xD286 blob); empty = unknown. */
+  recFrameRateList: number[];
 
   // --- Focus ---
   /**
@@ -91,6 +113,26 @@ export interface SonyRawState {
    * 0xFFFF or 0 = infinity / not available.
    */
   focalDistanceM: number;
+  /**
+   * Focal distance minimum from prop 0xD004 range form (UINT32 raw; /100 = meters).
+   * 0 = unknown / not yet polled.
+   */
+  focalDistanceMin: number;
+  /**
+   * Focal distance maximum from prop 0xD004 range form (UINT32 raw; /100 = meters).
+   * 0 = unknown / not yet polled; may equal 0xFFFFFFFF when camera reports ∞.
+   */
+  focalDistanceMax: number;
+  /**
+   * Focal distance step from prop 0xD004 range form (UINT32 raw).
+   * 0 = unknown / not yet polled.
+   */
+  focalDistanceStep: number;
+  /**
+   * Focal distance writability flag from prop 0xD004 IsEnabled byte.
+   * true = direct set via 0x9205 is accepted; false = blocked by lens/mode.
+   */
+  focalDistanceEnabled: boolean;
   /**
    * Current lens position from prop 0xE043 (PTP3 only).
    * 0x0000 = near limit, 0xFFFF = infinity. 0 = not yet polled / not supported.

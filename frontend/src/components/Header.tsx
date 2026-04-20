@@ -31,7 +31,9 @@ export function Header({
 
   const [ifaceList, setIfaceList] = useState<NetworkIface[]>([])
   const [ifaceOpen, setIfaceOpen] = useState(false)
+  const [menuOpen,  setMenuOpen]  = useState(false)
   const ifacePillRef = useRef<HTMLDivElement>(null)
+  const menuRef      = useRef<HTMLDivElement>(null)
 
   const loadInterfaces = useCallback(async () => {
     try {
@@ -45,10 +47,14 @@ export function Header({
     if (wsStatus === 'connected') loadInterfaces()
   }, [wsStatus, loadInterfaces])
 
+  // Close dropdowns on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ifacePillRef.current && !ifacePillRef.current.contains(e.target as Node)) {
         setIfaceOpen(false)
+      }
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
       }
     }
     document.addEventListener('click', handler)
@@ -60,7 +66,7 @@ export function Header({
     const ok = window.confirm(
       `Disconnect and delete ALL ${cameraCount} camera(s)? This removes them from config.`,
     )
-    if (ok) onDeleteAll?.()
+    if (ok) { onDeleteAll?.(); setMenuOpen(false) }
   }
 
   const ifaceLabel = ifaceList.length === 0
@@ -68,6 +74,44 @@ export function Header({
     : ifaceList.length === 1
       ? `${ifaceList[0]!.address}:7777`
       : `${ifaceList.length} addresses`
+
+  // Action buttons — shared between full row and dropdown menu
+  const actionButtons = (
+    <>
+      <button className={`${styles.btn} ${styles.btnRecAll}`}
+        onClick={() => { onRecAll?.(); setMenuOpen(false) }}>
+        ● REC ALL
+      </button>
+      <button className={`${styles.btn} ${styles.btnStopAll}`}
+        onClick={() => { onStopAll?.(); setMenuOpen(false) }}>
+        ■ Stop All
+      </button>
+      <button
+        className={`${styles.btn} ${styles.btnDanger}`}
+        onClick={handleDeleteAll}
+        disabled={cameraCount === 0}
+        title="Disconnect and delete all cameras"
+      >
+        ⌫ Delete All
+      </button>
+      <button className={`${styles.btn} ${styles.btnGhost}`}
+        onClick={() => { onOpenLogs?.(); setMenuOpen(false) }}>
+        Logs
+      </button>
+      <button
+        className={`${styles.btn} ${styles.btnGhost} ${styles.btnPlaceholder}`}
+        disabled title="Coming soon"
+      >
+        Recall Settings
+      </button>
+      <button
+        className={`${styles.btn} ${styles.btnGhost} ${styles.btnPlaceholder}`}
+        disabled title="Coming soon"
+      >
+        Camera Links
+      </button>
+    </>
+  )
 
   return (
     <header className={styles.header}>
@@ -83,7 +127,7 @@ export function Header({
           {appVersion && <span className={styles.verBadge}>v{appVersion}</span>}
         </div>
 
-        {/* ── Add Camera (separated from rest) ─────────────────── */}
+        {/* ── Add Camera ──────────────────────────────────────── */}
         <div className={styles.addGroup}>
           <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={onAddCamera}>
             + Add Camera
@@ -92,11 +136,11 @@ export function Header({
 
         <div className={styles.spacer} />
 
-        {/* ── Network address selector ─────────────────────────── */}
+        {/* ── Network pill (hidden on narrow) ─────────────────── */}
         {ifaceList.length > 0 && (
           <div
             ref={ifacePillRef}
-            className={styles.ifacePill}
+            className={`${styles.ifacePill} ${styles.ifacePillHide}`}
             onClick={(e) => { e.stopPropagation(); setIfaceOpen((v) => !v) }}
             title="Local addresses where the UI is reachable"
           >
@@ -125,39 +169,26 @@ export function Header({
           </div>
         )}
 
-        {/* ── Global actions ───────────────────────────────────── */}
-        <div className={styles.actions}>
-          <button className={`${styles.btn} ${styles.btnRecAll}`} onClick={onRecAll}>
-            ● REC ALL
-          </button>
-          <button className={`${styles.btn} ${styles.btnStopAll}`} onClick={onStopAll}>
-            ■ Stop All
-          </button>
+        {/* ── Actions (hidden on narrow, shown via menu) ──────── */}
+        <div className={`${styles.actions} ${styles.actionsWide}`}>
+          {actionButtons}
+        </div>
+
+        {/* ── Hamburger (narrow only) ──────────────────────────── */}
+        <div ref={menuRef} className={styles.menuWrap}>
           <button
-            className={`${styles.btn} ${styles.btnDanger}`}
-            onClick={handleDeleteAll}
-            disabled={cameraCount === 0}
-            title="Disconnect and delete all cameras"
+            className={`${styles.menuBtn}`}
+            onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v) }}
+            title="Actions"
+            aria-label="Actions menu"
           >
-            ⌫ Delete All
+            ≡
           </button>
-          <button className={`${styles.btn} ${styles.btnGhost}`} onClick={onOpenLogs}>
-            Logs
-          </button>
-          <button
-            className={`${styles.btn} ${styles.btnGhost} ${styles.btnPlaceholder}`}
-            disabled
-            title="Coming soon"
-          >
-            Recall Settings
-          </button>
-          <button
-            className={`${styles.btn} ${styles.btnGhost} ${styles.btnPlaceholder}`}
-            disabled
-            title="Coming soon"
-          >
-            Camera Links
-          </button>
+          {menuOpen && (
+            <div className={styles.menuDropdown}>
+              {actionButtons}
+            </div>
+          )}
         </div>
       </div>
     </header>

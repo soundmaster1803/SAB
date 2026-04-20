@@ -30,4 +30,11 @@ export const LOW_PRIORITY_PROP_CODES: readonly number[] = [
   0x500B, // Metering mode
   0x500E, // Exposure mode (M / A / S / P)
   0x5013, // Drive mode
+  0xD160, // Recording media (slot selection)
+  0xD241, // Movie file format
+  0xD242, // Recording setting (fps + bitrate)
+  0xD286, // Rec frame rate
+  0xD248, // Media slot 1 status
+  0xD256, // Media slot 2 status
+  0xD258, // Media slot 2 remaining recordable time
 ] as const;

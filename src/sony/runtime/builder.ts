@@ -84,7 +84,7 @@ const CAPABILITY_PROP_MAP: ReadonlyArray<[keyof RuntimeCapabilities, number[]]> 
   ['hasBattery',           [0xD218]],
   ['hasFocusMode',         [0x500A]],
   ['hasMfNearFar',         [0xD2D1]],
-  ['hasFocusPosition',     [0xD381]],
+  ['hasFocusPosition',     [0xE042, 0xE043]],
   ['hasSubjectRecognition',[0xD060, 0xD157]],
   ['hasAfTransitionSpeed', [0xD061]],
   ['hasWhiteBalance',      [0x5005]],

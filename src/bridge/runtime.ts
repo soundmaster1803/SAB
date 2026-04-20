@@ -6,6 +6,7 @@ import { decodeControlIntent } from './intents/decoder';
 import { executeSonyIntent, clearPrevFocus } from './executors/sony-command-executor';
 import { isInCooldown } from './policies/anti-loop';
 import { syncCameraStateToAtem as syncStateImpl } from './sync/atem-sync';
+import { getATEMModelSpec } from '../atem/models';
 
 function ts(): string { return new Date().toISOString().slice(11, 23); }
 function log(msg: string)  { console.log(`[${ts()}] [BRIDGE] ${msg}`); }
@@ -28,6 +29,14 @@ async function handleCameraControl(
     log(`Command ignored: ATEM Control Disabled for "${config.name}"`);
     return;
   }
+
+  // Gate by ATEM model capability
+  const atemModelSpec = getATEMModelSpec(atemListener.atemModel);
+  if (!atemModelSpec.capabilities.cameraControl) {
+    log(`Command ignored: Camera control not supported by ATEM model "${atemListener.atemModel}"`);
+    return;
+  }
+
   if (!client.state.connected) {
     warn(`"${config.name}" not connected — skipping ATEM command cat=${cmd.category} param=${cmd.parameter}`);
     return;
@@ -59,6 +68,14 @@ function handleFirstPollSync(
   const onFirstPoll = () => {
     if (client.state.connected && client.state.lastUpdate > 0) {
       client.off('stateUpdate', onFirstPoll);
+
+      // Gate by ATEM model capability
+      const atemModelSpec = getATEMModelSpec(atemListener.atemModel);
+      if (!atemModelSpec.capabilities.reverseCameraControlSync) {
+        log(`Sync skipped: Reverse camera control sync not supported by ATEM model "${atemListener.atemModel}"`);
+        return;
+      }
+
       log(`Syncing "${cfg.name}" state → ATEM input ${cfg.atemInput}`);
       const liveCfg = manager.getAllConfigs().find(c => c.id === cfg.id);
       syncStateImpl(atemListener.atem, liveCfg?.atemInput ?? cfg.atemInput, client.state);

@@ -30,12 +30,19 @@
   color: var(--t2);
 }
 
+.ipWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+}
+
 .ipInput {
   width: 130px;
   padding: 6px 10px;
-  border-radius: 6px;
+  border-radius: 6px 0 0 6px;
   background: var(--card);
   border: 1px solid var(--border);
+  border-right: none;
   color: var(--t1);
   font-size: 12px;
   font-weight: 500;
@@ -46,6 +53,209 @@
 .ipInput::placeholder { color: var(--t3); }
 .ipInput:focus        { border-color: var(--accent); }
 .ipInput:disabled     { opacity: 0.55; cursor: default; }
+
+.scanBtn {
+  padding: 0 10px;
+  border-radius: 0 6px 6px 0;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--t2);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+}
+.scanBtn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--t1);
+  border-color: var(--accent);
+}
+.scanBtn:disabled { opacity: 0.45; cursor: default; }
+
+/* CSS spinner (used while mDNS scan is in progress). Inherits currentColor. */
+.spinner {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  animation: sab-spin 0.7s linear infinite;
+  display: inline-block;
+}
+@keyframes sab-spin {
+  to { transform: rotate(360deg); }
+}
+
+.dropdown {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  z-index: 90;
+  min-width: 280px;
+  max-height: 280px;
+  overflow-y: auto;
+  background: rgba(20, 20, 20, 0.98);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dropdownHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--t3);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2px;
+}
+
+.dropdownRescan {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--t2);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.dropdownRescan:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.dropdownStatus {
+  padding: 10px 12px;
+  color: var(--t3);
+  font-size: 11px;
+  font-style: italic;
+  text-align: center;
+}
+
+.dropdownSection {
+  border-bottom: 1px solid var(--border);
+}
+.dropdownSection:last-child {
+  border-bottom: none;
+}
+
+.dropdownSectionTitle {
+  padding: 6px 12px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--t3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dropdownFilters {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dropdownFilter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--t2);
+  cursor: pointer;
+}
+.dropdownFilter input {
+  margin: 0;
+}
+
+.dropdownError {
+  padding: 10px 12px;
+  color: var(--red);
+  font-size: 11px;
+  text-align: center;
+}
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: var(--t1);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.dropdownItem:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--accent);
+}
+
+.dropdownItemMain {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+}
+
+.dropdownFavorite {
+  background: transparent;
+  border: none;
+  color: var(--t2);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 3px;
+  transition: color 0.12s;
+}
+.dropdownFavorite:hover {
+  color: var(--accent);
+}
+
+.ddIp {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--t1);
+  letter-spacing: -0.1px;
+}
+.ddName {
+  font-size: 11px;
+  color: var(--t2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 160px;
+}
+.ddFirmware {
+  color: var(--t3);
+  font-size: 10px;
+}
 
 .btn {
   padding: 6px 14px;

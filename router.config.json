@@ -1,0 +1,77 @@
+{
+  "defaultReadFirst": [
+    "PROJECT_MAP.md",
+    "AI_TASK_PROTOCOL.md"
+  ],
+  "doNotTouch": [
+    "dist/",
+    "public/",
+    "node_modules/",
+    "frontend/node_modules/",
+    ".claude/"
+  ],
+  "domains": {
+    "ui": {
+      "docs": ["docs/domains/ui.md"],
+      "files": [
+        "frontend/src/panels/",
+        "frontend/src/components/",
+        "frontend/src/stores/",
+        "frontend/src/types/"
+      ],
+      "validation": ["npm run build:ui"],
+      "executor": "codex"
+    },
+    "api": {
+      "docs": ["docs/domains/api.md"],
+      "files": [
+        "src/api/routes/",
+        "src/api/services/",
+        "src/api/viewmodels/",
+        "src/api/ws/"
+      ],
+      "validation": ["npm run typecheck"],
+      "executor": "codex"
+    },
+    "atem": {
+      "docs": ["docs/domains/atem.md"],
+      "files": [
+        "src/atem/",
+        "src/api/routes/atem.ts",
+        "frontend/src/panels/atem/"
+      ],
+      "validation": ["npm run typecheck", "npm run build"],
+      "executor": "codex"
+    },
+    "sony": {
+      "docs": ["docs/domains/sony.md"],
+      "files": [
+        "src/sony/",
+        "src/api/routes/cameras.ts",
+        "frontend/src/panels/cameras/"
+      ],
+      "validation": ["npm run typecheck", "npm run build"],
+      "executor": "claude"
+    },
+    "bridge": {
+      "docs": ["docs/domains/bridge.md"],
+      "files": ["src/bridge/"],
+      "validation": ["npm run typecheck", "npm run build"],
+      "executor": "claude"
+    }
+  },
+  "research": {
+    "defaultSource": "local-notes",
+    "availableSources": [
+      "local-notes",
+      "notebooklm",
+      "open-notebooklm"
+    ]
+  },
+  "localLlm": {
+    "provider": "ollama",
+    "baseUrl": "http://127.0.0.1:11434",
+    "model": "qwen2.5:7b-instruct",
+    "role": "task-router"
+  }
+}

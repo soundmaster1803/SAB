@@ -36,12 +36,27 @@ export interface CameraState {
   charging: boolean;    // true when powerSource∈{1,3} or icon-bit fallback
   recState: number;       // 0=idle, 1=recording
   recRemainSec: number;   // remaining card capacity in seconds (0 = unknown)
+  recDurationSec: number; // 0xD120: elapsed recording time in seconds; 0 = not recording
+  slotStatus: number;     // 0xD248: 0=unknown, 1=OK, 2=NoCard, 3=Error, 4/6=Recognizing, 7=Locked
+  slotStatus2: number;    // 0xD256: same codes as slotStatus, for slot 2
+  recRemainSec2: number;  // 0xD258: remaining recordable seconds for slot 2; 0=unknown
+  movieFileFormat: number;// 0xD241: file format code; 0=unknown
+  movieFileFormatList: number[]; // 0xD241 enumeration — formats this camera supports; [] = unknown
+  recSetting: number;     // 0xD242: framerate+bitrate code; 0=unknown
+  recSettingList: number[];      // 0xD242 enumeration — recording modes this camera supports; [] = unknown
+  recMedia: number;       // 0xD160: recording slot; 0=unknown (1=Slot1, 2=Slot2, 0x0101=Simultaneous)
+  recFrameRate: number;   // 0xD286: frame rate code; 0=unknown
+  recFrameRateList: number[]; // 0xD286 enumeration — frame rates this camera supports; [] = unknown
   tally: number;      // 0=none, 1=program, 2=preview
   fps?: number;       // current frame rate (from camera or config)
   lastUpdate: number;
   focusMode:      number;  // 0x500A: 0x0001=MF, 0x0002=AF-S, 0x8004=AF-C, 0x8005=AF-A, 0x8006=DMF, 0x8009=PF
   afStatus:       number;  // 0xD213: 0x01=not locked, 0x02=focused, 0x05=tracking
   focalDistanceM: number;  // 0xD004: raw value; /100 = meters, 0xFFFF = infinity
+  focalDistanceMin:     number;   // 0xD004 range.min   — UINT32 raw (/100 = meters). 0 = unknown.
+  focalDistanceMax:     number;   // 0xD004 range.max   — UINT32 raw (/100 = meters). 0 = unknown.
+  focalDistanceStep:    number;   // 0xD004 range.step  — UINT32 raw. 0 = unknown.
+  focalDistanceEnabled: boolean;  // 0xD004 IsEnabled flag — true when set via 0x9205 is allowed.
   focusPosition:  number;  // 0xE043: 0x0000=near, 0xFFFF=far; PTP3 only; 0=not available
   nearFarEnable:  number;  // 0xD235: 0x01=enabled (step commands allowed)
 }
@@ -61,6 +76,8 @@ export interface SonyLivePropEntry {
   currentValue: number;
   defaultValue: number;
   formFlag: number;
+  /** Raw IsEnabled byte (offset +5) — 0x01 = settable, 0x00 = not settable. */
+  isEnabled: number;
   enumValues: number[];
   range?: { min: number; max: number; step: number };
 }
@@ -116,9 +133,10 @@ export class SonyPTPClient extends EventEmitter {
       connected: false,
       iso: 0, fnumber: 0, shutter: 0,
       expComp: 0, colorTemp: 5500,
-      battery: 0, powerSource: 0, batteryMinutes: 0, charging: false, recState: 0, recRemainSec: 0,
+      battery: 0, powerSource: 0, batteryMinutes: 0, charging: false, recState: 0, recRemainSec: 0, recDurationSec: 0, slotStatus: 0, slotStatus2: 0, recRemainSec2: 0, movieFileFormat: 0, movieFileFormatList: [], recSetting: 0, recSettingList: [], recMedia: 0, recFrameRate: 0, recFrameRateList: [],
       tally: 0, lastUpdate: 0,
       focusMode: 0, afStatus: 0, focalDistanceM: 0, focusPosition: 0, nearFarEnable: 0,
+      focalDistanceMin: 0, focalDistanceMax: 0, focalDistanceStep: 0, focalDistanceEnabled: false,
     };
   }
 
@@ -245,8 +263,8 @@ export class SonyPTPClient extends EventEmitter {
     this.vlog(`[7] ← Phase 2 done (0xA101 = already connected, expected on ZV-E10 II)`);
 
     // 8. GetExtDeviceInfo — strictly ONE parameter (0x012C = PTP v3.00), per v60.py
-    this.vlog(`[8] → GetExtDeviceInfo op=0x9202 version=0x012C`);
-    await this.sendCmd(OPCODES.SDIO_GET_EXT_DEVICE_INFO, [0x012C], DATA_PHASE_NONE);
+    this.vlog(`[8] → GetExtDeviceInfo op=0x9202 version=0x012C flag=0x00000001`);
+    await this.sendCmd(OPCODES.SDIO_GET_EXT_DEVICE_INFO, [0x012C, 0x00000001], DATA_PHASE_NONE);
     this.vlog(`[8] ← GetExtDeviceInfo done`);
 
     // 9. SDIO_Connect Phase 3 — finalises session
@@ -335,60 +353,151 @@ export class SonyPTPClient extends EventEmitter {
 
   // Returns [currentValue, enumerationList] for a prop code in the polling blob.
   private hunterExtractWithList(blob: Buffer, propCode: number): [number | null, number[]] {
-    const search = Buffer.alloc(2);
-    search.writeUInt16LE(propCode, 0);
-    let start = 0;
-    while (start < blob.length - 6) {
-      const idx = blob.indexOf(search, start);
-      if (idx === -1) break;
-      try {
-        const dtype = blob.readUInt16LE(idx + 2);
-        const size = TYPE_SIZE[dtype];
-        if (!size) { start = idx + 1; continue; }
-
-        // Layout: [propCode:2][dtype:2][defaultVal:size][currentVal:size][formFlag:1][...]
-        const valOffset = idx + 6 + size;
-        if (valOffset + size > blob.length) { start = idx + 1; continue; }
-
-        const readVal = (off: number): number => {
-          if (dtype === 0x0003) return blob.readInt16LE(off);
-          if (dtype === 0x0001) return blob.readInt8(off);
-          if (dtype === 0x0005) return blob.readUInt32LE(off);
-          if (size === 4) return blob.readUInt32LE(off);
-          if (size === 2) return blob.readUInt16LE(off);
-          return blob.readUInt8(off);
-        };
-
-        const currentVal = readVal(valOffset);
-        const list: number[] = [];
-
-        const formFlagOffset = valOffset + size;
-        if (formFlagOffset < blob.length && blob.readUInt8(formFlagOffset) === 0x02) {
-          // Enumeration
-          const enumStart = formFlagOffset + 1;
-          if (enumStart + 2 <= blob.length) {
-            const count = blob.readUInt16LE(enumStart);
-            const valsStart = enumStart + 2;
-            if (valsStart + count * size <= blob.length) {
-              for (let i = 0; i < count; i++) {
-                list.push(readVal(valsStart + i * size));
-              }
-            }
-          }
-        }
-
-        if (propCode === 0xD21E) {
-          // Sony extended UINT32: high bytes are flags (e.g. 0x10000280 → ISO 640).
-          // Mask currentVal for state storage/display, but keep list unmasked so
-          // the original value is sent back to the camera via SetExtDevicePropValue.
-          const maskedCurrent = currentVal === 0x00FFFFFF ? currentVal : currentVal & 0xFFFF;
-          return [maskedCurrent, list];
-        }
-        return [currentVal, list];
-      } catch (_e) { /* try next match */ }
-      start = idx + 1;
+    const entries = this.parseSonyPollEntries(blob);
+    for (const entry of entries) {
+      if (entry.propCode === propCode) {
+        const value = propCode === 0xD21E
+          ? (entry.currentValue === 0x00FFFFFF ? entry.currentValue : entry.currentValue & 0xFFFF)
+          : entry.currentValue;
+        return [value, entry.enumValues];
+      }
     }
     return [null, []];
+  }
+
+  private parseSonyPollEntries(blob: Buffer): SonyLivePropEntry[] {
+    if (!blob || blob.length < 8) return [];
+
+    const count = this.detectSonyPollRecordCount(blob);
+    if (count !== null) {
+      const entries = this.parseSonyPollEntriesFromOffset(blob, 4, count);
+      if (entries.length === count) return entries;
+    }
+
+    return this.parseSonyPollEntriesFromOffset(blob, 0);
+  }
+
+  private detectSonyPollRecordCount(blob: Buffer): number | null {
+    if (blob.length < 4) return null;
+    const count = blob.readUInt32LE(0);
+    if (count > 0 && count < 4096 && blob.length >= 4 + count * 9) return count;
+    return null;
+  }
+
+  private parseSonyPollEntriesFromOffset(blob: Buffer, startOffset: number, recordCount?: number): SonyLivePropEntry[] {
+    const results = new Map<number, SonyLivePropEntry>();
+    let offset = startOffset;
+    let remaining = recordCount ?? Number.POSITIVE_INFINITY;
+
+    while (offset < blob.length - 8 && remaining > 0) {
+      const parsed = this.parseSonyPollRecord(blob, offset);
+      if (!parsed) {
+        if (recordCount != null) return [];
+        offset += 1;
+        continue;
+      }
+
+      if (!isVendorMarker(parsed.entry.propCode)) {
+        const existing = results.get(parsed.entry.propCode);
+        if (!existing || parsed.entry.enumValues.length > existing.enumValues.length || (!!parsed.entry.range && !existing.range)) {
+          results.set(parsed.entry.propCode, parsed.entry);
+        }
+      }
+
+      offset += parsed.length;
+      remaining -= 1;
+    }
+
+    if (recordCount != null && remaining !== 0) return [];
+    return [...results.values()].sort((a, b) => a.propCode - b.propCode);
+  }
+
+  private readPropValue(blob: Buffer, dtype: number, off: number): number {
+    switch (dtype) {
+      case 0x0001: return blob.readInt8(off);
+      case 0x0002: return blob.readUInt8(off);
+      case 0x0003: return blob.readInt16LE(off);
+      case 0x0004: return blob.readUInt16LE(off);
+      case 0x0005: return blob.readUInt32LE(off);
+      case 0x0006: return blob.readInt32LE(off);
+      default: return blob.readUInt8(off);
+    }
+  }
+
+  private parseSonyPollRecord(blob: Buffer, offset: number): { entry: SonyLivePropEntry; length: number } | null {
+    if (offset + 6 >= blob.length) return null;
+
+    const propCode = blob.readUInt16LE(offset);
+    if (!this.isValidSonyPropCode(propCode)) return null;
+
+    const dataType = blob.readUInt16LE(offset + 2);
+    const size = TYPE_SIZE[dataType];
+    if (!size) return null;
+
+    const getSet = blob.readUInt8(offset + 4);
+    const isEnabled = blob.readUInt8(offset + 5);
+    if (getSet > 0x03 || isEnabled > 0x03) return null;
+
+    const defaultOff = offset + 6;
+    const currentOff = defaultOff + size;
+    const formFlagOff = currentOff + size;
+    if (formFlagOff >= blob.length) return null;
+
+    const formFlag = blob.readUInt8(formFlagOff);
+    if (formFlag !== 0x00 && formFlag !== 0x01 && formFlag !== 0x02) return null;
+
+    if (currentOff + size > blob.length) return null;
+    const defaultValue = this.readPropValue(blob, dataType, defaultOff);
+    const currentValue = this.readPropValue(blob, dataType, currentOff);
+
+    let nextOffset = formFlagOff + 1;
+    const enumValues: number[] = [];
+    let range: SonyLivePropEntry['range'];
+
+    if (formFlag === 0x02) {
+      if (nextOffset + 2 > blob.length) return null;
+      const count = blob.readUInt16LE(nextOffset);
+      if (count > 128) return null;
+      nextOffset += 2;
+      if (nextOffset + count * size > blob.length) return null;
+      for (let i = 0; i < count; i++) {
+        enumValues.push(this.readPropValue(blob, dataType, nextOffset + i * size));
+      }
+      const deduped = [...new Set(enumValues)];
+      enumValues.length = 0;
+      enumValues.push(...deduped.slice(0, 64));
+      nextOffset += count * size;
+    } else if (formFlag === 0x01) {
+      if (nextOffset + size * 3 > blob.length) return null;
+      range = {
+        min: this.readPropValue(blob, dataType, nextOffset),
+        max: this.readPropValue(blob, dataType, nextOffset + size),
+        step: this.readPropValue(blob, dataType, nextOffset + size * 2),
+      };
+      nextOffset += size * 3;
+    }
+
+    return {
+      entry: {
+        propCode,
+        dataType,
+        currentValue,
+        defaultValue,
+        formFlag,
+        isEnabled,
+        enumValues,
+        ...(range ? { range } : {}),
+      },
+      length: nextOffset - offset,
+    };
+  }
+
+  private isValidSonyPropCode(propCode: number): boolean {
+    return (
+      (propCode >= 0x5000 && propCode <= 0x5FFF) ||
+      (propCode >= 0xD000 && propCode <= 0xDFFF) ||
+      (propCode >= 0xE000 && propCode <= 0xEFFF)
+    );
   }
 
   /**
@@ -401,6 +510,13 @@ export class SonyPTPClient extends EventEmitter {
     return this.hunterExtractWithList(this.lastPollBlob, propCode);
   }
 
+  /** Find a single parsed prop entry (with range / isEnabled / formFlag) in a poll blob. */
+  private findPollEntry(blob: Buffer, propCode: number): SonyLivePropEntry | null {
+    const entries = this.parseSonyPollEntries(blob);
+    for (const e of entries) if (e.propCode === propCode) return e;
+    return null;
+  }
+
   /**
    * Parse all property records currently present in the last Sony poll blob.
    * This is used for diagnostics/debug UI only and must not affect the control path.
@@ -408,122 +524,7 @@ export class SonyPTPClient extends EventEmitter {
   public scanAllProps(): SonyLivePropEntry[] {
     const blob = this.lastPollBlob;
     if (!blob || blob.length < 8) return [];
-    const anchorCodes = [0x5005, 0x5007, 0x500A, 0x500E, 0xD20D, 0xD21D, 0xD21E, 0xD218];
-
-    const readValue = (dtype: number, off: number): number => {
-      switch (dtype) {
-        case 0x0001: return blob.readInt8(off);
-        case 0x0002: return blob.readUInt8(off);
-        case 0x0003: return blob.readInt16LE(off);
-        case 0x0004: return blob.readUInt16LE(off);
-        case 0x0005: return blob.readUInt32LE(off);
-        case 0x0006: return blob.readInt32LE(off);
-        default: return blob.readUInt8(off);
-      }
-    };
-
-    const results = new Map<number, SonyLivePropEntry>();
-    const isPlausibleAt = (offset: number): boolean => {
-      if (offset < 0 || offset + 8 >= blob.length) return false;
-      const dataType = blob.readUInt16LE(offset + 2);
-      const size = TYPE_SIZE[dataType];
-      if (!size) return false;
-      // 6 bytes header (propCode+dtype+getset+reserved), then default+current, then formFlag
-      const formFlagOff = offset + 6 + size + size;
-      if (formFlagOff >= blob.length) return false;
-      const formFlag = blob.readUInt8(formFlagOff);
-      if (formFlag !== 0x00 && formFlag !== 0x01 && formFlag !== 0x02) return false;
-      if (formFlag === 0x02) {
-        if (formFlagOff + 3 > blob.length) return false;
-        const count = blob.readUInt16LE(formFlagOff + 1);
-        if (count > 128) return false;
-      }
-      return true;
-    };
-
-    let startOffset = 0;
-    const candidateStarts: number[] = [];
-    for (const code of anchorCodes) {
-      const needle = Buffer.alloc(2);
-      needle.writeUInt16LE(code, 0);
-      const idx = blob.indexOf(needle);
-      if (idx !== -1 && isPlausibleAt(idx)) candidateStarts.push(idx);
-    }
-    if (candidateStarts.length) startOffset = Math.min(...candidateStarts);
-
-    for (let offset = startOffset; offset < blob.length - 8; offset++) {
-      const propCode = blob.readUInt16LE(offset);
-      const dataType = blob.readUInt16LE(offset + 2);
-      const size = TYPE_SIZE[dataType];
-      if (!size) continue;
-      if (propCode < 0x5000 || propCode > 0xEFFF) continue;
-
-      // Sony SDIO ALLEXTDEVICEINFO prop format (confirmed from raw blob analysis):
-      //   [propCode:2][dtype:2][getset:1][reserved:1][defaultVal:size][currentVal:size][formFlag:1]
-      // Two bytes (getset + reserved) precede defaultVal — standard PTP has only 1 byte (getset).
-      const SONY_HDR = 6; // bytes before defaultVal: propCode(2)+dtype(2)+getset(1)+reserved(1)
-      const defaultOff = offset + SONY_HDR;
-      const currentOff = defaultOff + size;
-      const formFlagOff = currentOff + size;
-      if (formFlagOff >= blob.length) continue;
-
-      const formFlag = blob.readUInt8(formFlagOff);
-      if (formFlag !== 0x00 && formFlag !== 0x01 && formFlag !== 0x02) continue;
-
-      // Exclude vendor extension base markers — they are not camera properties
-      if (isVendorMarker(propCode)) continue;
-
-      if (currentOff + size > blob.length) continue;
-      const defaultValue = readValue(dataType, defaultOff);
-      const currentValue = readValue(dataType, currentOff);
-
-      let nextOffset = formFlagOff + 1;
-      const enumValues: number[] = [];
-      let range: SonyLivePropEntry['range'];
-
-      if (formFlag === 0x02) {
-        if (nextOffset + 2 > blob.length) continue;
-        const count = blob.readUInt16LE(nextOffset);
-        if (count > 128) continue;
-        nextOffset += 2;
-        if (nextOffset + count * size > blob.length) continue;
-        for (let i = 0; i < count; i++) {
-          enumValues.push(readValue(dataType, nextOffset + i * size));
-        }
-        const deduped = [...new Set(enumValues)];
-        enumValues.length = 0;
-        enumValues.push(...deduped.slice(0, 64));
-        nextOffset += count * size;
-      } else if (formFlag === 0x01) {
-        if (nextOffset + size * 3 > blob.length) continue;
-        range = {
-          min: readValue(dataType, nextOffset),
-          max: readValue(dataType, nextOffset + size),
-          step: readValue(dataType, nextOffset + size * 2),
-        };
-        nextOffset += size * 3;
-      }
-
-      const existing = results.get(propCode);
-      const candidate: SonyLivePropEntry = {
-        propCode,
-        dataType,
-        currentValue,
-        defaultValue,
-        formFlag,
-        enumValues,
-        ...(range ? { range } : {}),
-      };
-
-      // Prefer richer records when the blob contains duplicates.
-      if (!existing || candidate.enumValues.length > existing.enumValues.length || (!!candidate.range && !existing.range)) {
-        results.set(propCode, candidate);
-      }
-
-      offset = nextOffset - 1;
-    }
-
-    return [...results.values()].sort((a, b) => a.propCode - b.propCode);
+    return this.parseSonyPollEntries(blob);
   }
 
   private parsedOnce = false;
@@ -546,30 +547,71 @@ export class SonyPTPClient extends EventEmitter {
     const [focalDistM]             = this.hunterExtractWithList(blob, 0xD004);
     const [focusPos]               = this.hunterExtractWithList(blob, 0xE043);  // current lens position (PTP3)
     const [nearFarEn]              = this.hunterExtractWithList(blob, 0xD235);  // step enable flag
-    // Remaining recordable time in seconds — PTP3 cameras (ZV-E10 II, FX30, etc.)
-    // 0xD3C4 = Slot3RemainingTime, 0xD3C2 = Slot1RemainingTime (inferred from SDK pattern)
+    // Remaining recordable time in seconds.
+    // Priority: 0xD24A (Slot1 Remaining Time, confirmed on ZV-E10M2/FX30)
+    //           0xD3C2/0xD3C4 (legacy prop codes, fallback for older models)
+    const [remSecD24A]             = this.hunterExtractWithList(blob, 0xD24A);
     const [remSec3]                = this.hunterExtractWithList(blob, 0xD3C4);
     const [remSec1]                = this.hunterExtractWithList(blob, 0xD3C2);
-    // Prefer slot1, fallback to slot3; value must be plausible (1s–24h)
-    const remSecRaw = remSec1 ?? remSec3;
+    // Use first non-null, non-zero candidate (0xD24A preferred, fallback to legacy codes).
+    // ?? would not fall through on value=0; using > 0 check avoids stale-zero masking.
+    const remSecRaw = (remSecD24A !== null && remSecD24A > 0) ? remSecD24A
+      : (remSec1  !== null && remSec1  > 0) ? remSec1
+      : remSec3;
     const remSec = (remSecRaw !== null && remSecRaw > 0 && remSecRaw < 86400) ? remSecRaw : 0;
+    // Recording duration (elapsed time) — 0xD120, UINT32 seconds
+    const [recDuration]            = this.hunterExtractWithList(blob, 0xD120);
+    // Media / recording settings — polled low-priority but extracted from same blob
+    const [slotStatus]             = this.hunterExtractWithList(blob, 0xD248);
+    const [slotStatus2]            = this.hunterExtractWithList(blob, 0xD256);
+    const [remSec2Raw]             = this.hunterExtractWithList(blob, 0xD258);
+    const remSec2 = (remSec2Raw !== null && remSec2Raw > 0 && remSec2Raw < 86400) ? remSec2Raw : 0;
+    const [movieFileFormat, fileFormatList] = this.hunterExtractWithList(blob, 0xD241);
+    const [recSetting, recSettingList]      = this.hunterExtractWithList(blob, 0xD242);
+    const [recFrameRate, recFrameRateList]  = this.hunterExtractWithList(blob, 0xD286);
+    const [recMedia]               = this.hunterExtractWithList(blob, 0xD160);
 
     // Log parsed values on first successful poll, then every 50 polls
     if (!this.parsedOnce || this.pollCount % 50 === 0) {
+      const d004 = this.findPollEntry(blob, 0xD004);
+      const d004Info = d004
+        ? `0xD004: cur=${d004.currentValue} en=${d004.isEnabled} form=${d004.formFlag}` +
+          (d004.range ? ` min=${d004.range.min} max=${d004.range.max >>> 0} step=${d004.range.step}` : ' (no range)')
+        : '0xD004: absent';
+      const e042 = this.findPollEntry(blob, 0xE042);
+      const e042Info = e042 ? `0xE042: type=0x${e042.dataType.toString(16)} cur=${e042.currentValue} en=${e042.isEnabled} form=${e042.formFlag}` : '0xE042: absent';
+      const e043 = this.findPollEntry(blob, 0xE043);
+      const e043Info = e043 ? `0xE043: type=0x${e043.dataType.toString(16)} cur=${e043.currentValue}` : '0xE043: absent';
+      const d235 = this.findPollEntry(blob, 0xD235);
+      const d235Info = d235 ? `0xD235(nearFar): cur=${d235.currentValue} en=${d235.isEnabled}` : '0xD235: absent';
       this.vlog(
         `Props: iso=${iso ?? '?'} fn=${fnumber ?? '?'} shut=0x${(shutter ?? 0).toString(16)} ` +
         `ev=${expComp ?? '?'} ct=${colorT ?? '?'} bat=${battery ?? '?'} rec=${recState ?? '?'} ` +
-        `| lists: iso=${isoList.length} fn=${fnList.length} shut=${shutList.length} ev=${expList.length} ct=${colorList.length}`
+        `focusMode=0x${(focusMode ?? 0).toString(16)} nearFar=0x${(nearFarEn ?? 0).toString(16)} ` +
+        `| lists: iso=${isoList.length} fn=${fnList.length} shut=${shutList.length} ev=${expList.length} ct=${colorList.length} ` +
+        `| ${d004Info} | ${e042Info} | ${e043Info} | ${d235Info}`
       );
       this.parsedOnce = true;
     }
 
     // Update supported lists (skip empty — camera may not send them every poll)
-    if (isoList.length)   this.supportedLists.set(0xD21E, isoList);
-    if (fnList.length)    this.supportedLists.set(0x5007, fnList);
-    if (shutList.length)  this.supportedLists.set(0xD20D, shutList);
-    if (expList.length)   this.supportedLists.set(0x5010, expList);
-    if (colorList.length) this.supportedLists.set(0xD20F, colorList);
+    if (isoList.length)       this.supportedLists.set(0xD21E, isoList);
+    if (fnList.length)        this.supportedLists.set(0x5007, fnList);
+    if (shutList.length)      this.supportedLists.set(0xD20D, shutList);
+    if (expList.length)       this.supportedLists.set(0x5010, expList);
+    if (colorList.length)     this.supportedLists.set(0xD20F, colorList);
+    if (fileFormatList.length) {
+      this.supportedLists.set(0xD241, fileFormatList);
+      this.state.movieFileFormatList = fileFormatList;
+    }
+    if (recSettingList.length) {
+      this.supportedLists.set(0xD242, recSettingList);
+      this.state.recSettingList = recSettingList;
+    }
+    if (recFrameRateList.length) {
+      this.supportedLists.set(0xD286, recFrameRateList);
+      this.state.recFrameRateList = recFrameRateList;
+    }
 
     // ── Power-source / charging detection ────────────────────────────────────
     // Evaluated in priority order — first truthy match wins:
@@ -626,8 +668,38 @@ export class SonyPTPClient extends EventEmitter {
     if (focusMode !== null && focusMode !== this.state.focusMode)           { this.state.focusMode     = focusMode;   changed = true; }
     if (afStatus  !== null && afStatus  !== this.state.afStatus)            { this.state.afStatus      = afStatus;    changed = true; }
     if (focalDistM !== null && focalDistM !== this.state.focalDistanceM)    { this.state.focalDistanceM = focalDistM; changed = true; }
+
+    // ── Focal Distance in Meter (0xD004) range + IsEnabled ──────────────
+    // Values in the dataset are UINT32 raw; divide by 100 for meters.
+    // range is only populated when formFlag=0x01 (Range form).
+    {
+      const d004 = this.findPollEntry(blob, 0xD004);
+      if (d004) {
+        // Some Sony bodies report IsEnabled=0x02 for 0xD004 while still accepting
+        // a direct set. Treat anything non-zero as "try it" and let the PTP
+        // response code be the final arbiter.
+        const en = d004.isEnabled !== 0x00;
+        if (en !== this.state.focalDistanceEnabled) {
+          this.state.focalDistanceEnabled = en;
+          changed = true;
+        }
+        if (d004.range) {
+          if (d004.range.min  !== this.state.focalDistanceMin)  { this.state.focalDistanceMin  = d004.range.min;  changed = true; }
+          if (d004.range.max  !== this.state.focalDistanceMax)  { this.state.focalDistanceMax  = d004.range.max;  changed = true; }
+          if (d004.range.step !== this.state.focalDistanceStep) { this.state.focalDistanceStep = d004.range.step; changed = true; }
+        }
+      }
+    }
     if (focusPos  !== null && focusPos  !== this.state.focusPosition)       { this.state.focusPosition = focusPos;    changed = true; }
     if (nearFarEn !== null && nearFarEn !== this.state.nearFarEnable)       { this.state.nearFarEnable = nearFarEn;   changed = true; }
+    if (recDuration !== null && recDuration !== this.state.recDurationSec)  { this.state.recDurationSec = recDuration; changed = true; }
+    if (slotStatus  !== null && slotStatus  !== this.state.slotStatus)      { this.state.slotStatus     = slotStatus;  changed = true; }
+    if (slotStatus2 !== null && slotStatus2 !== this.state.slotStatus2)    { this.state.slotStatus2    = slotStatus2; changed = true; }
+    if (remSec2     !== this.state.recRemainSec2)                          { this.state.recRemainSec2  = remSec2;     changed = true; }
+    if (movieFileFormat !== null && movieFileFormat !== this.state.movieFileFormat) { this.state.movieFileFormat = movieFileFormat; changed = true; }
+    if (recSetting  !== null && recSetting  !== this.state.recSetting)      { this.state.recSetting     = recSetting;  changed = true; }
+    if (recMedia     !== null && recMedia     !== this.state.recMedia)          { this.state.recMedia        = recMedia;     changed = true; }
+    if (recFrameRate !== null && recFrameRate !== this.state.recFrameRate)     { this.state.recFrameRate    = recFrameRate; changed = true; }
 
     if (changed) {
       this.state.lastUpdate = Date.now();
@@ -735,6 +807,7 @@ export class SonyPTPClient extends EventEmitter {
       case 0xD20D: return this.state.shutter;
       case 0x5010: return this.state.expComp;
       case 0xD20F: return this.state.colorTemp;
+      case 0xE043: return this.state.focusPosition;
       default: return 0;
     }
   }
@@ -746,6 +819,7 @@ export class SonyPTPClient extends EventEmitter {
       case 0xD20D: this.state.shutter   = value; break;
       case 0x5010: this.state.expComp   = value; break;
       case 0xD20F: this.state.colorTemp = value; break;
+      case 0xE043: this.state.focusPosition = value; break;
     }
   }
 
@@ -758,7 +832,8 @@ export class SonyPTPClient extends EventEmitter {
         return b;
       }
       case 0x5007: // FNumber — UINT16
-      case 0xD20F: { // ColorTemp — UINT16
+      case 0xD20F: // ColorTemp — UINT16
+      case 0xE042: { // Focus Position Setting — UINT16 (dataType=0x04 confirmed in poll)
         const b = Buffer.alloc(2);
         b.writeUInt16LE(value, 0);
         return b;
@@ -776,11 +851,31 @@ export class SonyPTPClient extends EventEmitter {
     }
   }
 
+  // Pack a prop value using the data type reported by the camera's poll blob.
+  // Falls back to hardcoded mapping when the prop is absent from the blob.
+  private packPropValueDynamic(propCode: number, value: number): Buffer {
+    if (this.lastPollBlob) {
+      const entry = this.findPollEntry(this.lastPollBlob, propCode);
+      if (entry) {
+        switch (entry.dataType) {
+          case 0x0001: { const b = Buffer.alloc(1); b.writeInt8(value, 0);     return b; }
+          case 0x0002: { const b = Buffer.alloc(1); b.writeUInt8(value, 0);    return b; }
+          case 0x0003: { const b = Buffer.alloc(2); b.writeInt16LE(value, 0);  return b; }
+          case 0x0004: { const b = Buffer.alloc(2); b.writeUInt16LE(value, 0); return b; }
+          case 0x0005: { const b = Buffer.alloc(4); b.writeUInt32LE(value, 0); return b; }
+          case 0x0006: { const b = Buffer.alloc(4); b.writeInt32LE(value, 0);  return b; }
+        }
+      }
+    }
+    return this.packPropValue(propCode, value);
+  }
+
   // Set an ext device property to an absolute value directly (bypasses enum list requirement).
   // Use when the target value is known exactly (e.g. WB Kelvin from ATEM) and the camera
   // does not return an enumeration list for the property.
   async setExtDeviceProp(propCode: number, value: number): Promise<void> {
-    const data = this.packPropValue(propCode, value);
+    const data = this.packPropValueDynamic(propCode, value);
+    this.log(`setExtDeviceProp 0x${propCode.toString(16)} = ${value} (${data.length}B)`);
     this.setPropState(propCode, value);
     await this.sendCmdWithData(0x9205, [propCode], data);
   }
@@ -791,6 +886,30 @@ export class SonyPTPClient extends EventEmitter {
     await this.controlDevice(0xD2C8, 0x81 /* BUTTON */, 0x0002 /* DOWN */);
     await this.delay(100);
     await this.controlDevice(0xD2C8, 0x81 /* BUTTON */, 0x0001 /* UP */);
+  }
+
+  // Format a media slot.
+  // type='full'  → 0xD2E2 value 0x0001 (Slot1) / 0x0002 (Slot2)
+  // type='quick' → 0xD2E2 value 0x0011 (Slot1) / 0x0012 (Slot2)
+  // Sets the format type via 0xD2E2, then triggers 0xD2CA (Media Format button) Down→Up.
+  async formatMedia(slot: 1 | 2, type: 'full' | 'quick'): Promise<void> {
+    const formatValue = type === 'full'
+      ? (slot === 1 ? 0x0001 : 0x0002)
+      : (slot === 1 ? 0x0011 : 0x0012);
+    this.log(`Format media slot=${slot} type=${type} value=0x${formatValue.toString(16)}`);
+    await this.controlDevice(0xD2E2, 0x84, formatValue);
+    await this.delay(100);
+    await this.controlDevice(0xD2CA, 0x81, 0x0002 /* DOWN */);
+    await this.delay(200);
+    await this.controlDevice(0xD2CA, 0x81, 0x0001 /* UP */);
+  }
+
+  // Set recording slot, file format, frame rate, and/or recording mode (fps+bitrate).
+  async setRecordingSettings(opts: { recMedia?: number; movieFileFormat?: number; recFrameRate?: number; recSetting?: number }): Promise<void> {
+    if (opts.recMedia !== undefined)        await this.setExtDeviceProp(0xD160, opts.recMedia);
+    if (opts.movieFileFormat !== undefined) await this.setExtDeviceProp(0xD241, opts.movieFileFormat);
+    if (opts.recFrameRate !== undefined)    await this.setExtDeviceProp(0xD286, opts.recFrameRate);
+    if (opts.recSetting !== undefined)      await this.setExtDeviceProp(0xD242, opts.recSetting);
   }
 
   // Push AutoFocus: S1 button DOWN → 150ms → UP
@@ -821,16 +940,91 @@ export class SonyPTPClient extends EventEmitter {
     await this.sendCmdWithData(0x9205, [0xD22C], data);
   }
 
+  // Get focus distance range (min/max) for prop 0xD004 using SDIO_GetAllExtDevicePropInfo.
+  // Returns [min, max] in raw UINT32 values (divide by 100 for meters).
+  async getFocusDistanceRange(): Promise<[number, number] | null> {
+    try {
+      const blob = await this.sendCmdReadData(0x9209, []);
+      if (!blob || blob.length < 8) {
+        this.warn(`SDIO_GetAllExtDevicePropInfo returned empty or short blob: ${blob?.length} bytes`);
+        return null;
+      }
+
+      this.vlog(`SDIO_GetAllExtDevicePropInfo blob length: ${blob.length}`);
+
+      // Parse the SDIO_GetAllExtDevicePropInfo response
+      // Each dataset: DevicePropertyCode (2), DataType (2), GetSet (1), IsEnabled (1), FormFlag (1), CurrentValue (varies)
+      // For Range form (FormFlag=0x01): after CurrentValue: MinimumValue (4), MaximumValue (4), StepValue (4)
+      let offset = 0;
+      let foundD004 = false;
+      while (offset + 8 < blob.length) {
+        const propCode = blob.readUInt16LE(offset);
+        const dataType = blob.readUInt16LE(offset + 2);
+        const getSet = blob.readUInt8(offset + 4);
+        const isEnabled = blob.readUInt8(offset + 5);
+        const formFlag = blob.readUInt8(offset + 6);
+
+        this.vlog(`Prop 0x${propCode.toString(16)}: type=0x${dataType.toString(16)} getSet=0x${getSet.toString(16)} enabled=0x${isEnabled.toString(16)} form=0x${formFlag.toString(16)}`);
+
+        if (propCode === 0xD004) {
+          foundD004 = true;
+          if (formFlag === 0x01 && isEnabled === 0x01) {
+            // UINT32 data type, so CurrentValue is 4 bytes
+            const currentValueSize = 4; // UINT32
+            const currentValueOffset = offset + 7;
+            const minOffset = currentValueOffset + currentValueSize;
+            const maxOffset = minOffset + 4;
+
+            if (maxOffset + 4 <= blob.length) {
+              const min = blob.readUInt32LE(minOffset);
+              const max = blob.readUInt32LE(maxOffset);
+              this.log(`Focus distance range: min=0x${min.toString(16)} (${min / 100}m), max=0x${max.toString(16)} (${max / 100}m)`);
+              return [min, max];
+            } else {
+              this.warn(`Prop 0xD004 range data out of bounds: maxOffset=${maxOffset} blob.length=${blob.length}`);
+            }
+          } else {
+            this.warn(`Prop 0xD004 not range/enabled: formFlag=0x${formFlag.toString(16)} isEnabled=0x${isEnabled.toString(16)}`);
+          }
+        }
+
+        // Skip to next dataset: fixed header (7) + CurrentValue size + Range data if applicable
+        const currentValueSize = dataType === 0x0006 ? 4 : (dataType === 0x0004 ? 2 : 4); // UINT32=6, UINT16=4, default 4
+        let skip = 7 + currentValueSize;
+        if (formFlag === 0x01) skip += 12; // Min, Max, Step
+        offset += skip;
+      }
+
+      if (!foundD004) {
+        this.warn('Prop 0xD004 not found in SDIO_GetAllExtDevicePropInfo response');
+      }
+      return null;
+    } catch (e) {
+      this.warn(`Failed to get focus distance range: ${e}`);
+      return null;
+    }
+  }
+
   // Set absolute focus position (prop 0xE042). PTP3 cameras only.
-  // position: 0x0000 = near limit, 0xFFFF = infinity.
+  // position: 0x0000 = near limit, 0xFFFF = far limit.
   // Camera must be in MF or DMF mode — AF cameras silently reject this.
-  // Data type: UINT16 (2 bytes) per PTP3 protocol spec for prop 0xE042.
   async setFocusPositionAbsolute(position: number): Promise<void> {
     const clamped = Math.max(0, Math.min(0xFFFF, position));
-    this.log(`SetFocusPosition 0x${clamped.toString(16)}`);
-    const data = Buffer.alloc(2);
-    data.writeUInt16LE(clamped, 0);
-    await this.sendCmdWithData(0x9205, [0xE042], data);
+    this.log(`SetFocusPosition 0x${clamped.toString(16)} (${((clamped / 0xFFFF) * 100).toFixed(1)}%)`);
+
+    // 0xE042 requires SDIO_ControlDevice (0x9207) with FLAG_EXT_OPT — not SetDevicePropValue (0x9205).
+    // Camera ACKs 0x9205 without error but silently ignores the command.
+    // Wire format: UINT16 value padded to 4-byte UINT32 LE (confirmed: dataType=0x04 in poll blob).
+    const FLAG_EXT_OPT = 0x00000001;
+    const data = Buffer.alloc(4);
+    data.writeUInt32LE(clamped, 0);
+    await this.sendCmdWithData(0x9207, [0xE042, FLAG_EXT_OPT], data);
+
+    // Update state
+    this.state.focusPosition = clamped;
+    this.state.lastUpdate = Date.now();
+    this.emit('stateUpdate', this.state);
+    await this.delay(500); // Allow time for lens to move
   }
 
   // Step focus one increment toward near (0xD2D7) — single button pulse.

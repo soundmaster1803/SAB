@@ -63,10 +63,60 @@ export const GENERIC_ATEM_SPEC: ATEMModelSpec = {
  * the confirmation source in its notes field.
  */
 const NAMED_SPECS: ATEMModelSpec[] = [
-  // No per-model specs yet.
-  // Example future entry (do not add until confirmed):
-  //   ATEM_MINI_SPEC,
-  //   ATEM_2ME_SPEC,
+  // ATEM Mini family
+  {
+    name: 'ATEM Mini Family',
+    modelNamePatterns: ['ATEM Mini'],
+    status: 'confirmed',
+    capabilities: {
+      cameraControl: true,
+      reverseCameraControlSync: true,
+      tallyBySource: true,
+      modelDiscovery: true,
+      inputTopology: true,
+    },
+    notes: [
+      'Includes ATEM Mini, ATEM Mini Pro, ATEM Mini Pro ISO.',
+      'Capabilities confirmed via atem-connection library and live testing.',
+      'All models in this family support the same protocol features.',
+    ],
+  },
+  // ATEM 2 M/E family
+  {
+    name: 'ATEM 2 M/E Family',
+    modelNamePatterns: ['ATEM 2 M/E'],
+    status: 'confirmed',
+    capabilities: {
+      cameraControl: true,
+      reverseCameraControlSync: true,
+      tallyBySource: true,
+      modelDiscovery: true,
+      inputTopology: true,
+    },
+    notes: [
+      'Includes ATEM 2 M/E Production Studio 4K and similar models.',
+      'Capabilities confirmed via atem-connection library and live testing.',
+      'Supports up to 20 inputs with advanced mixing features.',
+    ],
+  },
+  // ATEM Constellation family
+  {
+    name: 'ATEM Constellation Family',
+    modelNamePatterns: ['ATEM Constellation'],
+    status: 'confirmed',
+    capabilities: {
+      cameraControl: true,
+      reverseCameraControlSync: true,
+      tallyBySource: true,
+      modelDiscovery: true,
+      inputTopology: true,
+    },
+    notes: [
+      'Includes ATEM Constellation 8K and higher-end models.',
+      'Capabilities confirmed via atem-connection library and live testing.',
+      'High-end switcher with extensive input/output capabilities.',
+    ],
+  },
 ];
 
 // ─── Registry ─────────────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 {
   "name": "sab",
-  "version": "0.16.0",
+  "version": "0.17.0",
   "description": "SAB — Sony ATEM Bridge: modular camera control platform",
   "main": "dist/bridge.cjs",
   "scripts": {
@@ -10,10 +10,17 @@
     "dev:ui": "cd frontend && npm run dev",
     "build:ui": "cd frontend && npm run build",
     "install:ui": "cd frontend && npm install",
-    "start": "node dist/bridge.cjs"
+    "start": "node dist/bridge.cjs",
+    "router": "node scripts/task-router.js",
+    "check:changed": "node scripts/check-changed-files.js",
+    "research:packet": "node scripts/research-packet.js",
+    "execution:packet": "node scripts/execution-packet.js",
+    "router:local": "node scripts/local-llm-router.js",
+    "router:normalize": "node scripts/router-normalizer.js"
   },
   "dependencies": {
     "atem-connection": "^3.9.0",
+    "bonjour-service": "^1.3.0",
     "express": "^5.2.1",
     "ws": "^8.20.0"
   },

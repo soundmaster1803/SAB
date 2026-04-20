@@ -35,6 +35,12 @@ export class ATEMListener extends EventEmitter {
   // on every connect which contains stale/bogus values.
   private readyAfter = 0
 
+  // Flag to prevent auto-reconnect when manually disconnected
+  private manualDisconnect = false
+
+  // Config for auto-reconnect
+  private autoReconnect: boolean
+
   get atemModel(): string {
     const info = (this.atem.state as any)?.info;
     return info?.productIdentifier ?? info?.deviceName ?? 'ATEM';
@@ -45,8 +51,9 @@ export class ATEMListener extends EventEmitter {
       .map(Number).filter(n => n >= 1 && n <= 20).length;
   }
 
-  constructor() {
+  constructor(autoReconnect = true) {
     super()
+    this.autoReconnect = autoReconnect
     // disableMultithreaded: true — prevents threadedClass from spawning a worker
     // process via file path resolution, which breaks in esbuild bundles.
     // Runs AtemSocket inline (same thread) instead — functionally identical.
@@ -63,7 +70,14 @@ export class ATEMListener extends EventEmitter {
 
     this.atem.on('disconnected', () => {
       this.connected = false
-      warn('Disconnected — will auto-reconnect')
+      if (this.manualDisconnect) {
+        log('Disconnected (manual)')
+        this.manualDisconnect = false
+      } else if (this.autoReconnect) {
+        warn('Disconnected — will auto-reconnect')
+      } else {
+        warn('Disconnected — auto-reconnect disabled')
+      }
     })
 
     this.atem.on('receivedCommands', (cmds) => {
@@ -89,6 +103,7 @@ export class ATEMListener extends EventEmitter {
 
   disconnect(): void {
     log('Disconnecting...')
+    this.manualDisconnect = true
     this.atem.removeAllListeners('disconnected')
     Promise.resolve(this.atem.disconnect()).then(() => {
       this.connected = false

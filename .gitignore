@@ -16,6 +16,9 @@ logs.txt
 config.json
 
 # Claude local state
+.claude/
+!.claude/agents/
+!.claude/commands/
 .claude/settings.local.json
 .claude/launch.json
 .claude/CHANGELOG.md
