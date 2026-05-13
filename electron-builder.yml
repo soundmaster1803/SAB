@@ -1,0 +1,73 @@
+appId: com.sabbridge.app
+productName: SAB
+copyright: "Copyright © 2026 Ivan Kaigarodov"
+
+directories:
+  output: release
+  buildResources: electron/assets
+
+# Files that go into app.asar (the Electron JS layer)
+files:
+  - electron/main.js
+  - electron/preload.js
+  - electron/launcher.html
+  - package.json
+
+# Large files placed next to app.asar in Resources/ (not packed, stays readable)
+extraResources:
+  - from: dist/bridge.cjs
+    to: bridge.cjs
+  - from: dist/atemSocketChild.js
+    to: atemSocketChild.js
+  - from: dist/prebuilds
+    to: prebuilds
+    filter:
+      - "**/*"
+  - from: public
+    to: public
+    filter:
+      - "**/*"
+  - from: config.json
+    to: config.json
+  - from: VERSION
+    to: VERSION
+
+# ── macOS ───────────────────────────────────────────────────────────────────
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64    # Intel
+        - arm64  # Apple Silicon
+  category: public.app-category.utilities
+  icon: electron/assets/icon.icns
+
+dmg:
+  title: "SAB ${version}"
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+
+# ── Windows ─────────────────────────────────────────────────────────────────
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: zip
+      arch:
+        - x64
+  icon: electron/assets/icon.ico
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: SAB
+
+publish: null
