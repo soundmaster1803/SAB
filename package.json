@@ -17,6 +17,7 @@
     "app:pack:win": "electron-builder --win",
     "app:pack": "electron-builder --mac --win",
     "app:cleaners": "node scripts/build-cleaners.js",
+    "app:collect": "node scripts/collect-release.js",
     "router": "node scripts/task-router.js",
     "check:changed": "node scripts/check-changed-files.js",
     "research:packet": "node scripts/research-packet.js",

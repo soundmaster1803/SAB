@@ -40,3 +40,4 @@ config.json
 coverage/
 *.tgz
 release/
+releases/

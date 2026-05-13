@@ -37,10 +37,11 @@ mac:
   target:
     - target: dmg
       arch:
-        - x64    # Intel
-        - arm64  # Apple Silicon
+        - universal  # fat binary: arm64 + x64
   category: public.app-category.utilities
   icon: electron/assets/icon.icns
+  # prebuilds contain both arch .node files in every build — take them from x64
+  x64ArchFiles: "**/prebuilds/**"
 
 dmg:
   title: "SAB ${version}"
