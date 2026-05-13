@@ -136,7 +136,7 @@ function startServer() {
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 360,
-    height: process.platform === 'darwin' ? 310 : 330,
+    height: process.platform === 'darwin' ? 310 : 390,
     resizable: false,
     maximizable: false,
     fullscreenable: false,

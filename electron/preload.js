@@ -3,6 +3,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electron', {
+  platform:       process.platform,
   getStatus:      () => ipcRenderer.invoke('get-status'),
   getAppVersion:  () => ipcRenderer.invoke('get-app-version'),
   openUrl:        (url) => ipcRenderer.send('open-url', url),

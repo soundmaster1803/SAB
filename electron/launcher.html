@@ -276,6 +276,14 @@
       return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
+    // Disable right-click context menu
+    document.addEventListener('contextmenu', e => e.preventDefault());
+
+    // Traffic-lights spacer is only needed on macOS (hiddenInset title bar)
+    if (window.electron.platform !== 'darwin') {
+      document.querySelector('.tl').style.display = 'none';
+    }
+
     // Init
     window.electron.getAppVersion().then(v => {
       document.getElementById('ver').textContent = 'v' + v;
