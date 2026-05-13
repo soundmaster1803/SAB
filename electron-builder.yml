@@ -13,6 +13,7 @@ files:
   - electron/launcher.html
   - electron/assets/icon.icns
   - electron/assets/icon.ico
+  - electron/assets/tray.png
   - package.json
 
 # Large files placed next to app.asar in Resources/ (not packed, stays readable)

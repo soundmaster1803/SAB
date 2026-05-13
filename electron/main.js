@@ -46,9 +46,9 @@ function getInterfaces() {
 // ─── Tray icon ────────────────────────────────────────────────────────────────
 
 function makeTrayIcon() {
-  const file = process.platform === 'win32' ? 'icon.ico' : 'icon.icns';
-  const img = nativeImage.createFromPath(path.join(__dirname, 'assets', file));
-  return img.resize({ width: 16, height: 16 });
+  // PNG is the most reliable format for tray icons across platforms
+  const file = process.platform === 'win32' ? 'icon.ico' : 'tray.png';
+  return nativeImage.createFromPath(path.join(__dirname, 'assets', file));
 }
 
 // ─── Server ───────────────────────────────────────────────────────────────────
@@ -200,9 +200,14 @@ ipcMain.on('quit',                quitApp);
 // ─── App lifecycle ────────────────────────────────────────────────────────────
 
 app.whenReady().then(() => {
+  // Menu-bar utility: no dock icon on macOS
+  if (process.platform === 'darwin') app.dock.hide();
+
   createWindow();
   createTray();
   startServer();
+
+  // Cmd+Tab / dock click → show window
   app.on('activate', () => { mainWindow?.show(); });
 });
 
