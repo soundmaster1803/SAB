@@ -56,17 +56,10 @@ function makeTrayIcon() {
 function ensureConfigExists() {
   const dest = getConfigPath();
   if (fs.existsSync(dest)) return;
-  const source = app.isPackaged
-    ? path.join(process.resourcesPath, 'config.json')
-    : path.join(__dirname, '..', 'config.json');
   try {
-    if (fs.existsSync(source)) {
-      fs.copyFileSync(source, dest);
-    } else {
-      fs.writeFileSync(dest, JSON.stringify(
-        { atemIp: '', atemAutoReconnect: true, atemFavorites: [], cameras: [] }, null, 2
-      ));
-    }
+    fs.writeFileSync(dest, JSON.stringify(
+      { atemIp: '', atemAutoReconnect: true, atemFavorites: [], cameras: [] }, null, 2
+    ));
   } catch (e) {
     console.error('[SAB] ensureConfigExists failed:', e.message);
   }
@@ -111,7 +104,9 @@ function startServer() {
       ELECTRON_RUN_AS_NODE: '1',
       SAB_CONFIG_PATH: getConfigPath(),
     },
-    cwd: app.getPath('userData'),
+    // packaged: argv[1] = resourcesPath/bridge.cjs, public/ found there; userData is writable for logs
+    // dev:      public/ is at project root — set cwd so the fallback in server.ts resolves it
+    cwd: app.isPackaged ? app.getPath('userData') : path.join(__dirname, '..'),
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 

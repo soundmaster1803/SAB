@@ -30,8 +30,6 @@ extraResources:
     to: public
     filter:
       - "**/*"
-  - from: config.json
-    to: config.json
   - from: VERSION
     to: VERSION
 
