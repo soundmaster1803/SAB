@@ -58,6 +58,13 @@ export function startServer(manager: CameraManager, atemListener: ATEMListener, 
   app.use(createAtemRoutes({ atemListener, getConfig, setConfig }));
   app.use(createStatusRoutes({ manager, atemListener, getConfig }));
 
+  // Installer calls this to gracefully stop the app before overwriting files.
+  // Exit code 42 signals Electron main to call quitApp().
+  app.post('/api/shutdown', (_req, res) => {
+    res.json({ ok: true });
+    setTimeout(() => process.exit(42), 200);
+  });
+
   server.listen(7777, () => {
     log(`UI ready → http://localhost:7777`);
     listLanInterfaces().forEach(({ address }) => log(`           http://${address}:7777`));

@@ -123,7 +123,9 @@ function startServer() {
 
   serverProcess.on('exit', (code, signal) => {
     console.log(`[Bridge] exited code=${code} signal=${signal}`);
-    if (serverStatus !== 'quitting') setStatus('error');
+    if (serverStatus === 'quitting') return;
+    if (code === 42) { quitApp(); return; }  // installer shutdown signal
+    setStatus('error');
   });
 
   pollServer();

@@ -1,44 +1,26 @@
 ; installer.nsh — SAB custom NSIS hooks
-; Plain NSIS only — no LogicLib, no nested quotes, no loops.
-;
-; Why customInit does the heavy lifting:
-;   uninstallOldVersion (installUtil.nsh) runs the OLD uninstaller silently and
-;   shows $(appCannotBeClosed) after 5 failed attempts.  By wiping the registry
-;   entries before the install section starts, uninstallOldVersion finds nothing
-;   and returns early — no dialog.
+; nsExec::Exec runs processes hidden (CREATE_NO_WINDOW) — no console flashes.
 
 !macro preInit
-  ExecWait '"$SYSDIR\taskkill.exe" /F /IM SAB.exe' $0
+  ; Ask SAB to shut itself down via its HTTP endpoint.
+  ; PowerShell exits 0 if SAB responded, 1 if not running / no endpoint.
+  nsExec::Exec 'powershell.exe -WindowStyle Hidden -NonInteractive -Command "try{Invoke-RestMethod -Method POST -Uri http://127.0.0.1:7777/api/shutdown -TimeoutSec 2;exit 0}catch{exit 1}"'
+  Pop $0
+  ; Only wait for graceful exit if SAB actually responded (exit 0).
+  IntCmp $0 0 sab_shutdown_ok sab_no_response sab_no_response
+  sab_shutdown_ok:
+    Sleep 2000
+  sab_no_response:
+  ; Force-kill anything named SAB.exe still alive.
+  nsExec::Exec '"$SYSDIR\taskkill.exe" /F /IM SAB.exe'
+  Pop $0
   Sleep 1000
-  ExecWait '"$SYSDIR\taskkill.exe" /F /IM SAB.exe' $0
-  Sleep 3000
 !macroend
 
-!macro customInit
-  ; 1. Kill all SAB.exe processes (main Electron + bridge child)
-  ExecWait '"$SYSDIR\taskkill.exe" /F /IM SAB.exe' $0
-  Sleep 2000
-  ExecWait '"$SYSDIR\taskkill.exe" /F /IM SAB.exe' $0
-  Sleep 1000
-
-  ; 2. Read old install location and delete directory so files are not locked
-  ReadRegStr $9 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${UNINSTALL_APP_KEY}" "InstallLocation"
-  StrCmp $9 "" sab_no_old_dir
-    RMDir /r "$9"
-  sab_no_old_dir:
-
-  ; 3. Wipe uninstall registry entries — uninstallOldVersion will find nothing
-  ;    and skip its retry loop (which is the true source of the dialog).
-  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${UNINSTALL_APP_KEY}"
-  DeleteRegKey HKCU "Software\${APP_GUID}"
-!macroend
-
-; Replaces the built-in "SAB cannot be closed" dialog in CHECK_APP_RUNNING.
-; Belt-and-suspenders: customInit already killed SAB, but this catches any
-; restart that happens between .onInit and the install section.
+; Safety net: replaces the "SAB cannot be closed" dialog in CHECK_APP_RUNNING.
+; By this point preInit already shut SAB down, so this almost never fires.
 !macro customCheckAppRunning
-  ExecWait '"$SYSDIR\taskkill.exe" /F /IM SAB.exe' $0
-  Sleep 800
-  ExecWait '"$SYSDIR\taskkill.exe" /F /IM SAB.exe' $0
-  Sleep 2000
+  nsExec::Exec '"$SYSDIR\taskkill.exe" /F /IM SAB.exe'
+  Pop $0
+  Sleep 1000
 !macroend
