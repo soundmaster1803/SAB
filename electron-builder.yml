@@ -71,5 +71,6 @@ nsis:
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: SAB
+  include: scripts/installer.nsh
 
 publish: null

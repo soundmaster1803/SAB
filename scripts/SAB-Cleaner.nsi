@@ -1,10 +1,10 @@
-; SAB Cleaner — удаляет старую версию SAB перед установкой новой
+; SAB Cleaner — останавливает SAB и удаляет старую версию перед установкой новой
 
 Unicode True
 Name "SAB Cleaner"
 OutFile "SAB-Cleaner.exe"
 RequestExecutionLevel user
-ShowInstDetails nevershow
+ShowInstDetails show
 InstProgressFlags smooth
 
 !include "LogicLib.nsh"
@@ -15,9 +15,9 @@ Section "Clean"
 
   DetailPrint "SAB Cleaner — подготовка к установке новой версии..."
 
-  ; Спрашиваем подтверждение
+  ; Подтверждение
   MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION \
-    "SAB Cleaner$\r$\n$\r$\nУдалит старую версию SAB с этого компьютера.$\r$\nКонфиг камер предложим сохранить отдельно.$\r$\n$\r$\nПродолжить?" \
+    "SAB Cleaner$\r$\n$\r$\nОстановит SAB и удалит старую версию с этого компьютера.$\r$\nКонфиг камер (IP, ATEM) предложим сохранить отдельно.$\r$\n$\r$\nПродолжить?" \
     IDOK do_clean IDCANCEL abort
 
   abort:
@@ -25,33 +25,33 @@ Section "Clean"
 
   do_clean:
 
-  ; Остановить SAB
+  ; Убиваем SAB и все его дочерние процессы (bridge запускается как child)
   DetailPrint "Останавливаю SAB..."
-  ExecWait 'taskkill /IM "SAB.exe" /F' $0
-  Sleep 1000
+  ExecWait 'cmd /C "taskkill /F /T /IM SAB.exe >nul 2>&1"' $0
+  Sleep 2500
 
   ; Запустить встроенный деинсталлятор (если установлено через Setup.exe)
   ReadRegStr $0 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\SAB" "UninstallString"
   ${If} $0 != ""
-    DetailPrint "Запускаю деинсталлятор..."
+    DetailPrint "Запускаю встроенный деинсталлятор..."
     ExecWait '"$0" /S'
     Sleep 3000
   ${EndIf}
 
-  ; Удалить папку приложения если осталась
+  ; Удалить папку приложения если осталась после деинсталлятора
   ${If} ${FileExists} "$LOCALAPPDATA\Programs\SAB"
-    DetailPrint "Удаляю папку приложения..."
+    DetailPrint "Удаляю остатки папки приложения..."
     RMDir /r "$LOCALAPPDATA\Programs\SAB"
   ${EndIf}
 
-  ; Удалить записи в реестре
+  ; Убрать запись реестра
   DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\SAB"
   DetailPrint "Реестр очищен."
 
-  ; Спросить про конфиг
+  ; Спросить про конфиг камер
   ${If} ${FileExists} "$APPDATA\SAB\*"
     MessageBox MB_YESNO|MB_ICONQUESTION \
-      "Сохранить конфиг?$\r$\n$\r$\nВ нём хранятся IP камер и настройки ATEM.$\r$\nЕсли оставишь — новая версия подхватит их." \
+      "Сохранить конфиг камер?$\r$\n$\r$\nВ нём хранятся IP камер и настройки ATEM.$\r$\nЕсли оставишь — новая версия подхватит их автоматически." \
       IDYES done IDNO del_data
 
     del_data:
@@ -60,8 +60,8 @@ Section "Clean"
   ${EndIf}
 
   done:
-  DetailPrint "Готово!"
+  DetailPrint "Готово — можно запускать новый установщик."
   MessageBox MB_OK|MB_ICONINFORMATION \
-    "Готово.$\r$\n$\r$\nУстанавливай новую версию из Setup .exe"
+    "Готово.$\r$\n$\r$\nSAB остановлен и удалён. Теперь запускай новый Setup .exe"
 
 SectionEnd
