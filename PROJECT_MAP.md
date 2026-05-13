@@ -22,17 +22,22 @@ Sony cameras / ATEM / user actions
 
 - `src/` — backend runtime
 - `frontend/src/` — исходники UI
+- `electron/` — Electron-обёртка (main.js, preload.js, launcher.html, assets/)
 - `docs/` — документация по архитектуре и исследованиям
 - `knowledge/` — справочники и каталоги возможностей Sony
-- `config.json` — локальная конфигурация камер и ATEM
+- `config.json` — локальная конфигурация камер и ATEM (не входит в инсталлятор)
 - `package.json` — команды проекта и backend dependencies
 - `frontend/package.json` — команды и dependencies UI
+- `electron-builder.yml` — конфиг упаковки (DMG / NSIS)
+- `scripts/` — утилиты сборки: иконки, клинеры, сбор релиза
 
 ## Generated / build artifacts
 Это производные файлы. Их не правят руками, если нет очень особой причины.
 
 - `dist/` — собранный backend
 - `public/` — собранный frontend, который реально отдаёт express server
+- `release/` — сырой вывод electron-builder (временные папки, blockmaps и т.д.)
+- `releases/` — финальные установщики по версиям (`releases/v1.0.1-beta/`); не в git
 
 Критично:
 
@@ -47,7 +52,7 @@ Sony cameras / ATEM / user actions
 - `frontend/node_modules/` — зависимости frontend
 - `.claude/` — локальные артефакты Claude Code
 - `.git/` — git metadata
-- `logs.txt` — runtime logs
+- `logs.txt` — runtime logs (пишется в userData в packaged-режиме)
 
 ## Главные домены
 
@@ -120,6 +125,42 @@ npm run build:ui
 npm start
 ```
 Запускает `dist/bridge.cjs`.
+
+### Electron dev (лаунчер без упаковки)
+```bash
+npm run app:dev
+```
+Запускает Electron-лаунчер локально. Bridge собирается в `dist/`, UI в `public/`.
+
+### Electron packaging
+```bash
+npm run app:pack        # Mac (universal) + Windows
+npm run app:pack:mac    # только Mac
+npm run app:pack:win    # только Windows
+npm run app:cleaners    # SAB-Cleaner.app + SAB-Cleaner.exe
+npm run app:collect     # копирует финальные файлы в releases/v<version>/
+```
+
+## Electron layer (`electron/`)
+
+Тонкая обёртка над backend runtime. Не содержит логики домена.
+
+```
+electron/
+  main.js         — Electron main process: spawn bridge, tray, IPC, window
+  preload.js      — contextBridge: exposing IPC API в renderer
+  launcher.html   — лаунчер окно: статус, URL-список, 3 кнопки
+  assets/
+    icon.icns     — иконка macOS (все размеры)
+    icon.ico      — иконка Windows
+    tray.png      — иконка menu bar (32×32 PNG)
+```
+
+Ключевые принципы:
+- Bridge запускается как child process через `ELECTRON_RUN_AS_NODE=1`
+- `public/` находится через `process.argv[1]` (packaged) или `cwd` (dev)
+- `config.json` **не** входит в установщик — создаётся при первом запуске в userData
+- На macOS `app.dock.hide()` — SAB работает только через menu bar tray
 
 ## Важное правило для UI
 Есть две версии UI:

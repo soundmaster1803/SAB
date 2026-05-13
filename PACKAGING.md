@@ -17,7 +17,12 @@ npm run install:ui
 
 В `package.json` поменяй `"version"`:
 ```json
-"version": "0.19.0"
+"version": "1.0.2-beta"
+```
+То же значение автоматически подхватывается electron-builder и окошком лаунчера.
+Файл `VERSION` обновить отдельно (используется backend'ом):
+```bash
+echo "1.0.2-beta" > VERSION
 ```
 
 ### 2. Собрать
@@ -30,58 +35,99 @@ npm run build:ui    # React → public/
 ### 3. Упаковать
 
 ```bash
-# только Mac (быстро, ~3 мин)
+# Mac — универсальный (arm64 + Intel в одном DMG, ~185 MB)
 npm run app:pack:mac
 
-# только Windows (можно с мака, ~5 мин)
+# Windows — NSIS-установщик + ZIP (~87 MB)
 npm run app:pack:win
 
-# всё сразу
+# Всё сразу
 npm run app:pack
 ```
 
-### 4. Забрать файлы из `release/`
+### 4. Собрать клинеры
 
-| Файл | Для кого |
-|---|---|
-| `SAB-X.X.X-arm64.dmg` | Mac M-серия (M1–M4) |
-| `SAB-X.X.X.dmg` | Mac Intel |
-| `SAB Setup X.X.X.exe` | Windows |
-| `SAB-X.X.X-win.zip` | Windows portable (без установки) |
+```bash
+npm run app:cleaners
+```
 
-Просто скинь нужный файл тестеру. Никакого Node.js устанавливать не нужно — всё внутри.
+Создаёт `release/SAB-Cleaner.app` и `release/SAB-Cleaner.exe`.
+Тестер запускает клинер перед установкой новой версии поверх старой.
+
+### 5. Собрать папку релиза
+
+```bash
+npm run app:collect
+```
+
+Копирует установщики и клинеры в `releases/v<version>/`:
+
+```
+releases/
+  v1.0.1-beta/
+    SAB-1.0.1-beta-universal.dmg   ← Mac (M1–M4 + Intel)
+    SAB Setup 1.0.1-beta.exe       ← Windows
+    SAB-Cleaner.app                ← запустить до установки (Mac)
+    SAB-Cleaner.exe                ← запустить до установки (Win)
+```
+
+Папка `releases/` не входит в git — только на локальной машине разработчика.
 
 ---
 
 ## Проверить до раздачи
 
 ```bash
-npm run app:dev   # запустить лаунчер локально без упаковки
+npm run app:dev
 ```
 
-Окошко появилось → статус перешёл в **Running** → кнопка **Open UI** открывает браузер → всё ок.
+Запускает Electron-лаунчер без упаковки. Ожидаемое поведение:
+- иконка SAB появляется в menu bar (top right)
+- окно лаунчера открывается автоматически
+- статус переходит в **Running** через ~2 сек
+- кнопка **Open UI** открывает браузер с интерфейсом
+- **Hide** скрывает окно, иконка в menu bar остаётся
+- клик по иконке в menu bar → окно возвращается
+- **Quit** закрывает всё
 
 ---
 
 ## macOS: «Неизвестный разработчик»
 
-Без подписи macOS покажет предупреждение. Тестеры обходят так:
+Без подписи macOS блокирует первый запуск. Обходится один раз:
 
-> Правый клик по SAB.app → **Открыть** → **Всё равно открыть**
+> Правый клик по SAB.app (или SAB-Cleaner.app) → **Открыть** → **Всё равно открыть**
 
-Один раз — потом запускается нормально.
+После этого запускается нормально.
 
 ---
 
-## Конфиг тестера сохраняется здесь
+## Конфиг тестера не затрагивается при обновлении
 
-После первого запуска конфиг живёт отдельно от .app — при обновлении не сбрасывается:
+Конфиг хранится отдельно от `.app` и **не входит в установщик**:
 
 - Mac: `~/Library/Application Support/SAB/config.json`
 - Windows: `%APPDATA%\SAB\config.json`
+
+При первом запуске создаётся пустой конфиг. При обновлении существующий не трогается.
+
+---
+
+## Иконка в menu bar — как пересобрать
+
+Если обновился логотип:
+
+```bash
+node scripts/make-icons.js путь/к/логотипу.png
+# пересоздаёт electron/assets/icon.icns, icon.ico
+
+sips -s format png electron/assets/icon.icns \
+     --out electron/assets/tray.png -Z 32
+# пересоздаёт tray.png для menu bar
+```
 
 ---
 
 ## Когда первая сборка долгая
 
-При первом запуске `npm run app:pack` electron-builder скачивает Electron (~110 MB) и Wine/NSIS (~25 MB для Windows). Потом всё кешируется — повторные сборки быстрые.
+При первом `npm run app:pack` electron-builder скачивает Electron (~110 MB) и Wine/NSIS (~25 MB для Windows). Потом кешируется — повторные сборки быстрые.

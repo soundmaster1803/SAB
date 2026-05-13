@@ -1,13 +1,31 @@
 # SAB — Current System
 
-Version: 0.12.2
-Last updated: 2026-04-17
+Version: 1.0.1-beta
+Last updated: 2026-05-13
 
 ---
 
 ## Source tree
 
 ```
+electron/
+  main.js           — Electron main: spawn bridge child, tray icon, IPC, window lifecycle
+  preload.js        — contextBridge: exposes get-status / open-url / hide / quit to renderer
+  launcher.html     — launcher UI: status dot, URL list, Open UI / Hide / Quit buttons
+  assets/
+    icon.icns       — macOS app icon (all iconset sizes, from real SAB logo)
+    icon.ico        — Windows app icon
+    tray.png        — menu bar icon (32×32 PNG, macOS only)
+
+electron-builder.yml — packaging: universal DMG (mac), NSIS + ZIP (win)
+scripts/
+  copy-native-prebuilds.js  — copies freetype2 .node files into dist/ for packaging
+  make-icons.js             — generates icon.icns + icon.ico from source PNG
+  build-cleaners.js         — builds SAB-Cleaner.app (osacompile) + SAB-Cleaner.exe (NSIS)
+  collect-release.js        — copies installers + cleaners into releases/v<version>/
+  SAB-Cleaner.applescript   — AppleScript source for Mac cleaner
+  SAB-Cleaner.nsi           — NSIS source for Windows cleaner
+
 src/
   index.ts              — bootstrap: config load, manager/listener init, wireBridgeRuntime  [clean]
   config.ts             — config file I/O (loadConfig, saveConfig, addCamera, removeCamera)
@@ -129,7 +147,7 @@ src/
 
 ---
 
-## Working capabilities (verified v0.12.2)
+## Working capabilities (verified v1.0.1-beta)
 
 - Sony PTP/IP: handshake, session, polling (ISO/shutter/aperture/WB/battery/recState/recRemain)
 - Sony camera control: iris, focus, AF, shutter, ISO, WB, recording toggle
@@ -141,6 +159,7 @@ src/
 - WebSocket: 500ms state broadcast + 150ms log flush
 - Operator web console (public/index.html): live camera cards with capabilities badges
 - Config: config.json with SAB_CONFIG_PATH env override support
+- Electron desktop app: universal DMG (arm64+x64) + NSIS installer; launcher window with tray icon, status, URL list; config not bundled — created fresh per machine
 
 ---
 
