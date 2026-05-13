@@ -2,7 +2,6 @@
 
 const { app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage } = require('electron');
 const { spawn } = require('child_process');
-const { deflateSync } = require('zlib');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
@@ -44,57 +43,12 @@ function getInterfaces() {
   return result;
 }
 
-// ─── Tray icon (generated at runtime, no external file needed) ────────────────
+// ─── Tray icon ────────────────────────────────────────────────────────────────
 
 function makeTrayIcon() {
-  const SIZE = 16;
-
-  const crcTable = (() => {
-    const t = new Uint32Array(256);
-    for (let i = 0; i < 256; i++) {
-      let c = i;
-      for (let j = 0; j < 8; j++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
-      t[i] = c >>> 0;
-    }
-    return t;
-  })();
-
-  const crc32 = (buf) => {
-    let c = 0xFFFFFFFF;
-    for (const b of buf) c = (crcTable[(c ^ b) & 0xFF] ^ (c >>> 8)) >>> 0;
-    return (c ^ 0xFFFFFFFF) >>> 0;
-  };
-
-  const chunk = (type, data) => {
-    const t = Buffer.from(type, 'ascii');
-    const d = Buffer.isBuffer(data) ? data : Buffer.from(data);
-    const len = Buffer.alloc(4); len.writeUInt32BE(d.length);
-    const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(Buffer.concat([t, d])));
-    return Buffer.concat([len, t, d, crc]);
-  };
-
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(SIZE, 0);
-  ihdr.writeUInt32BE(SIZE, 4);
-  ihdr[8] = 8; ihdr[9] = 2; // 8-bit RGB
-
-  // Solid #007AFF (SAB accent blue) — 16×16 pixels
-  const row = Buffer.alloc(1 + SIZE * 3);
-  for (let i = 0; i < SIZE; i++) {
-    row[1 + i * 3] = 0x00; // R
-    row[2 + i * 3] = 0x7A; // G
-    row[3 + i * 3] = 0xFF; // B  → #007AFF
-  }
-  const raw = Buffer.concat(Array.from({ length: SIZE }, () => row));
-
-  const png = Buffer.concat([
-    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
-    chunk('IHDR', ihdr),
-    chunk('IDAT', deflateSync(raw)),
-    chunk('IEND', Buffer.alloc(0)),
-  ]);
-
-  return nativeImage.createFromBuffer(png);
+  const file = process.platform === 'win32' ? 'icon.ico' : 'icon.icns';
+  const img = nativeImage.createFromPath(path.join(__dirname, 'assets', file));
+  return img.resize({ width: 16, height: 16 });
 }
 
 // ─── Server ───────────────────────────────────────────────────────────────────

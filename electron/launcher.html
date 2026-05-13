@@ -257,7 +257,7 @@
       list.innerHTML = ifaces.map(i => {
         const url   = `http://${i.address}:${PORT}`;
         const label = i.address === '127.0.0.1' ? 'localhost' : i.name;
-        return `<div class="url-row" onclick="open('${esc(url)}')">
+        return `<div class="url-row" onclick="openExternal('${esc(url)}')">
           <span class="url-iface">${esc(label)}</span>
           <span class="url-addr">${esc(url)}</span>
           <span class="url-arrow">↗</span>
@@ -265,11 +265,11 @@
       }).join('');
     }
 
-    function open(url) { window.electron.openUrl(url); }
+    function openExternal(url) { window.electron.openUrl(url); }
 
     function openBest() {
       const p = ifaces.find(i => i.address !== '127.0.0.1') || ifaces[0];
-      if (p) open(`http://${p.address}:${PORT}`);
+      if (p) openExternal(`http://${p.address}:${PORT}`);
     }
 
     function esc(s) {
