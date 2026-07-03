@@ -42,5 +42,5 @@
     "moduleDetection": "force",
     "skipLibCheck": true,
   },
-  "exclude": ["node_modules", "dist", "frontend"]
+  "exclude": ["node_modules", "dist", "frontend", "CrSDK_v2", "CameraRemoteCommand-2.02.00", "MiddleControl.app"]
 }

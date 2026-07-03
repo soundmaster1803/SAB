@@ -45,3 +45,7 @@ releases/
 # Competitor reference apps (local analysis only — never commit)
 MiddleControl.app/
 *.app/
+
+# Vendor SDK reference (local analysis only — never commit; findings go in docs/research/sony-sdk/)
+CrSDK_v2/
+CameraRemoteCommand-2.02.00/

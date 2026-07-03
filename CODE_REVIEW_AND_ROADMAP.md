@@ -143,6 +143,31 @@ Frontend:
 Возможные доработки Stage 2 (не блокеры): фильтр «выбрать по ATEM-input», подсветка выбранной карточки,
 bulk shutter-set/focus-area из UI (эндпоинты уже готовы).
 
+### Stage 0.5 — интеграция Sony CrSDK + PTP3 Reference (2026-07-04)
+Иван дал `CrSDK_v2/` (Camera Remote SDK) и `CameraRemoteCommand-2.02.00/` (raw PTP2/3 Reference).
+Разбор: `docs/research/sony-sdk/FINDINGS.md`, `ptp3-confirmed-values.md`.
+
+**Ключевой урок:** CrSDK-значения ≠ raw-PTP wire (доказано на FocusMode). Wire-значения взяты из
+**Camera Control PTP 3 Reference** (первоисточник провода).
+
+**Исправлены подтверждённые баги в коде:**
+- **[done]** `setWhiteBalanceMode`: Color-Temp `0x8006` → **`0x8012`** (0x8006 в таблице WB не существует).
+- **[done]** `constants FOCUS_AREA_VALUES`: FLEXIBLE_XS `0x0104`→`0x0106`, FLEXIBLE_XL `0x0105`→`0x0107`,
+  LOCK_ON_AF `0x0202`→`0x0201` (0x0202 = Lock-on Zone, а не generic).
+- **[done]** `constants FOCUS_MODE_VALUES`: добавлен **AF-D = 0x8008** (+ в FOCUS_MODE_MAP роутов).
+
+**Снят 501 для iris/shutter (реализовано на подтверждённых значениях):**
+- **[done]** `ptp-client.setCineMode(propCode, auto)` — UINT8 `0x01 Auto/0x02 Manual` для
+  Iris `0xD001` / Shutter `0xD013` / Gain `0xD01C`; `hasProp()` — проверка наличия пропа у камеры.
+- **[done]** `/mode` и bulk: iris/shutter через cinema-проп если тело его экспонирует (FX6/FX30/Z200),
+  иначе честный 501 «mirrorless uses exposure mode»; iso→gain-control если есть 0xD01C.
+- constants: добавлены IRIS_MODE/SHUTTER_MODE/GAIN_CONTROL/EXPOSURE_CTRL_TYPE.
+- tsconfig: исключены vendor-папки (CrSDK_v2, CameraRemoteCommand, MiddleControl.app).
+
+**Осталось подтвердить на железе Ивана** (значения авторитетные, но не прогнаны на реальном FX6):
+cinema iris/shutter toggle; exposure mode 0x500E для mirrorless (UINT32, M=0x00000001, P=0x00010002…,
+Movie_*=0x0007805x); focus-area XS/XL/lock-on. Проверка — через `/api/cameras/:id/debug`.
+
 ### Заметки sony-research (2026-07-04) — что нужно железо
 - **Два механизма:** PASM-режим `0x500E` (ZV-E10 II, FX30 в P/A/S/M) vs per-parameter cinema-тоглы
   (FX6/Z200/FX30 Cine): iris `0xD001` UINT8 (0x01 Manual/0x02 Auto), gain `0xD01C` UINT8.

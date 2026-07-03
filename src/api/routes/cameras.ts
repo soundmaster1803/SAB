@@ -81,6 +81,7 @@ const FOCUS_MODE_MAP: Record<string, number> = {
   'AF-C': 0x8004,
   'AF-A': 0x8005,
   'DMF':  0x8006,
+  'AF-D': 0x8008,
   'PF':   0x8009,
 };
 
@@ -124,11 +125,20 @@ async function applyOp(client: SonyPTPClient, op: string, params: Record<string,
       const wantAuto = mode === 'auto';
       if (param === 'wb') { await client.setWhiteBalanceMode(wantAuto); return; }
       if (param === 'iso') {
+        if (client.hasProp(PROP_CODES.GAIN_CONTROL)) { await client.setCineMode(PROP_CODES.GAIN_CONTROL, wantAuto); return; }
         if (wantAuto) { await client.setIsoAuto(); return; }
-        if (client.state.iso === 0x00FFFFFF) throw new Error('Manual ISO from Auto pending hardware confirmation');
+        if (client.state.iso === 0x00FFFFFF) throw new Error('Manual ISO from Auto needs a target value on this body');
         return; // already a concrete value → already manual
       }
-      throw new Error(`Auto/Manual for ${param} pending hardware confirmation`);
+      if (param === 'iris') {
+        if (!client.hasProp(PROP_CODES.IRIS_MODE)) throw new Error('Iris Auto/Manual not exposed by this camera');
+        await client.setCineMode(PROP_CODES.IRIS_MODE, wantAuto); return;
+      }
+      if (param === 'shutter') {
+        if (!client.hasProp(PROP_CODES.SHUTTER_MODE)) throw new Error('Shutter Auto/Manual not exposed by this camera');
+        await client.setCineMode(PROP_CODES.SHUTTER_MODE, wantAuto); return;
+      }
+      throw new Error(`unknown mode param "${param}"`);
     }
     case 'focus-mode': {
       const mv = FOCUS_MODE_MAP[String(params.mode)];
@@ -462,7 +472,7 @@ export function createCameraRoutes({ manager, atemListener, getConfig, setConfig
     if (!client.state.connected) { res.status(503).json({ error: 'not connected' }); return; }
     const modeVal = FOCUS_MODE_MAP[mode];
     if (modeVal === undefined) {
-      res.status(400).json({ error: `unknown focus mode "${mode}"; valid: MF, AF-S, AF-C, AF-A, DMF, PF` }); return;
+      res.status(400).json({ error: `unknown focus mode "${mode}"; valid: ${Object.keys(FOCUS_MODE_MAP).join(', ')}` }); return;
     }
     log(`Focus mode cam="${id}" mode=${mode} (0x${modeVal.toString(16)})`);
     try {
@@ -539,18 +549,36 @@ export function createCameraRoutes({ manager, atemListener, getConfig, setConfig
           res.json({ ok: true });
           return;
         case 'iso':
+          // Prefer the cinema Gain Control toggle (0xD01C) when the body exposes it.
+          if (client.hasProp(PROP_CODES.GAIN_CONTROL)) {
+            await client.setCineMode(PROP_CODES.GAIN_CONTROL, wantAuto);
+            res.json({ ok: true });
+            return;
+          }
           if (wantAuto) { await client.setIsoAuto(); res.json({ ok: true }); return; }
-          // Manual: if already a concrete ISO, it's already manual (no-op). From Auto we
-          // have no effective ISO to lock to — defer until hardware-confirmed behaviour.
+          // Manual on a mirrorless body: if already a concrete ISO it's already manual;
+          // from Auto we have no effective value to lock to.
           if (client.state.iso === 0x00FFFFFF) {
-            res.status(501).json({ error: 'Manual ISO from Auto needs a target value — pending hardware confirmation' });
+            res.status(501).json({ error: 'Manual ISO from Auto needs a target value on this body' });
             return;
           }
           res.json({ ok: true, note: 'already manual' });
           return;
         case 'iris':
+          if (!client.hasProp(PROP_CODES.IRIS_MODE)) {
+            res.status(501).json({ error: 'Iris Auto/Manual not exposed by this camera (mirrorless uses exposure mode)' });
+            return;
+          }
+          await client.setCineMode(PROP_CODES.IRIS_MODE, wantAuto);
+          res.json({ ok: true });
+          return;
         case 'shutter':
-          res.status(501).json({ error: `Auto/Manual for ${param} pending hardware confirmation` });
+          if (!client.hasProp(PROP_CODES.SHUTTER_MODE)) {
+            res.status(501).json({ error: 'Shutter Auto/Manual not exposed by this camera (mirrorless uses exposure mode)' });
+            return;
+          }
+          await client.setCineMode(PROP_CODES.SHUTTER_MODE, wantAuto);
+          res.json({ ok: true });
           return;
         default:
           res.status(400).json({ error: `unknown param "${param}"` });

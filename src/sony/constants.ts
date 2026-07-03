@@ -27,6 +27,13 @@ export const PROP_CODES = {
   WB_AB: 0xD21C,
   ISO: 0xD21E,
 
+  // Sony vendor — cinema Auto/Manual mode toggles (UINT8: 0x01 Auto / 0x02 Manual)
+  // Confirmed against Camera Control PTP 3 Reference. Present only on cinema bodies.
+  IRIS_MODE: 0xD001,
+  SHUTTER_MODE: 0xD013,
+  GAIN_CONTROL: 0xD01C,
+  EXPOSURE_CTRL_TYPE: 0xD099,
+
   // Sony vendor — battery / power
   BATTERY_ICON: 0xD205,
   BATTERY_LEVEL: 0xD20E,
@@ -319,17 +326,18 @@ export const BUTTON = {
 // SDI Extension Version
 export const SDI_EXTENSION_VERSION = 0xC8;
 
-// Focus mode values (prop 0x500A)
+// Focus mode values (prop 0x500A) — confirmed against Camera Control PTP 3 Reference.
 export const FOCUS_MODE_VALUES = {
   MANUAL: 0x0001,  // MF
   AF_S:   0x0002,  // AF-S (single-shot)
   AF_C:   0x8004,  // AF-C (continuous)
   AF_A:   0x8005,  // AF-A (automatic switch S/C)
   DMF:    0x8006,  // DMF (direct manual focus after AF)
+  AF_D:   0x8008,  // AF-D (hybrid, PTP3 ref)
   PF:     0x8009,  // Preset Focus
 } as const;
 
-// Focus area values (prop 0xD22C)
+// Focus area values (prop 0xD22C) — confirmed against Camera Control PTP 3 Reference.
 export const FOCUS_AREA_VALUES = {
   WIDE:         0x0001,
   ZONE:         0x0002,
@@ -337,9 +345,9 @@ export const FOCUS_AREA_VALUES = {
   FLEXIBLE_S:   0x0101,
   FLEXIBLE_M:   0x0102,
   FLEXIBLE_L:   0x0103,
-  FLEXIBLE_XS:  0x0104,
-  FLEXIBLE_XL:  0x0105,
-  LOCK_ON_AF:   0x0202,
+  FLEXIBLE_XS:  0x0106,  // PTP3 ref (was wrongly 0x0104 = Expand Flexible Spot)
+  FLEXIBLE_XL:  0x0107,  // PTP3 ref (was wrongly 0x0105 = Flexible Spot generic)
+  LOCK_ON_AF:   0x0201,  // Lock on AF Wide (was wrongly 0x0202 = Lock on AF Zone)
 } as const;
 
 // AF status values (prop 0xD213 — Focus Indication)

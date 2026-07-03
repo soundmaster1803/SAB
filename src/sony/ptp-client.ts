@@ -908,15 +908,34 @@ export class SonyPTPClient extends EventEmitter {
 
   // White Balance mode (prop 0x5005, UINT16 via 0x9205).
   //   auto=true  → AWB           (0x0002)
-  //   auto=false → Color-Temp    (0x8006) — must be set before writing Kelvin to 0xD20F.
-  // Enum values confirmed by knowledge/sony capability-catalog + prop-knowledge.
+  //   auto=false → Color-Temp    (0x8012) — must be set before writing Kelvin to 0xD20F.
+  // Values confirmed against Camera Control PTP 3 Reference (see docs/research/sony-sdk).
   async setWhiteBalanceMode(auto: boolean): Promise<void> {
-    const value = auto ? 0x0002 : 0x8006;
+    const value = auto ? 0x0002 : 0x8012;
     this.log(`SetWhiteBalanceMode ${auto ? 'AWB' : 'CT/manual'} (0x${value.toString(16)})`);
     const data = Buffer.alloc(2);
     data.writeUInt16LE(value, 0);
     await this.sendCmdWithData(0x9205, [0x5005], data);
     await this.delay(200); // settle before a follow-up Kelvin write
+  }
+
+  // Cinema Auto/Manual mode toggle (UINT8 via 0x9205). Confirmed enum: 0x01 Automatic, 0x02 Manual.
+  //   Iris   = 0xD001, Shutter = 0xD013, Gain = 0xD01C.
+  // These props exist only on cinema bodies (FX6/FX30/Z200); mirrorless (ZV-E10 II) uses
+  // exposure mode (0x500E) instead. Caller must confirm the prop is exposed before use.
+  // Packed as an explicit single byte — these props are often absent from the poll blob.
+  async setCineMode(propCode: number, auto: boolean): Promise<void> {
+    const value = auto ? 0x01 : 0x02;
+    this.log(`SetCineMode 0x${propCode.toString(16)} = ${auto ? 'Auto(0x01)' : 'Manual(0x02)'}`);
+    const data = Buffer.alloc(1);
+    data.writeUInt8(value, 0);
+    await this.sendCmdWithData(0x9205, [propCode], data);
+  }
+
+  /** True if the camera currently exposes this device property (present in the last poll blob). */
+  hasProp(propCode: number): boolean {
+    const [value] = this.scanProp(propCode);
+    return value !== null;
   }
 
   // ISO Auto: write the Sony auto sentinel to prop 0xD21E (UINT32 via 0x9205).
