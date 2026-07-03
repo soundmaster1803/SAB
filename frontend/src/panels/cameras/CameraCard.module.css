@@ -1034,3 +1034,17 @@
 }
 .formatConfirmGo:hover:not(:disabled) { opacity: 0.82; }
 .formatConfirmGo:disabled { opacity: 0.3; cursor: default; }
+
+/* Bulk-selection checkbox in the card header */
+.select {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 8px;
+  cursor: pointer;
+}
+.select input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}

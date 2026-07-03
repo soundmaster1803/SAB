@@ -124,6 +124,25 @@
 focus-area подключён; мёртвый код убран. **Осталось для полного Auto/Manual** (не входит в Stage 0,
 требует железа Ивана): iris/shutter toggle + ISO Manual из Auto — см. Research-заметки ниже.
 
+### Stage 2 — оптовая настройка группы камер (сделано 2026-07-04)
+Backend:
+- **[done]** `api/routes/cameras.ts`: `POST /api/cameras/bulk` — `{ ids: string[]|"all", op, params }`.
+  Ops: adjust, color-temp, shutter-set, mode, focus-mode, focus-area, af, record.
+  `Promise.all` + per-camera результаты (`{id,ok,error}`) → partial-failure виден, batch не падает.
+- **[done]** общий хелпер `applyOp()` (зеркалит одиночные роуты), `FOCUS_MODE_MAP` вынесен в модуль-скоуп
+  (убран дубль в одиночном `/focus-mode`), `asStep()` для валидации delta/direction.
+
+Frontend:
+- **[done]** `stores/selection.ts` — стор выбранных камер (Set id).
+- **[done]** `lib/api.ts` — общий `post()` + `bulk(op, params, ids)`.
+- **[done]** `panels/cameras/BulkBar.tsx` (+css) — панель: счётчик, Select all/Clear, группы кнопок
+  ISO/IRIS/SHUT/WB(K)/WB Auto-Man/FOCUS(AF-C·MF·AF)/REC(●■), строка результата «N/M ok».
+- **[done]** чекбокс выбора в шапке `CameraCard`; `BulkBar` подключён в `App` над гридом.
+- backend typecheck + `npm run build:ui` — чисто; UI отдаётся, бандл содержит bulk-код.
+
+Возможные доработки Stage 2 (не блокеры): фильтр «выбрать по ATEM-input», подсветка выбранной карточки,
+bulk shutter-set/focus-area из UI (эндпоинты уже готовы).
+
 ### Заметки sony-research (2026-07-04) — что нужно железо
 - **Два механизма:** PASM-режим `0x500E` (ZV-E10 II, FX30 в P/A/S/M) vs per-parameter cinema-тоглы
   (FX6/Z200/FX30 Cine): iris `0xD001` UINT8 (0x01 Manual/0x02 Auto), gain `0xD01C` UINT8.

@@ -6,6 +6,7 @@
  * Routes:
  *   POST   /api/cameras/rec-all          — start recording on all idle cameras
  *   POST   /api/cameras/stop-all         — stop recording on all cameras
+ *   POST   /api/cameras/bulk             — apply one control op to a group ("all" or ids[])
  *   POST   /api/cameras/pair             — pair a new camera (blocking, up to 15s)
  *   POST   /api/cameras/:id/connect      — reconnect a disconnected camera
  *   POST   /api/cameras/:id/record       — toggle record on a camera
@@ -26,6 +27,7 @@
 
 import { Router } from 'express';
 import type { CameraManager } from '../../sony/manager';
+import type { SonyPTPClient } from '../../sony/ptp-client';
 import type { ATEMListener } from '../../atem/listener';
 import { saveConfig, addCamera, removeCamera, type AppConfig, type CameraConfig } from '../../config';
 import { appendLog } from '../../logger';
@@ -72,6 +74,90 @@ const FOCUS_AREA_MAP: Record<string, number> = {
   'Lock-on':     FOCUS_AREA_VALUES.LOCK_ON_AF,
 };
 
+// Focus-mode name → Sony prop 0x500A value.
+const FOCUS_MODE_MAP: Record<string, number> = {
+  'MF':   0x0001,
+  'AF-S': 0x0002,
+  'AF-C': 0x8004,
+  'AF-A': 0x8005,
+  'DMF':  0x8006,
+  'PF':   0x8009,
+};
+
+function asStep(v: unknown): 1 | -1 | null {
+  return v === 1 ? 1 : v === -1 ? -1 : null;
+}
+
+/**
+ * Apply a single control operation to one connected camera.
+ * Mirrors the single-camera route behaviour so bulk stays consistent.
+ * Throws on invalid params or unsupported ops — the bulk handler collects
+ * per-camera failures instead of aborting the whole batch.
+ */
+async function applyOp(client: SonyPTPClient, op: string, params: Record<string, unknown>): Promise<void> {
+  switch (op) {
+    case 'adjust': {
+      const param = String(params.param);
+      const propCode = CAMERA_PROP_MAP[param];
+      if (!propCode) throw new Error(`unknown param "${param}"`);
+      const delta = asStep(params.delta);
+      if (delta === null) throw new Error('delta must be 1 or -1');
+      await client.stepProp(propCode, delta);
+      return;
+    }
+    case 'color-temp': {
+      const dir = asStep(params.direction);
+      if (dir === null) throw new Error('direction must be 1 or -1');
+      await client.stepProp(CAMERA_PROP_MAP['colorTemp']!, dir);
+      return;
+    }
+    case 'shutter-set': {
+      const den = parseShutterDenominator(params.value);
+      if (den === null) throw new Error('value must be like "1/100" or "100"');
+      await client.setPropNearest(PROP_CODES.SHUTTER_SPEED, (1 << 16) | den);
+      return;
+    }
+    case 'mode': {
+      const param = String(params.param);
+      const mode = params.mode;
+      if (mode !== 'auto' && mode !== 'manual') throw new Error('mode must be "auto" or "manual"');
+      const wantAuto = mode === 'auto';
+      if (param === 'wb') { await client.setWhiteBalanceMode(wantAuto); return; }
+      if (param === 'iso') {
+        if (wantAuto) { await client.setIsoAuto(); return; }
+        if (client.state.iso === 0x00FFFFFF) throw new Error('Manual ISO from Auto pending hardware confirmation');
+        return; // already a concrete value → already manual
+      }
+      throw new Error(`Auto/Manual for ${param} pending hardware confirmation`);
+    }
+    case 'focus-mode': {
+      const mv = FOCUS_MODE_MAP[String(params.mode)];
+      if (mv === undefined) throw new Error(`unknown focus mode "${String(params.mode)}"`);
+      await client.setFocusMode(mv);
+      return;
+    }
+    case 'focus-area': {
+      const av = FOCUS_AREA_MAP[String(params.area)];
+      if (av === undefined) throw new Error(`unknown focus area "${String(params.area)}"`);
+      await client.setFocusArea(av);
+      return;
+    }
+    case 'af':
+      await client.triggerAutoFocus();
+      return;
+    case 'record': {
+      const action = params.action; // "start" | "stop" | "toggle"
+      const recording = client.state.recState === 1;
+      if (action === 'start' && recording) return;  // already recording — no-op
+      if (action === 'stop' && !recording) return;   // already idle — no-op
+      await client.toggleRecord();
+      return;
+    }
+    default:
+      throw new Error(`unknown op "${op}"`);
+  }
+}
+
 export interface CameraRouteDeps {
   manager: CameraManager;
   atemListener: ATEMListener;
@@ -117,6 +203,47 @@ export function createCameraRoutes({ manager, atemListener, getConfig, setConfig
       err(`stop-all failed: ${e.message}`);
       res.status(500).json({ error: e.message });
     }
+  });
+
+  // ── Camera: bulk control — apply one op to a group of cameras ─────────────
+  // Body: { ids: string[] | "all", op: string, params?: {...} }
+  //   op ∈ adjust | color-temp | shutter-set | mode | focus-mode | focus-area | af | record
+  //   params match the equivalent single-camera route body.
+  // Returns per-camera results so partial failures are visible (207-style payload, 200 status).
+  router.post('/api/cameras/bulk', async (req, res) => {
+    const body = req.body as { ids?: unknown; op?: unknown; params?: unknown };
+    const op = typeof body.op === 'string' ? body.op : '';
+    if (!op) { res.status(400).json({ error: 'op is required' }); return; }
+    const params = (body.params && typeof body.params === 'object')
+      ? body.params as Record<string, unknown> : {};
+
+    const allConfigs = getConfig().cameras ?? [];
+    let ids: string[];
+    if (body.ids === undefined || body.ids === 'all') {
+      ids = allConfigs.map(c => c.id);
+    } else if (Array.isArray(body.ids)) {
+      ids = body.ids.filter((x): x is string => typeof x === 'string');
+    } else {
+      res.status(400).json({ error: 'ids must be an array of camera ids or "all"' }); return;
+    }
+    if (ids.length === 0) { res.status(400).json({ error: 'no target cameras' }); return; }
+
+    log(`BULK op=${op} targets=${ids.length} params=${JSON.stringify(params)}`);
+
+    const results = await Promise.all(ids.map(async (camId) => {
+      const client = manager.getClient(camId);
+      if (!client) return { id: camId, ok: false, error: 'not found' };
+      if (!client.state.connected) return { id: camId, ok: false, error: 'not connected' };
+      try {
+        await applyOp(client, op, params);
+        return { id: camId, ok: true };
+      } catch (e: any) {
+        return { id: camId, ok: false, error: e.message as string };
+      }
+    }));
+
+    const okCount = results.filter(r => r.ok).length;
+    res.json({ ok: okCount > 0, total: results.length, okCount, results });
   });
 
   // ── Camera: pair (blocking — waits for connect result) ────────────────────
@@ -333,14 +460,6 @@ export function createCameraRoutes({ manager, atemListener, getConfig, setConfig
     const client = manager.getClient(id);
     if (!client) { res.status(404).json({ error: 'not found' }); return; }
     if (!client.state.connected) { res.status(503).json({ error: 'not connected' }); return; }
-    const FOCUS_MODE_MAP: Record<string, number> = {
-      'MF':   0x0001,
-      'AF-S': 0x0002,
-      'AF-C': 0x8004,
-      'AF-A': 0x8005,
-      'DMF':  0x8006,
-      'PF':   0x8009,
-    };
     const modeVal = FOCUS_MODE_MAP[mode];
     if (modeVal === undefined) {
       res.status(400).json({ error: `unknown focus mode "${mode}"; valid: MF, AF-S, AF-C, AF-A, DMF, PF` }); return;

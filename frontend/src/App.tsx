@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useWsStore } from './stores/ws'
 import { Header } from './components/Header'
 import { CameraGrid } from './panels/cameras/CameraGrid'
+import { BulkBar } from './panels/cameras/BulkBar'
 import { DebugModal } from './panels/cameras/DebugModal'
 import { AddCameraWizard } from './panels/cameras/AddCameraWizard'
 import { AtemBar } from './panels/atem/AtemBar'
@@ -42,6 +43,7 @@ function App() {
       />
 
       <main style={{ padding: '16px' }}>
+        <BulkBar />
         <CameraGrid onDebug={openDebug} />
       </main>
 

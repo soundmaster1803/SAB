@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CameraUIState } from '../../types/ws'
 import { useAtemStore } from '../../stores/atem'
+import { useSelectionStore } from '../../stores/selection'
 import { OfflineOverlay } from './OfflineOverlay'
 import styles from './CameraCard.module.css'
 
@@ -241,6 +242,8 @@ export function CameraCard({ cam, onDebug, usedAtemIds = [] }: Props) {
   const { id, connected, tally, battery, alerts, recState } = cam
   const atemTopology = useAtemStore((s) => s.topology)
   const atemConnected = useAtemStore((s) => s.connected)
+  const isSelected = useSelectionStore((s) => s.selected.has(id))
+  const toggleSelected = useSelectionStore((s) => s.toggle)
   const off = !connected
 
   // ── Edit form ─────────────────────────────────────────────────────────────
@@ -532,6 +535,13 @@ export function CameraCard({ cam, onDebug, usedAtemIds = [] }: Props) {
       {/* ── Head ── */}
       <div className={styles.head}>
         <div className={styles.headLeft}>
+          <label className={styles.select} title="Select for bulk actions">
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={() => toggleSelected(id)}
+            />
+          </label>
           <div className={styles.name}>{cam.name}</div>
           {cam.model && <div className={styles.model}>{cam.model}</div>}
           <div className={styles.ipRow}>
