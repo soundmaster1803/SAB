@@ -41,3 +41,7 @@ coverage/
 *.tgz
 release/
 releases/
+
+# Competitor reference apps (local analysis only — never commit)
+MiddleControl.app/
+*.app/

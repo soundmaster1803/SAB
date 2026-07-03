@@ -12,9 +12,12 @@
  *   POST   /api/cameras/:id/rec-settings — set slot, file format, recording mode
  *   POST   /api/cameras/:id/format-media — format a media slot (full or quick)
  *   POST   /api/cameras/:id/adjust       — step a camera property (iso/iris/shutter/etc.)
+ *   POST   /api/cameras/:id/mode         — set Auto/Manual (wb, iso→auto confirmed; iris/shutter 501)
+ *   POST   /api/cameras/:id/shutter-set  — set shutter to an absolute value ("1/100")
  *   POST   /api/cameras/:id/af           — trigger autofocus
  *   POST   /api/cameras/:id/focus-position — set absolute focus position (0-100%)
  *   POST   /api/cameras/:id/focus-mode  — set focus mode (MF/AF-S/AF-C/AF-A/DMF/PF)
+ *   POST   /api/cameras/:id/focus-area  — set focus area (Wide/Zone/Center/Flexible/Lock-on)
  *   POST   /api/cameras/:id/focus-step  — single focus step near or far
  *   POST   /api/cameras/:id/color-temp   — step color temperature
  *   PATCH  /api/cameras/:id             — update camera config (name/ip/atemInput/control)
@@ -38,10 +41,36 @@ import {
 import { buildSonyDebugPayload } from '../services/sony-debug';
 import { serializeRuntimeModel } from '../../sony/runtime/builder.js';
 import { getPollSummary } from '../../sony/polling/strategy.js';
+import { PROP_CODES, FOCUS_AREA_VALUES } from '../../sony/constants';
 
 function ts(): string { return new Date().toISOString().slice(11, 23); }
 function log(msg: string) { console.log(`[${ts()}] [UI] ${msg}`); }
 function err(msg: string) { console.error(`[${ts()}] [UI] ERROR: ${msg}`); }
+
+// Parse a shutter-speed string into a Sony denominator (1/x).
+// Accepts "1/100" or "100" (both → 1/100). Video shutter is 1/x only —
+// whole-second speeds are out of scope. Returns null on invalid input.
+function parseShutterDenominator(value: unknown): number | null {
+  if (typeof value !== 'string') return null;
+  const v = value.trim();
+  const m = v.match(/^(?:1\s*\/\s*)?(\d{1,6})$/);
+  if (!m) return null;
+  const den = Number(m[1]);
+  return den >= 1 && den <= 1_000_000 ? den : null;
+}
+
+// Focus-area name → Sony prop 0xD22C value (see FOCUS_AREA_VALUES in constants).
+const FOCUS_AREA_MAP: Record<string, number> = {
+  'Wide':        FOCUS_AREA_VALUES.WIDE,
+  'Zone':        FOCUS_AREA_VALUES.ZONE,
+  'Center':      FOCUS_AREA_VALUES.CENTER,
+  'Flexible-S':  FOCUS_AREA_VALUES.FLEXIBLE_S,
+  'Flexible-M':  FOCUS_AREA_VALUES.FLEXIBLE_M,
+  'Flexible-L':  FOCUS_AREA_VALUES.FLEXIBLE_L,
+  'Flexible-XS': FOCUS_AREA_VALUES.FLEXIBLE_XS,
+  'Flexible-XL': FOCUS_AREA_VALUES.FLEXIBLE_XL,
+  'Lock-on':     FOCUS_AREA_VALUES.LOCK_ON_AF,
+};
 
 export interface CameraRouteDeps {
   manager: CameraManager;
@@ -365,6 +394,94 @@ export function createCameraRoutes({ manager, atemListener, getConfig, setConfig
       res.json({ ok: true });
     } catch (e: any) {
       err(`Color Temp step failed: ${e.message}`);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // ── Camera: set Auto/Manual for an exposure parameter ─────────────────────
+  // Accepts { param: "iso"|"shutter"|"iris"|"wb", mode: "auto"|"manual" }.
+  // Confirmed today: wb (both directions), iso→auto. The rest return 501 until the
+  // per-model protocol is confirmed on hardware (see CODE_REVIEW_AND_ROADMAP.md).
+  router.post('/api/cameras/:id/mode', async (req, res) => {
+    const id = req.params.id;
+    const { param, mode } = req.body as { param?: string; mode?: string };
+    const client = manager.getClient(id);
+    if (!client) { res.status(404).json({ error: 'not found' }); return; }
+    if (!client.state.connected) { res.status(503).json({ error: 'not connected' }); return; }
+    if (mode !== 'auto' && mode !== 'manual') {
+      res.status(400).json({ error: 'mode must be "auto" or "manual"' }); return;
+    }
+    const wantAuto = mode === 'auto';
+    log(`Mode cam="${id}" param=${param} mode=${mode}`);
+    try {
+      switch (param) {
+        case 'wb':
+          await client.setWhiteBalanceMode(wantAuto);
+          res.json({ ok: true });
+          return;
+        case 'iso':
+          if (wantAuto) { await client.setIsoAuto(); res.json({ ok: true }); return; }
+          // Manual: if already a concrete ISO, it's already manual (no-op). From Auto we
+          // have no effective ISO to lock to — defer until hardware-confirmed behaviour.
+          if (client.state.iso === 0x00FFFFFF) {
+            res.status(501).json({ error: 'Manual ISO from Auto needs a target value — pending hardware confirmation' });
+            return;
+          }
+          res.json({ ok: true, note: 'already manual' });
+          return;
+        case 'iris':
+        case 'shutter':
+          res.status(501).json({ error: `Auto/Manual for ${param} pending hardware confirmation` });
+          return;
+        default:
+          res.status(400).json({ error: `unknown param "${param}"` });
+          return;
+      }
+    } catch (e: any) {
+      err(`Mode set failed: ${e.message}`);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // ── Camera: set shutter speed to an absolute value (direct entry) ─────────
+  // Accepts { value: "1/100" | "100" }. Sets the nearest supported shutter value.
+  router.post('/api/cameras/:id/shutter-set', async (req, res) => {
+    const id = req.params.id;
+    const rawValue = (req.body as Record<string, unknown>)?.value;
+    const client = manager.getClient(id);
+    if (!client) { res.status(404).json({ error: 'not found' }); return; }
+    if (!client.state.connected) { res.status(503).json({ error: 'not connected' }); return; }
+    const den = parseShutterDenominator(rawValue);
+    if (den === null) { res.status(400).json({ error: 'value must be like "1/100" or "100"' }); return; }
+    const targetRaw = (1 << 16) | den; // Sony shutter encoding: (numerator<<16)|denominator
+    log(`Shutter set cam="${id}" value="${String(rawValue)}" → 1/${den} (raw=0x${targetRaw.toString(16)})`);
+    try {
+      await client.setPropNearest(PROP_CODES.SHUTTER_SPEED, targetRaw);
+      res.json({ ok: true });
+    } catch (e: any) {
+      err(`Shutter set failed: ${e.message}`);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // ── Camera: set focus area ─────────────────────────────────────────────────
+  // Accepts { area: "Wide" | "Zone" | "Center" | "Flexible-S/M/L/XS/XL" | "Lock-on" }.
+  router.post('/api/cameras/:id/focus-area', async (req, res) => {
+    const id = req.params.id;
+    const area = (req.body as Record<string, unknown>)?.area;
+    const client = manager.getClient(id);
+    if (!client) { res.status(404).json({ error: 'not found' }); return; }
+    if (!client.state.connected) { res.status(503).json({ error: 'not connected' }); return; }
+    const areaVal = typeof area === 'string' ? FOCUS_AREA_MAP[area] : undefined;
+    if (areaVal === undefined) {
+      res.status(400).json({ error: `unknown focus area; valid: ${Object.keys(FOCUS_AREA_MAP).join(', ')}` }); return;
+    }
+    log(`Focus area cam="${id}" area="${area}" (0x${areaVal.toString(16)})`);
+    try {
+      await client.setFocusArea(areaVal);
+      res.json({ ok: true });
+    } catch (e: any) {
+      err(`Focus area failed: ${e.message}`);
       res.status(500).json({ error: e.message });
     }
   });

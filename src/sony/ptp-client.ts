@@ -800,6 +800,32 @@ export class SonyPTPClient extends EventEmitter {
     await this.sendCmdWithData(0x9205, [propCode], data);
   }
 
+  // Set a property to the nearest value in its enumeration list (absolute set).
+  // Unlike stepProp (relative), this jumps directly to the closest supported value
+  // to a target — used for direct entry (e.g. "1/100" shutter) and later bulk/presets.
+  // Shutter (0xD20D) and ISO (0xD21E) are matched on their low-16 bits (denominator /
+  // masked ISO), consistent with the bridge mapper's closest-match logic.
+  async setPropNearest(propCode: number, targetRaw: number): Promise<void> {
+    let list = this.supportedLists.get(propCode) ?? [];
+    if (list.length === 0 && propCode === 0xD20F) list = [...KELVIN_SCALE];
+    if (list.length === 0) {
+      this.warn(`setPropNearest 0x${propCode.toString(16)}: supported list not yet available — try again after next poll`);
+      return;
+    }
+    const masked = (v: number) =>
+      (propCode === 0xD20D || propCode === 0xD21E) ? (v & 0xFFFF) : v;
+    const target = masked(targetRaw);
+    const idx = list.reduce((best, v, i) =>
+      Math.abs(masked(v) - target) < Math.abs(masked(list[best]!) - target) ? i : best, 0);
+    const newVal = list[idx]!;
+
+    // Optimistic update so the UI reflects the change before the next poll.
+    this.setPropState(propCode, newVal);
+
+    const data = this.packPropValue(propCode, newVal);
+    await this.sendCmdWithData(0x9205, [propCode], data);
+  }
+
   private getPropValue(propCode: number): number {
     switch (propCode) {
       case 0xD21E: return this.state.iso === 0x00FFFFFF ? 0x00FFFFFF : this.state.iso & 0xFFFF;
@@ -880,6 +906,28 @@ export class SonyPTPClient extends EventEmitter {
     await this.sendCmdWithData(0x9205, [propCode], data);
   }
 
+  // White Balance mode (prop 0x5005, UINT16 via 0x9205).
+  //   auto=true  → AWB           (0x0002)
+  //   auto=false → Color-Temp    (0x8006) — must be set before writing Kelvin to 0xD20F.
+  // Enum values confirmed by knowledge/sony capability-catalog + prop-knowledge.
+  async setWhiteBalanceMode(auto: boolean): Promise<void> {
+    const value = auto ? 0x0002 : 0x8006;
+    this.log(`SetWhiteBalanceMode ${auto ? 'AWB' : 'CT/manual'} (0x${value.toString(16)})`);
+    const data = Buffer.alloc(2);
+    data.writeUInt16LE(value, 0);
+    await this.sendCmdWithData(0x9205, [0x5005], data);
+    await this.delay(200); // settle before a follow-up Kelvin write
+  }
+
+  // ISO Auto: write the Sony auto sentinel to prop 0xD21E (UINT32 via 0x9205).
+  async setIsoAuto(): Promise<void> {
+    this.log('SetIsoAuto (0x00FFFFFF)');
+    this.setPropState(0xD21E, 0x00FFFFFF);
+    const data = Buffer.alloc(4);
+    data.writeUInt32LE(0x00FFFFFF, 0);
+    await this.sendCmdWithData(0x9205, [0xD21E], data);
+  }
+
   // MovieRec = Hold mode (rule 5): DOWN → 100ms → UP (per docs/research/ref-sony.md)
   async toggleRecord(): Promise<void> {
     this.log(`REC toggle (recState=${this.state.recState})`);
@@ -938,71 +986,6 @@ export class SonyPTPClient extends EventEmitter {
     const data = Buffer.alloc(2);
     data.writeUInt16LE(area, 0);
     await this.sendCmdWithData(0x9205, [0xD22C], data);
-  }
-
-  // Get focus distance range (min/max) for prop 0xD004 using SDIO_GetAllExtDevicePropInfo.
-  // Returns [min, max] in raw UINT32 values (divide by 100 for meters).
-  async getFocusDistanceRange(): Promise<[number, number] | null> {
-    try {
-      const blob = await this.sendCmdReadData(0x9209, []);
-      if (!blob || blob.length < 8) {
-        this.warn(`SDIO_GetAllExtDevicePropInfo returned empty or short blob: ${blob?.length} bytes`);
-        return null;
-      }
-
-      this.vlog(`SDIO_GetAllExtDevicePropInfo blob length: ${blob.length}`);
-
-      // Parse the SDIO_GetAllExtDevicePropInfo response
-      // Each dataset: DevicePropertyCode (2), DataType (2), GetSet (1), IsEnabled (1), FormFlag (1), CurrentValue (varies)
-      // For Range form (FormFlag=0x01): after CurrentValue: MinimumValue (4), MaximumValue (4), StepValue (4)
-      let offset = 0;
-      let foundD004 = false;
-      while (offset + 8 < blob.length) {
-        const propCode = blob.readUInt16LE(offset);
-        const dataType = blob.readUInt16LE(offset + 2);
-        const getSet = blob.readUInt8(offset + 4);
-        const isEnabled = blob.readUInt8(offset + 5);
-        const formFlag = blob.readUInt8(offset + 6);
-
-        this.vlog(`Prop 0x${propCode.toString(16)}: type=0x${dataType.toString(16)} getSet=0x${getSet.toString(16)} enabled=0x${isEnabled.toString(16)} form=0x${formFlag.toString(16)}`);
-
-        if (propCode === 0xD004) {
-          foundD004 = true;
-          if (formFlag === 0x01 && isEnabled === 0x01) {
-            // UINT32 data type, so CurrentValue is 4 bytes
-            const currentValueSize = 4; // UINT32
-            const currentValueOffset = offset + 7;
-            const minOffset = currentValueOffset + currentValueSize;
-            const maxOffset = minOffset + 4;
-
-            if (maxOffset + 4 <= blob.length) {
-              const min = blob.readUInt32LE(minOffset);
-              const max = blob.readUInt32LE(maxOffset);
-              this.log(`Focus distance range: min=0x${min.toString(16)} (${min / 100}m), max=0x${max.toString(16)} (${max / 100}m)`);
-              return [min, max];
-            } else {
-              this.warn(`Prop 0xD004 range data out of bounds: maxOffset=${maxOffset} blob.length=${blob.length}`);
-            }
-          } else {
-            this.warn(`Prop 0xD004 not range/enabled: formFlag=0x${formFlag.toString(16)} isEnabled=0x${isEnabled.toString(16)}`);
-          }
-        }
-
-        // Skip to next dataset: fixed header (7) + CurrentValue size + Range data if applicable
-        const currentValueSize = dataType === 0x0006 ? 4 : (dataType === 0x0004 ? 2 : 4); // UINT32=6, UINT16=4, default 4
-        let skip = 7 + currentValueSize;
-        if (formFlag === 0x01) skip += 12; // Min, Max, Step
-        offset += skip;
-      }
-
-      if (!foundD004) {
-        this.warn('Prop 0xD004 not found in SDIO_GetAllExtDevicePropInfo response');
-      }
-      return null;
-    } catch (e) {
-      this.warn(`Failed to get focus distance range: ${e}`);
-      return null;
-    }
   }
 
   // Set absolute focus position (prop 0xE042). PTP3 cameras only.
@@ -1223,11 +1206,6 @@ export class SonyPTPClient extends EventEmitter {
       if (!result.model) result.model = 'Sony Camera';
     } catch (_e) {}
     return result;
-  }
-
-  /** @deprecated Use parseDeviceInfoBlob — kept to avoid breaking callers if any */
-  private parseModelName(data: Buffer): string {
-    return this.parseDeviceInfoBlob(data).model;
   }
 
   disconnect(): void {
