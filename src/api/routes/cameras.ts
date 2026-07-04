@@ -163,6 +163,33 @@ async function applyOp(client: SonyPTPClient, op: string, params: Record<string,
       await client.toggleRecord();
       return;
     }
+    case 'rec-settings': {
+      // Apply recording settings to the group. Each requested value is validated
+      // against THIS camera's live supported list, so a body that can't do the
+      // chosen format fails with a clear reason — the bulk result then reads
+      // "applied to all except <camera> (format not supported)".
+      const st = client.state;
+      const num = (v: unknown) => (typeof v === 'number' ? v : undefined);
+      const movieFileFormat = num(params.movieFileFormat);
+      const recFrameRate    = num(params.recFrameRate);
+      const recSetting      = num(params.recSetting);
+      const recMedia        = num(params.recMedia);
+      if (st.recState === 1) throw new Error('cannot change recording settings while recording');
+      if (movieFileFormat !== undefined && st.movieFileFormatList.length > 0 && !st.movieFileFormatList.includes(movieFileFormat))
+        throw new Error('file format not supported by this camera');
+      if (recFrameRate !== undefined && st.recFrameRateList.length > 0 && !st.recFrameRateList.includes(recFrameRate))
+        throw new Error('frame rate not supported by this camera');
+      if (recSetting !== undefined && st.recSettingList.length > 0 && !st.recSettingList.includes(recSetting))
+        throw new Error('recording mode not supported by this camera');
+      const opts: { recMedia?: number; movieFileFormat?: number; recFrameRate?: number; recSetting?: number } = {};
+      if (recMedia !== undefined)        opts.recMedia = recMedia;
+      if (movieFileFormat !== undefined) opts.movieFileFormat = movieFileFormat;
+      if (recFrameRate !== undefined)    opts.recFrameRate = recFrameRate;
+      if (recSetting !== undefined)      opts.recSetting = recSetting;
+      if (Object.keys(opts).length === 0) throw new Error('no rec-settings provided');
+      await client.setRecordingSettings(opts);
+      return;
+    }
     default:
       throw new Error(`unknown op "${op}"`);
   }
@@ -217,7 +244,7 @@ export function createCameraRoutes({ manager, atemListener, getConfig, setConfig
 
   // ── Camera: bulk control — apply one op to a group of cameras ─────────────
   // Body: { ids: string[] | "all", op: string, params?: {...} }
-  //   op ∈ adjust | color-temp | shutter-set | mode | focus-mode | focus-area | af | record
+  //   op ∈ adjust | color-temp | shutter-set | mode | focus-mode | focus-area | af | record | rec-settings
   //   params match the equivalent single-camera route body.
   // Returns per-camera results so partial failures are visible (207-style payload, 200 status).
   router.post('/api/cameras/bulk', async (req, res) => {
