@@ -59,6 +59,8 @@ export interface CameraState {
   focalDistanceEnabled: boolean;  // 0xD004 IsEnabled flag — true when set via 0x9205 is allowed.
   focusPosition:  number;  // 0xE043: 0x0000=near, 0xFFFF=far; PTP3 only; 0=not available
   nearFarEnable:  number;  // 0xD235: 0x01=enabled (step commands allowed)
+  wbMode:         number;  // 0x5005: 0x0002=AWB (auto), 0x8012=Color Temp, etc.; 0=not polled
+  shutterMode:    number;  // 0xD013: 0x01=Auto, 0x02=Manual (cinema bodies only); 0=not present
 }
 
 const TYPE_SIZE: Record<number, number> = {
@@ -137,6 +139,7 @@ export class SonyPTPClient extends EventEmitter {
       tally: 0, lastUpdate: 0,
       focusMode: 0, afStatus: 0, focalDistanceM: 0, focusPosition: 0, nearFarEnable: 0,
       focalDistanceMin: 0, focalDistanceMax: 0, focalDistanceStep: 0, focalDistanceEnabled: false,
+      wbMode: 0, shutterMode: 0,
     };
   }
 
@@ -547,6 +550,8 @@ export class SonyPTPClient extends EventEmitter {
     const [focalDistM]             = this.hunterExtractWithList(blob, 0xD004);
     const [focusPos]               = this.hunterExtractWithList(blob, 0xE043);  // current lens position (PTP3)
     const [nearFarEn]              = this.hunterExtractWithList(blob, 0xD235);  // step enable flag
+    const [wbMode]                 = this.hunterExtractWithList(blob, 0x5005);  // WB mode (0x0002=AWB)
+    const [shutterMode]            = this.hunterExtractWithList(blob, 0xD013);  // shutter mode (cinema: 0x01=Auto/0x02=Manual)
     // Remaining recordable time in seconds.
     // Priority: 0xD24A (Slot1 Remaining Time, confirmed on ZV-E10M2/FX30)
     //           0xD3C2/0xD3C4 (legacy prop codes, fallback for older models)
@@ -692,6 +697,8 @@ export class SonyPTPClient extends EventEmitter {
     }
     if (focusPos  !== null && focusPos  !== this.state.focusPosition)       { this.state.focusPosition = focusPos;    changed = true; }
     if (nearFarEn !== null && nearFarEn !== this.state.nearFarEnable)       { this.state.nearFarEnable = nearFarEn;   changed = true; }
+    if (wbMode      !== null && wbMode      !== this.state.wbMode)          { this.state.wbMode        = wbMode;      changed = true; }
+    if (shutterMode !== null && shutterMode !== this.state.shutterMode)     { this.state.shutterMode   = shutterMode; changed = true; }
     if (recDuration !== null && recDuration !== this.state.recDurationSec)  { this.state.recDurationSec = recDuration; changed = true; }
     if (slotStatus  !== null && slotStatus  !== this.state.slotStatus)      { this.state.slotStatus     = slotStatus;  changed = true; }
     if (slotStatus2 !== null && slotStatus2 !== this.state.slotStatus2)    { this.state.slotStatus2    = slotStatus2; changed = true; }

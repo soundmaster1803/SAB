@@ -143,6 +143,16 @@ export interface SonyRawState {
    * 0x01 = enabled (step commands allowed). 0 = not polled / disabled.
    */
   nearFarEnable: number;
+  /**
+   * White Balance mode from prop 0x5005.
+   * 0x0002 = AWB (auto), 0x8012 = Color Temp, other = preset. 0 = not polled.
+   */
+  wbMode: number;
+  /**
+   * Shutter mode from prop 0xD013 (cinema bodies only).
+   * 0x01 = Auto, 0x02 = Manual. 0 = not present (mirrorless uses exposure mode).
+   */
+  shutterMode: number;
 
   // --- Tally (written by bridge sync) ---
   /** Tally state: 0 = none, 1 = program, 2 = preview. */

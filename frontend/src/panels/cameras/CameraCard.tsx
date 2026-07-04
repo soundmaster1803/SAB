@@ -638,7 +638,7 @@ export function CameraCard({ cam, onDebug, usedAtemIds = [] }: Props) {
           <div className={styles.paramBox}>
             <div className={styles.shutterLeft}>
               <ModeToggle
-                isAuto={false}
+                isAuto={cam.derived?.shutterIsAuto ?? false}
                 onManual={() => setMode('shutter', 'manual')}
                 onAuto={() => setMode('shutter', 'auto')}
                 disabled={off}
@@ -708,7 +708,7 @@ export function CameraCard({ cam, onDebug, usedAtemIds = [] }: Props) {
           <span className={styles.paramLabel}>WB</span>
           <div className={styles.paramBox}>
             <ModeToggle
-              isAuto={false}
+              isAuto={cam.derived?.wbIsAuto ?? false}
               onManual={() => setMode('wb', 'manual')}
               onAuto={() => setMode('wb', 'auto')}
               disabled={off}

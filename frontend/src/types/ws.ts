@@ -108,6 +108,10 @@ export interface SonyRawState {
   focusPosition: number;
   /** Near/Far step enable from prop 0xD235. 0x01=enabled. 0=unavailable/disabled. */
   nearFarEnable: number;
+  /** White Balance mode from prop 0x5005. 0x0002=AWB. 0=not polled. */
+  wbMode: number;
+  /** Shutter mode from prop 0xD013 (cinema). 0x01=Auto, 0x02=Manual. 0=not present. */
+  shutterMode: number;
 }
 
 /** Derived display values computed from SonyRawState. */
@@ -118,12 +122,16 @@ export interface SonyDerivedState {
   colorTempDisplay: string;
   expCompEv: number;
   expCompDisplay: string;
-  /** Focus mode as display string — "MF", "AF-S", "AF-C", "AF-A", "DMF", "PF", or "—". */
+  /** Focus mode as display string — "MF", "AF-S", "AF-C", "AF-A", "DMF", "AF-D", "PF", or "—". */
   focusModeDisplay: string;
   /** AF status as display string — "Focused", "Tracking", "Searching", or "—". */
   afStatusDisplay: string;
   /** Focal distance as display string — e.g. "0.20m", "∞", or "—". */
   focalDistanceDisplay: string;
+  /** True when White Balance is in Auto (AWB) mode. */
+  wbIsAuto: boolean;
+  /** True when shutter is in Auto mode (cinema bodies). */
+  shutterIsAuto: boolean;
 }
 
 /** Alert conditions derived from raw + derived Sony state. */

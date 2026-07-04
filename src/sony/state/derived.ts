@@ -41,6 +41,10 @@ export interface SonyDerivedState {
   afStatusDisplay: string;
   /** Focal distance as display string — e.g. "0.20m", "∞", or "—". */
   focalDistanceDisplay: string;
+  /** True when White Balance is in Auto (AWB) mode (prop 0x5005 == 0x0002). */
+  wbIsAuto: boolean;
+  /** True when shutter is in Auto mode (cinema prop 0xD013 == 0x01). Null-ish when not exposed. */
+  shutterIsAuto: boolean;
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -110,6 +114,7 @@ function decodeFocusMode(raw: number): string {
     case FOCUS_MODE_VALUES.AF_C:   return 'AF-C';
     case FOCUS_MODE_VALUES.AF_A:   return 'AF-A';
     case FOCUS_MODE_VALUES.DMF:    return 'DMF';
+    case FOCUS_MODE_VALUES.AF_D:   return 'AF-D';
     case FOCUS_MODE_VALUES.PF:     return 'PF';
     default: return '—';
   }
@@ -157,5 +162,7 @@ export function deriveSonyState(raw: SonyRawState): SonyDerivedState {
     focusModeDisplay:    decodeFocusMode(raw.focusMode),
     afStatusDisplay:     decodeAfStatus(raw.afStatus),
     focalDistanceDisplay: decodeFocalDistance(raw.focalDistanceM),
+    wbIsAuto:            raw.wbMode === 0x0002,
+    shutterIsAuto:       raw.shutterMode === 0x01,
   };
 }
