@@ -10,6 +10,7 @@ import { listLanInterfaces } from './services/network';
 import { createBroadcaster } from './ws/broadcaster';
 import { createStatusRoutes } from './routes/status';
 import { createCameraRoutes } from './routes/cameras';
+import { createSonyPropRoutes } from './routes/sony-props';
 import { createAtemRoutes } from './routes/atem';
 import { APP_VERSION } from '../version';
 
@@ -55,6 +56,7 @@ export function startServer(manager: CameraManager, atemListener: ATEMListener, 
   const setConfig = (cfg: AppConfig) => { appConfig = cfg; };
 
   app.use(createCameraRoutes({ manager, atemListener, getConfig, setConfig }));
+  app.use(createSonyPropRoutes({ manager }));
   app.use(createAtemRoutes({ atemListener, getConfig, setConfig }));
   app.use(createStatusRoutes({ manager, atemListener, getConfig }));
 

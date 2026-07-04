@@ -40,6 +40,7 @@
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
+    "resolveJsonModule": true,
     "skipLibCheck": true,
   },
   "exclude": ["node_modules", "dist", "frontend", "CrSDK_v2", "CameraRemoteCommand-2.02.00", "MiddleControl.app"]

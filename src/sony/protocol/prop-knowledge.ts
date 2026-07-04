@@ -126,11 +126,15 @@ const RAW_ENTRIES: PropKnowledgeEntry[] = [
     propCode: 0x5005, semanticId: 'white_balance', name: 'White Balance',
     category: 'color', dataType: 'UINT16', writable: true, safeToWrite: true,
     pollPriority: 'low', safety: 'safe', confidence: 'confirmed', uiWidget: 'enum-select',
+    // Values confirmed against Camera Control PTP 3 Reference (raw wire values).
     enumDecoding: {
-      2: 'Auto', 4: 'Daylight', 0x8001: 'Shade', 0x8002: 'Cloudy',
-      0x8003: 'Tungsten', 0x8004: 'Fluorescent', 0x8006: 'Color Temp',
-      0x8007: 'Custom1', 0x8008: 'Custom2', 0x8009: 'Custom3',
-      0x800A: 'ATW', 0x800B: 'ATW Lock', 0x800C: 'AWB Lock',
+      1: 'Manual', 2: 'Auto (AWB)', 3: 'One-push Auto', 4: 'Daylight',
+      5: 'Fluorescent', 6: 'Tungsten', 7: 'Flash',
+      0x8001: 'Fluor: Warm White', 0x8002: 'Fluor: Cool White',
+      0x8003: 'Fluor: Day White', 0x8004: 'Fluor: Daylight',
+      0x8010: 'Cloudy', 0x8011: 'Shade', 0x8012: 'Color Temp',
+      0x8020: 'Custom 1', 0x8021: 'Custom 2', 0x8022: 'Custom 3', 0x8023: 'Custom',
+      0x8030: 'Underwater Auto',
     },
     alertRelevant: false,
   },
@@ -156,9 +160,18 @@ const RAW_ENTRIES: PropKnowledgeEntry[] = [
   },
   {
     propCode: 0x500E, semanticId: 'exposure_mode', name: 'Exposure Mode',
-    category: 'exposure', dataType: 'UINT16', writable: true, safeToWrite: true,
+    category: 'exposure', dataType: 'UINT32', writable: true, safeToWrite: true,
     pollPriority: 'low', safety: 'safe', confidence: 'confirmed', uiWidget: 'enum-select',
-    enumDecoding: { 1: 'M', 2: 'P', 3: 'A', 4: 'S', 0x8050: 'Intelligent Auto', 0x8060: 'Movie', 0x8061: 'Audio Recording' },
+    // UINT32 wire values confirmed against Camera Control PTP 3 Reference.
+    // Stills M/P/A/S plus the movie-mode block used by FX/cinema bodies.
+    enumDecoding: {
+      0x00000001: 'M', 0x00010002: 'P', 0x00020003: 'A', 0x00030004: 'S',
+      0x00048000: 'Auto', 0x00048001: 'Auto+',
+      0x00078050: 'Movie (P)', 0x00078051: 'Movie (A)', 0x00078052: 'Movie (S)',
+      0x00078053: 'Movie (M)', 0x00078054: 'Movie (Auto)', 0x00078090: 'Movie (F)',
+      0x00098059: 'S&Q (P)', 0x0009805A: 'S&Q (A)', 0x0009805B: 'S&Q (S)',
+      0x0009805C: 'S&Q (M)', 0x0009805D: 'S&Q (Auto)',
+    },
     alertRelevant: false,
   },
   {
@@ -301,9 +314,16 @@ const RAW_ENTRIES: PropKnowledgeEntry[] = [
   },
   {
     propCode: 0xD22C, semanticId: 'focus_area', name: 'Focus Area',
-    category: 'focus', dataType: 'UINT8', writable: true, safeToWrite: true,
+    category: 'focus', dataType: 'UINT16', writable: true, safeToWrite: true,
     pollPriority: 'low', safety: 'safe', confidence: 'confirmed', uiWidget: 'enum-select',
-    enumDecoding: { 1: 'Wide', 2: 'Zone', 3: 'Center', 4: 'Flex-S', 5: 'Flex-M', 6: 'Flex-L', 7: 'Expand Flex', 8: 'Track Wide', 9: 'Track Zone', 10: 'Track Center' },
+    // UINT16 wire values confirmed against Camera Control PTP 3 Reference.
+    enumDecoding: {
+      1: 'Wide', 2: 'Zone', 3: 'Center',
+      0x0101: 'Flexible Spot S', 0x0102: 'Flexible Spot M', 0x0103: 'Flexible Spot L',
+      0x0104: 'Expand Flexible Spot', 0x0105: 'Flexible Spot',
+      0x0106: 'Flexible Spot XS', 0x0107: 'Flexible Spot XL',
+      0x0201: 'Lock-on Wide', 0x0202: 'Lock-on Zone', 0x0203: 'Lock-on Center',
+    },
     alertRelevant: false,
   },
   {

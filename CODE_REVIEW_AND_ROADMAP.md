@@ -168,6 +168,38 @@ bulk shutter-set/focus-area из UI (эндпоинты уже готовы).
 cinema iris/shutter toggle; exposure mode 0x500E для mirrorless (UINT32, M=0x00000001, P=0x00010002…,
 Movie_*=0x0007805x); focus-area XS/XL/lock-on. Проверка — через `/api/cameras/:id/debug`.
 
+### Stage 1 — фундамент «управление всем» (2026-07-04)
+Проверено что реализовано, сверено с PTP3 Reference, исправлено.
+
+**Данные (база):**
+- **[done]** `knowledge/sony/ptp3-catalog.json` — полный каталог из PTP3 Reference: **776 свойств**,
+  585 с enum-значениями (код, name, dataType, getSet, form, values). Парсер устойчив к разрывам
+  страниц (multi-page таблицы вроде focus area 27 знач., exposure 61 знач. — захвачены целиком).
+- **[done]** `src/sony/protocol/ptp3-catalog.ts` — загрузчик (импорт JSON, инлайнится esbuild'ом
+  в bundle; работает в dev и packaged), lookup по коду + enum-метки + byte-width.
+
+**Механизм (обобщённое управление любым пропом):**
+- **[done]** `ptp-client.setPropTyped(code, value, dataType)` — установка с точной упаковкой по типу
+  (для пропов вне poll-блоба, которые packPropValueDynamic не мог засайзить).
+- **[done]** `src/api/routes/sony-props.ts` (подключён в server): `GET /api/sony/catalog`,
+  `GET /api/cameras/:id/prop/:code` (живое значение + enum-список + каталог + knowledge),
+  `POST /api/cameras/:id/prop {code,value,force?}` (гейт по safeToWrite; read-only отклоняется).
+
+**Сверка и фиксы (prop-knowledge.ts против каталога):**
+- Кросс-чек нашёл 73 расхождения в 26 пропах. Исправлены **control-критичные**:
+  - **[done]** WB 0x5005 enumDecoding — был неверен (0x8006 Color Temp и др.) → верные значения (CT=0x8012).
+  - **[done]** Exposure 0x500E — dataType `UINT16`→**`UINT32`** (баг упаковки) + реальные значения (M/P/A/S/Movie/S&Q).
+  - **[done]** Focus Area 0xD22C — dataType `UINT8`→**`UINT16`** + wire-значения (Flex 0x0101…, lock-on 0x0201…).
+- Остальные расхождения — status-энумы (слоты 0xD248, rec 0xD21D, батарея 0xD205/0xD20E, формат 0xD241):
+  значения SAB — реальные hardware-наблюдения, не трогал (перезапись рискует регрессией). Обобщённый
+  `/prop` эндпоинт уже отдаёт авторитетные метки из каталога.
+- tsconfig: `resolveJsonModule: true`. Vendor-каталог в .gitignore.
+
+typecheck + build (JSON инлайнится) + смоук новых эндпоинтов — чисто.
+
+**Дальше по фундаменту:** UI generic-панель поверх `/api/sony/catalog` + `/prop` (управление любым
+свойством из веба); bulk-обёртка для `/prop`; довыверить status-энумы на железе через `/debug`.
+
 ### Заметки sony-research (2026-07-04) — что нужно железо
 - **Два механизма:** PASM-режим `0x500E` (ZV-E10 II, FX30 в P/A/S/M) vs per-parameter cinema-тоглы
   (FX6/Z200/FX30 Cine): iris `0xD001` UINT8 (0x01 Manual/0x02 Auto), gain `0xD01C` UINT8.

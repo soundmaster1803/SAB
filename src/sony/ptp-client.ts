@@ -947,6 +947,28 @@ export class SonyPTPClient extends EventEmitter {
     await this.sendCmdWithData(0x9205, [0xD21E], data);
   }
 
+  // Generic property set with an explicit datatype (UINT8/INT8/UINT16/INT16/UINT32/INT32).
+  // Packs the value to the exact wire width so props absent from the poll blob (which
+  // packPropValueDynamic can't size) are still written correctly. Uses 0x9205.
+  // This is the foundation for catalog-driven "set any property" control.
+  async setPropTyped(propCode: number, value: number, dataType: string): Promise<void> {
+    let data: Buffer;
+    switch (dataType) {
+      case 'INT8':   data = Buffer.alloc(1); data.writeInt8(value, 0); break;
+      case 'UINT8':  data = Buffer.alloc(1); data.writeUInt8(value & 0xFF, 0); break;
+      case 'INT16':  data = Buffer.alloc(2); data.writeInt16LE(value, 0); break;
+      case 'UINT16': data = Buffer.alloc(2); data.writeUInt16LE(value & 0xFFFF, 0); break;
+      case 'INT32':  data = Buffer.alloc(4); data.writeInt32LE(value, 0); break;
+      case 'UINT32': data = Buffer.alloc(4); data.writeUInt32LE(value >>> 0, 0); break;
+      default:
+        // Unknown width — fall back to the poll-blob-derived packing.
+        return this.setExtDeviceProp(propCode, value);
+    }
+    this.log(`setPropTyped 0x${propCode.toString(16)} = ${value} (${dataType}, ${data.length}B)`);
+    this.setPropState(propCode, value);
+    await this.sendCmdWithData(0x9205, [propCode], data);
+  }
+
   // MovieRec = Hold mode (rule 5): DOWN → 100ms → UP (per docs/research/ref-sony.md)
   async toggleRecord(): Promise<void> {
     this.log(`REC toggle (recState=${this.state.recState})`);
