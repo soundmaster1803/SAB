@@ -43,6 +43,8 @@ import {
 import { buildSonyDebugPayload } from '../services/sony-debug';
 import { serializeRuntimeModel } from '../../sony/runtime/builder.js';
 import { getPollSummary } from '../../sony/polling/strategy.js';
+import { getPtp3Prop } from '../../sony/protocol/ptp3-catalog';
+import { getPropKnowledge } from '../../sony/protocol/prop-knowledge';
 import { PROP_CODES, FOCUS_AREA_VALUES } from '../../sony/constants';
 
 function ts(): string { return new Date().toISOString().slice(11, 23); }
@@ -190,6 +192,23 @@ async function applyOp(client: SonyPTPClient, op: string, params: Record<string,
       await client.setRecordingSettings(opts);
       return;
     }
+    case 'prop': {
+      // Generic single-property set for the group (look, audio, and any catalog prop).
+      // Mirrors POST /api/cameras/:id/prop: datatype from the PTP3 catalog, safeToWrite gate.
+      const code = typeof params.code === 'number' ? params.code
+        : typeof params.code === 'string' ? parseInt(params.code, 16) : NaN;
+      const value = typeof params.value === 'number' ? params.value : NaN;
+      if (!Number.isInteger(code) || code <= 0) throw new Error('invalid property code');
+      if (!Number.isInteger(value)) throw new Error('value must be a number');
+      const catalog = getPtp3Prop(code);
+      const knowledge = getPropKnowledge(code);
+      if (catalog?.getSet === 'Get') throw new Error(`property 0x${code.toString(16)} is read-only`);
+      if (knowledge?.safeToWrite !== true && params.force !== true) {
+        throw new Error(`property 0x${code.toString(16)} not marked safe to write (set force:true)`);
+      }
+      await client.setPropTyped(code, value, catalog?.dataType ?? knowledge?.dataType ?? '');
+      return;
+    }
     default:
       throw new Error(`unknown op "${op}"`);
   }
@@ -244,7 +263,7 @@ export function createCameraRoutes({ manager, atemListener, getConfig, setConfig
 
   // ── Camera: bulk control — apply one op to a group of cameras ─────────────
   // Body: { ids: string[] | "all", op: string, params?: {...} }
-  //   op ∈ adjust | color-temp | shutter-set | mode | focus-mode | focus-area | af | record | rec-settings
+  //   op ∈ adjust | color-temp | shutter-set | mode | focus-mode | focus-area | af | record | rec-settings | prop
   //   params match the equivalent single-camera route body.
   // Returns per-camera results so partial failures are visible (207-style payload, 200 status).
   router.post('/api/cameras/bulk', async (req, res) => {
