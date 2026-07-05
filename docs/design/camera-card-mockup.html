@@ -1,0 +1,460 @@
+<style>
+  :root {
+    --bg:#0a0c0f; --panel:#14181e; --panel-2:#1b2027; --panel-3:#222932;
+    --edge:rgba(255,255,255,0.08); --edge-strong:rgba(255,255,255,0.16);
+    --t1:#eef1f5; --t2:#99a2ad; --t3:#5c6570;
+    --accent:#3d9bff; --accent-dim:rgba(61,155,255,0.14);
+    --prog:#ff453a; --prev:#30d158; --warn:#ff9f0a; --ok:#30d158;
+    --radius:14px; --sans:ui-sans-serif,-apple-system,"SF Pro Text","Segoe UI",Roboto,sans-serif;
+  }
+  :root[data-theme="light"]{ --bg:#eef1f5; --panel:#fff; --panel-2:#f4f6f9; --panel-3:#e9edf2;
+    --edge:rgba(10,15,25,.10); --edge-strong:rgba(10,15,25,.22); --t1:#10151c; --t2:#576070; --t3:#97a0ad; --accent-dim:rgba(61,155,255,.12); }
+  @media (prefers-color-scheme:light){ :root:not([data-theme="dark"]){
+    --bg:#eef1f5; --panel:#fff; --panel-2:#f4f6f9; --panel-3:#e9edf2;
+    --edge:rgba(10,15,25,.10); --edge-strong:rgba(10,15,25,.22); --t1:#10151c; --t2:#576070; --t3:#97a0ad; --accent-dim:rgba(61,155,255,.12); } }
+
+  * { box-sizing:border-box; min-width:0; }
+  body { margin:0; background:var(--bg); color:var(--t1); font-family:var(--sans); font-size:14px; line-height:1.4; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1180px; margin:0 auto; padding:20px 16px 60px; }
+  .tnum { font-variant-numeric:tabular-nums; }
+  .ic { width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; display:inline-block; vertical-align:middle; flex:none; }
+  .ic.sm { width:12px; height:12px; }
+  button { font:inherit; }
+
+  .roombar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:12px 14px; background:var(--panel); border:1px solid var(--edge); border-radius:var(--radius); margin-bottom:14px; }
+  .brand { display:flex; align-items:baseline; gap:9px; margin-right:auto; }
+  .brand b { font-size:15px; } .brand span { font-size:10.5px; color:var(--t3); letter-spacing:.13em; text-transform:uppercase; }
+  .roomact { display:flex; gap:7px; flex-wrap:wrap; }
+  .btn { font-size:12.5px; font-weight:600; color:var(--t1); background:var(--panel-2); border:1px solid var(--edge); border-radius:9px; padding:8px 12px; cursor:pointer; display:inline-flex; align-items:center; gap:7px; white-space:nowrap; }
+  .btn:hover { border-color:var(--accent); }
+  .btn.prim { background:var(--accent); border-color:var(--accent); color:#04121f; }
+  .btn.danger { color:var(--prog); }
+  .btn.ghost { background:transparent; }
+  .rdot { width:8px; height:8px; border-radius:50%; background:currentColor; flex:none; }
+
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; }
+  .card { background:var(--panel); border:1px solid var(--edge); border-radius:var(--radius); overflow:hidden; display:flex; flex-direction:column; }
+  .card.live { box-shadow:0 0 0 1.5px var(--prog); } .card.pvw { box-shadow:0 0 0 1.5px var(--prev); }
+
+  .chead { display:flex; align-items:center; gap:8px; padding:11px 12px 8px; }
+  .cid { flex:1; min-width:0; }
+  .cname { font-size:15px; font-weight:650; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cmeta { display:flex; align-items:center; gap:7px; margin-top:1px; color:var(--t2); font-size:11.5px; }
+  .conn { width:7px; height:7px; border-radius:50%; background:var(--ok); flex:none; }
+  .tally { font-size:9.5px; font-weight:800; letter-spacing:.08em; padding:4px 8px; border-radius:6px; text-transform:uppercase; white-space:nowrap; }
+  .tally.on-air { background:var(--prog); color:#fff; } .tally.preview { background:transparent; color:var(--prev); border:1px solid var(--prev); }
+  .tally.idle { background:transparent; color:var(--t3); border:1px solid var(--edge); }
+  .icn { width:28px; height:28px; border-radius:7px; border:1px solid transparent; background:transparent; color:var(--t2); cursor:pointer; display:grid; place-items:center; flex:none; }
+  .icn:hover { background:var(--panel-2); border-color:var(--edge); color:var(--t1); } .icn:active { transform:scale(.92); }
+
+  .statusbar { display:grid; grid-template-columns:repeat(4,1fr); gap:7px; padding:0 12px 11px; }
+  .st { background:var(--panel-2); border:1px solid var(--edge); border-radius:9px; padding:6px 9px; min-width:0; }
+  .st .k { font-size:9px; letter-spacing:.08em; text-transform:uppercase; color:var(--t3); }
+  .st .v { font-size:15px; font-weight:700; margin-top:1px; }
+  .st.rec .v { color:var(--prog); }
+  .rec-badge { display:inline-flex; align-items:center; gap:5px; }
+  .rec-badge .d { width:7px; height:7px; border-radius:50%; background:var(--prog); animation:blink 1.4s steps(2,jump-none) infinite; }
+  @media (prefers-reduced-motion:reduce){ .rec-badge .d{ animation:none; } } @keyframes blink { 50%{ opacity:.25; } }
+  .bat .v { display:flex; align-items:baseline; gap:4px; } .bat .tm { font-size:11px; color:var(--t2); font-weight:600; }
+  .bat .adp { display:flex; align-items:center; gap:3px; font-size:9px; font-weight:700; color:var(--accent); margin-top:1px; }
+  .aud .mrow { display:flex; flex-direction:column; gap:3px; margin-top:4px; }
+  .amtr { height:5px; border-radius:3px; background:var(--panel); border:1px solid var(--edge); overflow:hidden; position:relative; }
+  .amtr i { position:absolute; inset:0 auto 0 0; border-radius:3px; background:linear-gradient(90deg,var(--ok),var(--warn) 84%,var(--prog)); transition:width .18s; }
+
+  /* ATEM link strip on the card */
+  .catem { display:flex; align-items:center; gap:7px; margin:0 12px 11px; padding:6px 10px; background:var(--panel-2); border:1px solid var(--edge); border-radius:9px; font-size:11px; }
+  .catem .l { font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--t3); }
+  .catem .in { font-weight:700; }
+  .catem .lk { display:inline-flex; align-items:center; gap:5px; margin-left:auto; color:var(--ok); font-weight:600; }
+  .catem .lk .d { width:6px; height:6px; border-radius:50%; background:var(--ok); flex:none; }
+  .catem.off .lk { color:var(--t3); } .catem.off .lk .d { background:var(--t3); }
+
+  /* quick controls — identical 2x2 on every card */
+  .quick { padding:2px 12px 12px; display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .qc { background:var(--panel-2); border:1px solid var(--edge); border-radius:10px; padding:8px 10px; min-width:0; }
+  .qc .lab { display:flex; align-items:center; gap:6px; font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--t3); }
+  .qc .am { margin-left:auto; }
+  .qc .body { display:flex; align-items:center; gap:8px; margin-top:6px; }
+  .qc .val { font-size:17px; font-weight:700; } .qc .val small { font-size:11px; color:var(--t2); font-weight:600; }
+  .qc .stepper { margin-left:auto; display:flex; gap:4px; }
+  .step { width:26px; height:26px; border-radius:7px; border:1px solid var(--edge); background:var(--panel); color:var(--t1); cursor:pointer; display:grid; place-items:center; }
+  .step:hover { border-color:var(--accent); color:var(--accent); } .step:active { transform:scale(.9); }
+  .am { display:inline-flex; border:1px solid var(--edge); border-radius:6px; overflow:hidden; height:20px; flex:none; }
+  .am button { font-size:9.5px; font-weight:800; width:24px; border:0; background:transparent; color:var(--t3); cursor:pointer; }
+  .am button.sel { background:var(--accent); color:#04121f; }
+
+  /* card footer: REC + settings */
+  .cfoot { margin-top:auto; padding:0 12px 12px; display:flex; gap:8px; }
+  .recbtn { flex:1; justify-content:center; font-weight:700; font-size:13px; padding:10px; color:var(--prog); background:transparent; border:1px solid var(--prog); border-radius:9px; cursor:pointer; display:inline-flex; align-items:center; gap:8px; }
+  .recbtn:hover { background:rgba(255,69,58,.1); }
+  .recbtn.recording { background:var(--prog); color:#fff; }
+  .setbtn { flex:none; padding:10px 12px; }
+
+  /* MODAL */
+  .overlay { position:fixed; inset:0; background:rgba(4,6,9,.62); backdrop-filter:blur(3px); display:none; place-items:center; padding:20px; z-index:20; }
+  .overlay.show { display:grid; }
+  .modal { width:min(700px,100%); max-height:88vh; display:flex; flex-direction:column; background:var(--panel); border:1px solid var(--edge-strong); border-radius:16px; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,.5); animation:pop .16s ease; }
+  @keyframes pop { from { transform:scale(.97); opacity:0; } } @media (prefers-reduced-motion:reduce){ .modal{ animation:none; } }
+  .mhead { display:flex; align-items:center; gap:10px; padding:14px 16px; border-bottom:1px solid var(--edge); }
+  .mhead .mt { font-size:15px; font-weight:700; } .mhead .ms { font-size:12px; color:var(--t2); }
+  .presetline { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:10px 16px; background:var(--panel-2); border-bottom:1px solid var(--edge); font-size:12px; }
+  .presetline .pl { font-size:9.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--t3); }
+  .presetline .cur { font-weight:700; } .presetline .sp { margin-left:auto; display:flex; gap:6px; }
+  .tabs { display:flex; gap:4px; padding:10px 12px 0; overflow-x:auto; }
+  .tab { font-size:12.5px; font-weight:600; color:var(--t2); background:transparent; border:1px solid transparent; border-bottom:0; border-radius:9px 9px 0 0; padding:9px 13px; cursor:pointer; white-space:nowrap; }
+  .tab.sel { color:var(--t1); background:var(--panel-2); border-color:var(--edge); }
+  .modal > .mhead, .modal > .presetline, .modal > .tabs, .modal > .mfoot { flex:none; }
+  .mbody { padding:16px; overflow-y:auto; background:var(--panel-2); flex:1 1 auto; min-height:0; }
+  .tabs::-webkit-scrollbar { height:0; }
+  .pane { display:grid; gap:12px; } .pane[hidden] { display:none; }
+  .field { display:grid; grid-template-columns:118px 1fr; align-items:center; gap:12px; }
+  .field > label { font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--t3); }
+  select, .selfake, .tin { width:100%; font:inherit; font-size:13px; color:var(--t1); background:var(--panel); border:1px solid var(--edge); border-radius:8px; padding:8px 10px; }
+  .selfake { display:flex; align-items:center; gap:10px; }
+  .row2 { display:flex; align-items:center; gap:10px; } .row2 .am { height:24px; } .row2 .am button { width:28px; font-size:10px; }
+  .val2 { font-size:15px; font-weight:700; min-width:64px; } .stepper2 { display:flex; gap:5px; margin-left:auto; }
+  .note { font-size:11.5px; color:var(--t3); grid-column:1/-1; margin-top:-4px; }
+  .sec { font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--t3); border-top:1px solid var(--edge); padding-top:11px; }
+  .slider { -webkit-appearance:none; appearance:none; height:4px; border-radius:3px; flex:1; min-width:80px; background:linear-gradient(90deg,var(--accent) var(--v,55%),var(--edge) var(--v,55%)); }
+  .slider::-webkit-slider-thumb { -webkit-appearance:none; width:15px; height:15px; border-radius:50%; background:#fff; border:2px solid var(--accent); cursor:pointer; }
+  .afbtn { font-size:11px; font-weight:800; padding:6px 13px; border-radius:7px; border:1px solid var(--ok); background:transparent; color:var(--ok); cursor:pointer; flex:none; }
+  .achan { display:grid; grid-template-columns:44px 1fr 88px; gap:9px; align-items:center; }
+  .achan .cl { font-size:11px; font-weight:700; color:var(--t2); }
+  .meter { height:9px; border-radius:5px; background:var(--panel); border:1px solid var(--edge); overflow:hidden; position:relative; }
+  .meter i { position:absolute; inset:1px auto 1px 1px; border-radius:4px; background:linear-gradient(90deg,var(--ok),var(--warn) 82%,var(--prog)); }
+  .proprow { display:grid; grid-template-columns:1fr 150px; gap:10px; align-items:center; font-size:13px; padding:7px 0; border-top:1px solid var(--edge); } .proprow:first-of-type { border-top:0; }
+
+  .mfoot { border-top:1px solid var(--edge); padding:13px 16px; display:flex; flex-direction:column; gap:11px; background:var(--panel); }
+  .targets { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12.5px; }
+  .targets .tglbl { font-size:10px; letter-spacing:.09em; text-transform:uppercase; color:var(--t3); }
+  .seg { display:inline-flex; border:1px solid var(--edge); border-radius:8px; overflow:hidden; }
+  .seg button { font-size:12px; font-weight:600; color:var(--t2); background:transparent; border:0; padding:7px 12px; cursor:pointer; }
+  .seg button.sel { background:var(--accent); color:#04121f; }
+  .picklist { display:flex; gap:6px; flex-wrap:wrap; } .picklist[hidden] { display:none; }
+  .chip { display:inline-flex; align-items:center; gap:6px; font-size:12px; padding:6px 10px; border:1px solid var(--edge); border-radius:8px; cursor:pointer; color:var(--t2); user-select:none; }
+  .chip.on { border-color:var(--accent); color:var(--t1); background:var(--accent-dim); }
+  .chip .box { width:13px; height:13px; border-radius:4px; border:1.5px solid var(--edge-strong); display:inline-grid; place-items:center; color:transparent; }
+  .chip.on .box { background:var(--accent); border-color:var(--accent); color:#04121f; }
+  .factions { display:flex; gap:8px; align-items:center; }
+  .factions .sp { margin-left:auto; }
+  .report { border:1px solid var(--edge); border-radius:10px; overflow:hidden; } .report[hidden] { display:none; }
+  .report .h { display:flex; align-items:center; gap:8px; padding:9px 12px; background:var(--panel-2); font-size:12px; font-weight:650; } .report .h .ok { color:var(--ok); display:inline-flex; }
+  .report ul { margin:0; padding:0; list-style:none; }
+  .report li { display:flex; align-items:center; gap:8px; padding:8px 12px; font-size:12px; border-top:1px solid var(--edge); }
+  .report li .nm { font-weight:600; } .report li .why { color:var(--warn); margin-left:auto; } .report li .yes { color:var(--ok); margin-left:auto; display:inline-flex; }
+
+  /* presets modal */
+  .plist { display:grid; gap:9px; }
+  .prow { display:flex; align-items:center; gap:11px; padding:11px 12px; background:var(--panel-2); border:1px solid var(--edge); border-radius:10px; flex-wrap:wrap; }
+  .prow .pn { font-weight:650; font-size:13.5px; } .prow .pd { font-size:11.5px; color:var(--t2); margin-top:1px; }
+  .prow .pa { margin-left:auto; display:flex; gap:6px; flex-wrap:wrap; }
+  .saverow { display:flex; gap:8px; }
+
+  .toast { position:fixed; left:50%; bottom:22px; transform:translateX(-50%) translateY(20px); background:var(--panel-3); border:1px solid var(--edge-strong); color:var(--t1); font-size:13px; font-weight:600; padding:10px 16px; border-radius:10px; opacity:0; transition:.2s; z-index:40; pointer-events:none; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  .legend { margin-top:24px; color:var(--t3); font-size:12px; display:grid; gap:6px; } .legend b { color:var(--t2); }
+  .themebtn { position:fixed; top:10px; right:10px; z-index:9; }
+
+  @media (max-width:520px){
+    .wrap { padding:14px 11px 48px; }
+    .grid { grid-template-columns:1fr; }
+    .quick { grid-template-columns:1fr 1fr; }
+    .statusbar { grid-template-columns:1fr 1fr; }
+    .field { grid-template-columns:1fr; gap:5px; } .field > label { color:var(--t2); }
+    .proprow { grid-template-columns:1fr; gap:5px; }
+    .roomact { width:100%; } .roomact .btn { flex:1; justify-content:center; }
+    .overlay { padding:0; } .modal { max-height:100vh; height:100vh; border-radius:0; width:100%; }
+  }
+</style>
+
+<svg width="0" height="0" aria-hidden="true" style="position:absolute"><defs>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></symbol>
+  <symbol id="i-cog" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1 14h6M9 8h6M17 16h6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9z"/></symbol>
+  <symbol id="i-all" viewBox="0 0 24 24"><path d="M12 2l9 5-9 5-9-5 9-5z"/><path d="M3 12l9 5 9-5"/><path d="M3 17l9 5 9-5"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></symbol>
+  <symbol id="i-theme" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 000 18z" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></symbol>
+  <symbol id="i-save" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></symbol>
+  <symbol id="i-rec" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"/></symbol>
+</defs></svg>
+
+<button class="btn ghost themebtn" id="themeBtn"><svg class="ic"><use href="#i-theme"/></svg>Theme</button>
+
+<div class="wrap">
+  <div class="roombar">
+    <div class="brand"><b>SAB</b><span>Control Room</span></div>
+    <div class="roomact">
+      <button class="btn danger" data-toast="Recording started on all cameras"><span class="rdot"></span>REC all</button>
+      <button class="btn" data-toast="Recording stopped on all cameras">Stop all</button>
+      <button class="btn" id="presetsBtn"><svg class="ic"><use href="#i-save"/></svg>Presets</button>
+      <button class="btn" data-toast="Add camera">Add</button>
+    </div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="legend">
+    <div><b>Uniform cards</b> — every card has the same layout; only the values differ. On the card: status row, quick real-time controls (ISO, shutter, iris, WB), and a per-camera Record button.</div>
+    <div><b>Everything else in Camera settings</b> — full exposure with mode switches (Speed/Angle, focus mode, WB mode), recording, look &amp; color, audio, device, all properties — each applied to This camera / All / Selected.</div>
+    <div><b>Presets</b> — save the whole camera setup and load it back. Cameras came back mis-configured from a shoot? Load "Broadcast Live", Apply to all, every camera is set for air.</div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="mhead">
+      <div><div class="mt" id="mTitle">Cam 1 — Settings</div><div class="ms" id="mSub">ILME-FX30 · 10.0.0.21</div></div>
+      <button class="icn" id="mClose" style="margin-left:auto" title="Close"><svg class="ic"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="presetline">
+      <span class="pl">Preset</span><span class="cur" id="curPreset">Broadcast Live</span>
+      <span class="sp">
+        <button class="btn" id="loadPresetBtn"><svg class="ic sm"><use href="#i-all"/></svg>Load preset</button>
+        <button class="btn" id="savePresetBtn"><svg class="ic sm"><use href="#i-save"/></svg>Save as preset</button>
+      </span>
+    </div>
+    <div class="tabs" id="tabs">
+      <button class="tab sel" data-tab="exp">Exposure</button>
+      <button class="tab" data-tab="rec">Recording</button>
+      <button class="tab" data-tab="look">Look &amp; Color</button>
+      <button class="tab" data-tab="audio">Audio</button>
+      <button class="tab" data-tab="device">Device</button>
+      <button class="tab" data-tab="all">All properties</button>
+    </div>
+    <div class="mbody">
+      <!-- EXPOSURE: full base settings + mode switches -->
+      <div class="pane" data-pane="exp">
+        <div class="field"><label>ISO / Gain</label><div class="row2"><span class="am"><button class="sel">M</button><button>A</button></span><span class="val2 tnum">2000</span><span class="stepper2"><button class="step"><svg class="ic sm"><use href="#i-up"/></svg></button><button class="step"><svg class="ic sm"><use href="#i-down"/></svg></button></span></div></div>
+        <div class="field"><label>Gain unit</label><select><option>ISO</option><option>dB</option></select></div>
+        <div class="field"><label>Base ISO</label><select><option>Low (800)</option><option>High (2500)</option></select></div>
+        <div class="sec">Shutter</div>
+        <div class="field"><label>Mode</label><select><option>Speed</option><option>Angle</option><option>ECS</option><option>Auto</option></select></div>
+        <div class="field"><label>Value</label><div class="row2"><span class="am"><button class="sel">M</button><button>A</button></span><span class="val2 tnum">1/50</span><span class="stepper2"><button class="step"><svg class="ic sm"><use href="#i-up"/></svg></button><button class="step"><svg class="ic sm"><use href="#i-down"/></svg></button></span></div></div>
+        <div class="sec">Iris</div>
+        <div class="field"><label>Aperture</label><div class="row2"><span class="am"><button class="sel">M</button><button>A</button></span><span class="val2">f/2.8</span><span class="stepper2"><button class="step"><svg class="ic sm"><use href="#i-up"/></svg></button><button class="step"><svg class="ic sm"><use href="#i-down"/></svg></button></span></div></div>
+        <div class="sec">White balance</div>
+        <div class="field"><label>Mode</label><select><option>AWB</option><option>Daylight</option><option>Cloudy</option><option>Tungsten</option><option selected>Color Temp</option><option>Custom 1</option></select></div>
+        <div class="field"><label>Color temp</label><div class="row2"><span class="val2 tnum">5600K</span><span class="stepper2"><button class="step"><svg class="ic sm"><use href="#i-up"/></svg></button><button class="step"><svg class="ic sm"><use href="#i-down"/></svg></button></span></div></div>
+        <div class="field"><label>Tint (G–M)</label><div class="selfake"><input class="slider" type="range" value="55" aria-label="Tint"><span class="tnum" style="color:var(--t2)">+2</span></div></div>
+        <div class="sec">Focus</div>
+        <div class="field"><label>Mode</label><select><option>MF</option><option>AF-S</option><option selected>AF-C</option><option>AF-A</option><option>DMF</option><option>AF-D</option><option>PF</option></select></div>
+        <div class="field"><label>Area</label><select><option>Wide</option><option selected>Flexible Spot M</option><option>Zone</option><option>Lock-on</option></select></div>
+        <div class="field"><label>Manual pull</label><div class="selfake"><input class="slider" type="range" value="50" aria-label="Focus"><button class="afbtn">Push AF</button></div></div>
+        <div class="note">These are the same parameters as the card, with every mode switch. The card keeps only the quick ISO / shutter / iris / WB for live tweaks.</div>
+      </div>
+      <!-- RECORDING -->
+      <div class="pane" data-pane="rec" hidden>
+        <div class="field"><label>File / codec</label><select><option>XAVC S-I</option><option>XAVC HS</option><option>XAVC S</option></select></div>
+        <div class="field"><label>Resolution</label><select><option>4K (3840×2160)</option><option>HD (1920×1080)</option></select></div>
+        <div class="field"><label>Frame rate</label><select><option>25p</option><option>50p</option><option>24p</option></select></div>
+        <div class="note">Resolution &amp; frame-rate options update from the file/codec choice.</div>
+        <div class="sec">Media</div>
+        <div class="field"><label>Record to</label><select><option>Slot 1</option><option>Slot 2</option><option>Simultaneous</option></select></div>
+        <div class="field"><label>Format card</label><div class="selfake" style="justify-content:space-between"><span style="font-size:12px;color:var(--t2)">Slot 1 · 64 GB · SDXC</span><button class="btn danger">Format (quick)</button></div></div>
+      </div>
+      <!-- LOOK -->
+      <div class="pane" data-pane="look" hidden>
+        <div class="field"><label>Base look</label><select><option selected>S-Log3 / S-Gamut3.Cine</option><option>S-Cinetone</option><option>Rec.709</option></select></div>
+        <div class="field"><label>Monitor LUT</label><select><option selected>s709</option><option>709(800%)</option><option>Off</option></select></div>
+        <div class="field"><label>Creative look</label><select><option selected>ST Standard</option><option>PT Portrait</option><option>FL Film</option></select></div>
+        <div class="sec">Picture profile</div>
+        <div class="field"><label>Gamma</label><select><option>S-Cinetone</option><option selected>S-Log3</option><option>Cine1</option></select></div>
+        <div class="field"><label>Black level</label><div class="selfake"><input class="slider" type="range" value="50" aria-label="Black"><span class="tnum" style="color:var(--t2)">0</span></div></div>
+        <div class="field"><label>Saturation</label><div class="selfake"><input class="slider" type="range" value="62" aria-label="Saturation"><span class="tnum" style="color:var(--t2)">+6</span></div></div>
+      </div>
+      <!-- AUDIO -->
+      <div class="pane" data-pane="audio" hidden>
+        <div class="achan"><span class="cl">CH1</span><div class="meter"><i style="width:64%"></i></div><span style="font-size:11px;color:var(--t2)">INPUT1 · Man</span></div>
+        <div class="achan"><span class="cl">CH2</span><div class="meter"><i style="width:71%"></i></div><span style="font-size:11px;color:var(--t2)">INPUT2 · Man</span></div>
+        <div class="sec">Channel 1</div>
+        <div class="field"><label>Input</label><select><option>INPUT1 (XLR)</option><option>INPUT2</option><option>Internal MIC</option><option>Shoe</option><option>Off</option></select></div>
+        <div class="field"><label>Type</label><select><option>MIC</option><option>LINE</option></select></div>
+        <div class="field"><label>Level</label><select><option>Manual</option><option>Auto</option></select></div>
+        <div class="field"><label>Gain</label><div class="selfake"><input class="slider" type="range" value="60" aria-label="Gain"><span class="tnum" style="color:var(--t2)">+18 dB</span></div></div>
+        <div class="field"><label>Wind filter</label><select><option>Off</option><option>On</option></select></div>
+        <div class="note">Live meters come from the camera video stream; input select &amp; gain are direct device controls.</div>
+      </div>
+      <!-- DEVICE -->
+      <div class="pane" data-pane="device" hidden>
+        <div class="field"><label>Name</label><input class="tin" value="Cam 1 · Stage L"></div>
+        <div class="field"><label>IP address</label><input class="tin" value="10.0.0.21" inputmode="decimal"></div>
+        <div class="field"><label>Model</label><div class="selfake" style="color:var(--t2)">ILME-FX30 · PTP3 · fw 4.01</div></div>
+        <div class="sec">ATEM link</div>
+        <div class="field"><label>ATEM input</label><select><option>IN 1</option><option>IN 2</option><option>IN 3</option><option>None</option></select></div>
+        <div class="field"><label>Control</label><select><option>Linked (control + tally)</option><option>Tally only</option><option>Off</option></select></div>
+        <div class="sec">Danger zone</div>
+        <div class="field"><label>Remove</label><div><button class="btn danger">Remove this camera</button></div></div>
+      </div>
+      <!-- ALL -->
+      <div class="pane" data-pane="all" hidden>
+        <div class="selfake" style="gap:8px"><svg class="ic" style="color:var(--t3)"><use href="#i-search"/></svg><input class="tin" style="border:0;padding:0;background:transparent" placeholder="Search 776 properties — NR, zebra, timecode, stabilization…"></div>
+        <div style="margin-top:4px">
+          <div class="proprow"><span>High ISO NR <span style="color:var(--t3);font-size:11px">· 0xD15C</span></span><select><option>Normal</option><option>Low</option><option>High</option><option>Off</option></select></div>
+          <div class="proprow"><span>SteadyShot <span style="color:var(--t3);font-size:11px">· 0xD0DA</span></span><select><option>Active</option><option>Standard</option><option>Off</option></select></div>
+          <div class="proprow"><span>Zebra <span style="color:var(--t3);font-size:11px">· 0xD1B8</span></span><select><option>70</option><option>100</option><option>Custom</option><option>Off</option></select></div>
+          <div class="proprow"><span>Timecode preset <span style="color:var(--t3);font-size:11px">· 0xD0D4</span></span><select><option>Rec Run</option><option>Free Run</option></select></div>
+        </div>
+        <div class="note">Every property from the PTP3 catalog — safe ones editable directly, risky ones ask for confirmation.</div>
+      </div>
+    </div>
+
+    <div class="mfoot">
+      <div class="targets">
+        <span class="tglbl">Apply to</span>
+        <span class="seg" id="seg"><button data-t="one" class="sel">This camera</button><button data-t="all">All</button><button data-t="sel">Selected</button></span>
+        <span class="picklist" id="picklist" hidden>
+          <span class="chip on"><span class="box"><svg class="ic sm"><use href="#i-check"/></svg></span>Cam 1</span>
+          <span class="chip on"><span class="box"><svg class="ic sm"><use href="#i-check"/></svg></span>Cam 2</span>
+          <span class="chip"><span class="box"><svg class="ic sm"><use href="#i-check"/></svg></span>Cam 3</span>
+          <span class="chip on"><span class="box"><svg class="ic sm"><use href="#i-check"/></svg></span>Cam 5</span>
+        </span>
+      </div>
+      <div class="report" id="report" hidden>
+        <div class="h"><span class="ok"><svg class="ic sm"><use href="#i-check"/></svg></span><span id="reportHead">Applied</span></div>
+        <ul id="reportList"></ul>
+      </div>
+      <div class="factions">
+        <button class="btn" id="btnCancel">Cancel</button>
+        <button class="btn prim sp" id="btnApply">Apply</button>
+        <button class="btn" id="btnApplyAll"><svg class="ic"><use href="#i-all"/></svg>Apply to all</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PRESETS MODAL -->
+<div class="overlay" id="presetsOverlay">
+  <div class="modal" style="width:min(560px,100%)">
+    <div class="mhead"><div class="mt">Presets</div><button class="icn" id="presetsClose" style="margin-left:auto" title="Close"><svg class="ic"><use href="#i-x"/></svg></button></div>
+    <div class="mbody">
+      <div class="plist" id="plist">
+        <div class="prow"><div><div class="pn">Broadcast Live</div><div class="pd">S-Cinetone · 1/50 · XAVC S-I 4K25 · WB 5600K · audio INPUT1/2</div></div>
+          <div class="pa"><button class="btn" data-toast="Loaded into editor">Load</button><button class="btn prim" data-apply="Broadcast Live">Apply to all</button></div></div>
+        <div class="prow"><div><div class="pn">Studio A</div><div class="pd">Rec.709 · 1/100 · XAVC HS 4K50 · WB 3200K</div></div>
+          <div class="pa"><button class="btn" data-toast="Loaded into editor">Load</button><button class="btn prim" data-apply="Studio A">Apply to all</button></div></div>
+        <div class="prow"><div><div class="pn">Outdoor Daylight</div><div class="pd">S-Log3 · 1/50 · XAVC S-I 4K25 · WB 5600K · ND auto</div></div>
+          <div class="pa"><button class="btn" data-toast="Loaded into editor">Load</button><button class="btn prim" data-apply="Outdoor Daylight">Apply to all</button></div></div>
+      </div>
+      <div class="sec" style="margin-top:13px">Save current setup</div>
+      <div class="saverow"><input class="tin" id="newPreset" placeholder="New preset name…"><button class="btn prim" id="savePreset2"><svg class="ic sm"><use href="#i-save"/></svg>Save</button></div>
+      <div class="note" style="margin-top:8px">A preset captures the full camera configuration — exposure, look, recording and audio — so one tap sets every camera the same for air.</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  // ── camera data (same card shape, different values) ──
+  var CAMS=[
+    {n:"Cam 1 · Stage L", m:"ILME-FX30 · 10.0.0.21", ring:"live", tally:["on-air","On Air"], rec:true, recTime:"12:47", card:"41m", bat:"78%", batT:"1:58", adp:false,
+      atem:{in:"IN 1", linked:true, txt:"Control + tally"}, iso:{v:"2000",u:"ISO",am:"M"}, sh:{v:"1/50",am:"M"}, ir:{v:"f/2.8",am:"M"}, wb:{v:"5600K"}, aud:[62,70]},
+    {n:"Cam 2 · Wide", m:"ILME-FX6 · 10.0.0.22", ring:"pvw", tally:["preview","Preview"], rec:false, recTime:"—", card:"2h04", bat:"92%", batT:"2:40", adp:true,
+      atem:{in:"IN 2", linked:true, txt:"Control + tally"}, iso:{v:"Auto",u:"dB",am:"A"}, sh:{v:"180.0°",am:"M"}, ir:{v:"f/4.0",am:"M"}, wb:{v:"Auto"}, aud:[40,44]},
+    {n:"Cam 3 · Tight", m:"PXW-Z200 · 10.0.0.23", ring:"", tally:["idle","Idle"], rec:false, recTime:"—", card:"58m", bat:"64%", batT:"3:20", adp:false,
+      atem:{in:"IN 3", linked:false, txt:"Tally only"}, iso:{v:"800",u:"ISO",am:"M"}, sh:{v:"1/50",am:"M"}, ir:{v:"f/5.6",am:"M"}, wb:{v:"6500K"}, aud:[12,9]},
+    {n:"Cam 5 · ZV-E10 II", m:"ZV-E10M2 · 10.0.0.25", ring:"", tally:["idle","Idle"], rec:false, recTime:"—", card:"22m", bat:"51%", batT:"1:12", adp:false,
+      atem:{in:"IN 5", linked:true, txt:"Control + tally"}, iso:{v:"1600",u:"ISO",am:"M"}, sh:{v:"1/60",am:"M"}, ir:{v:"f/3.5",am:"A"}, wb:{v:"AWB"}, aud:[30,28]}
+  ];
+  function amT(cur){ return '<span class="am"><button'+(cur==="M"?' class="sel"':'')+'>M</button><button'+(cur==="A"?' class="sel"':'')+'>A</button></span>'; }
+  function step(){ return '<span class="stepper"><button class="step" data-dir="1"><svg class="ic sm"><use href="#i-up"/></svg></button><button class="step" data-dir="-1"><svg class="ic sm"><use href="#i-down"/></svg></button></span>'; }
+  function qc(lab,c){ return '<div class="qc"><div class="lab">'+lab+(c.am?amT(c.am):'')+'</div><div class="body"><span class="val">'+c.v+(c.u?' <small>'+c.u+'</small>':'')+'</span>'+step()+'</div></div>'; }
+  function card(c){
+    return '<div class="card '+c.ring+'">'
+      +'<div class="chead"><div class="cid"><div class="cname">'+c.n+'</div><div class="cmeta"><span class="conn"></span> '+c.m+'</div></div>'
+      +'<span class="tally '+c.tally[0]+'">'+c.tally[1]+'</span>'
+      +'<button class="icn" title="Reconnect" data-toast="Reconnecting…"><svg class="ic"><use href="#i-refresh"/></svg></button></div>'
+      +'<div class="statusbar">'
+        +'<div class="st '+(c.rec?'rec':'')+'"><div class="k">'+(c.rec?'Rec':'Status')+'</div><div class="v tnum '+(c.rec?'rec-badge':'')+'">'+(c.rec?'<span class="d"></span>':'')+(c.rec?c.recTime:'Idle')+'</div></div>'
+        +'<div class="st"><div class="k">Card</div><div class="v tnum">'+c.card+'</div></div>'
+        +'<div class="st bat"><div class="k">Battery</div><div class="v"><span class="tnum">'+c.bat+'</span><span class="tm tnum">'+c.batT+'</span></div>'+(c.adp?'<div class="adp"><svg class="ic sm"><use href="#i-bolt"/></svg>On adapter</div>':'')+'</div>'
+        +'<div class="st aud"><div class="k">Audio</div><div class="mrow"><div class="amtr"><i style="width:'+c.aud[0]+'%"></i></div><div class="amtr"><i style="width:'+c.aud[1]+'%"></i></div></div></div>'
+      +'</div>'
+      +'<div class="catem'+(c.atem.linked?'':' off')+'"><span class="l">ATEM</span><span class="in">'+c.atem.in+'</span><span class="lk"><span class="d"></span>'+c.atem.txt+'</span></div>'
+      +'<div class="quick">'+qc("ISO",c.iso)+qc("Shutter",c.sh)+qc("Iris",c.ir)+qc("WB",c.wb)+'</div>'
+      +'<div class="cfoot"><button class="recbtn'+(c.rec?' recording':'')+'"><svg class="ic"><use href="#i-'+(c.rec?'stop':'rec')+'"/></svg>'+(c.rec?'Stop':'Record')+'</button>'
+      +'<button class="btn setbtn" data-name="'+c.n+'" data-meta="'+c.m+'"><svg class="ic"><use href="#i-cog"/></svg>Settings</button></div>'
+      +'</div>';
+  }
+  document.getElementById('grid').innerHTML=CAMS.map(card).join('');
+
+  var overlay=document.getElementById('overlay'), pov=document.getElementById('presetsOverlay');
+  var toast=document.getElementById('toast'), toastT;
+  function say(m){ toast.textContent=m; toast.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(function(){toast.classList.remove('show');},1700); }
+
+  document.getElementById('themeBtn').addEventListener('click',function(){ var r=document.documentElement; r.dataset.theme=r.dataset.theme==='light'?'dark':'light'; });
+
+  // delegated clicks
+  document.addEventListener('click',function(e){
+    var t=e.target;
+    var toastEl=t.closest('[data-toast]'); if(toastEl){ say(toastEl.getAttribute('data-toast')); }
+    // open settings
+    var set=t.closest('.setbtn'); if(set){ document.getElementById('mTitle').textContent=set.dataset.name+' — Settings'; document.getElementById('mSub').textContent=set.dataset.meta; document.getElementById('report').hidden=true; overlay.classList.add('show'); }
+    // rec toggle
+    var rb=t.closest('.recbtn'); if(rb){ var on=rb.classList.toggle('recording'); rb.innerHTML='<svg class="ic"><use href="#i-'+(on?'stop':'rec')+'"/></svg>'+(on?'Stop':'Record'); say(on?'Recording started':'Recording stopped'); }
+    // A/M
+    var amb=t.closest('.am button'); if(amb){ amb.parentElement.querySelectorAll('button').forEach(function(x){x.classList.remove('sel');}); amb.classList.add('sel'); }
+    // steppers (card + modal)
+    var st=t.closest('.step'); if(st){ var host=st.closest('.qc')||st.closest('.field'); var val=host&&host.querySelector('.val,.val2'); if(val){ val.style.color='var(--accent)'; setTimeout(function(){val.style.color='';},220); } }
+    // apply presets
+    var pa=t.closest('[data-apply]'); if(pa){ pov.classList.remove('show'); say(pa.getAttribute('data-apply')+' applied to all (3 of 4, Cam 5 partial)'); }
+  });
+
+  // close modals
+  function closeM(){ overlay.classList.remove('show'); }
+  document.getElementById('mClose').addEventListener('click',closeM);
+  document.getElementById('btnCancel').addEventListener('click',closeM);
+  overlay.addEventListener('click',function(e){ if(e.target===overlay) closeM(); });
+  document.getElementById('presetsBtn').addEventListener('click',function(){ pov.classList.add('show'); });
+  document.getElementById('presetsClose').addEventListener('click',function(){ pov.classList.remove('show'); });
+  pov.addEventListener('click',function(e){ if(e.target===pov) pov.classList.remove('show'); });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ closeM(); pov.classList.remove('show'); } });
+  document.getElementById('loadPresetBtn').addEventListener('click',function(){ pov.classList.add('show'); });
+  document.getElementById('savePresetBtn').addEventListener('click',function(){ pov.classList.add('show'); document.getElementById('newPreset').focus(); });
+  document.getElementById('savePreset2').addEventListener('click',function(){ var n=document.getElementById('newPreset').value.trim()||'New preset'; say('Saved preset "'+n+'"'); document.getElementById('newPreset').value=''; });
+
+  // tabs — Apply label follows the active tab
+  var LBL={exp:"exposure",rec:"recording",look:"look",audio:"audio",device:"device",all:"properties"};
+  document.getElementById('tabs').addEventListener('click',function(e){
+    var t=e.target.closest('.tab'); if(!t) return;
+    this.querySelectorAll('.tab').forEach(function(x){x.classList.remove('sel');}); t.classList.add('sel');
+    document.querySelectorAll('.pane').forEach(function(p){ p.hidden=p.dataset.pane!==t.dataset.tab; });
+    document.getElementById('btnApply').textContent='Apply '+LBL[t.dataset.tab];
+  });
+
+  // target seg
+  document.getElementById('seg').addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return; this.querySelectorAll('button').forEach(function(x){x.classList.remove('sel');}); b.classList.add('sel'); document.getElementById('picklist').hidden=b.dataset.t!=='sel'; });
+  document.getElementById('picklist').addEventListener('click',function(e){ var c=e.target.closest('.chip'); if(c) c.classList.toggle('on'); });
+
+  function target(){ return document.querySelector('#seg .sel').dataset.t; }
+  function apply(all){
+    var rep=document.getElementById('report'), list=document.getElementById('reportList'), head=document.getElementById('reportHead');
+    var cams;
+    if(all||target()==='all') cams=[['Cam 1 · Stage L',1],['Cam 2 · Wide',1],['Cam 3 · Tight',1],['Cam 5 · ZV-E10 II',0]];
+    else if(target()==='sel'){ cams=[]; document.querySelectorAll('#picklist .chip.on').forEach(function(c){ var n=c.textContent.trim(); cams.push([n, n.indexOf('5')>-1?0:1]); }); }
+    else cams=[[document.getElementById('mTitle').textContent.replace(' — Settings',''),1]];
+    var ok=cams.filter(function(c){return c[1];}).length;
+    list.innerHTML=cams.map(function(c){ return '<li><span class="nm">'+c[0]+'</span>'+(c[1]?'<span class="yes"><svg class="ic sm"><use href="#i-check"/></svg></span>':'<span class="why">format not supported</span>')+'</li>'; }).join('');
+    head.textContent='Applied to '+ok+' of '+cams.length+(all||target()==='all'?' cameras':(target()==='sel'?' selected':''));
+    rep.hidden=false; say('Applied to '+ok+' of '+cams.length);
+  }
+  document.getElementById('btnApply').addEventListener('click',function(){ apply(false); });
+  document.getElementById('btnApplyAll').addEventListener('click',function(){ apply(true); });
+
+  // sliders + ambient audio
+  function bindSliders(){ document.querySelectorAll('.slider').forEach(function(sl){ function u(){ sl.style.setProperty('--v',sl.value+'%'); } sl.oninput=u; u(); }); }
+  bindSliders();
+  if(!matchMedia('(prefers-reduced-motion: reduce)').matches){
+    setInterval(function(){ document.querySelectorAll('.amtr i').forEach(function(m){ var b=parseInt(m.style.width)||30; m.style.width=Math.max(5,Math.min(96,b+(Math.random()*20-10)))+'%'; }); },650);
+  }
+})();
+</script>

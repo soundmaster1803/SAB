@@ -200,6 +200,12 @@ typecheck + build (JSON инлайнится) + смоук новых эндпо
 **Дальше по фундаменту:** UI generic-панель поверх `/api/sony/catalog` + `/prop` (управление любым
 свойством из веба); bulk-обёртка для `/prop`; довыверить status-энумы на железе через `/debug`.
 
+### RELEASE v1.1.0-beta (2026-07-05)
+Версия поднята 1.0.1-beta → **1.1.0-beta** (VERSION + package.json). Полный лог сессии:
+`docs/SESSION-LOG-2026-07.md`. CHANGELOG обновлён. UI-редизайн залочен как спека
+(`docs/design/camera-ui-redesign.md` + `camera-card-mockup.html`) — реализация в React
+это следующая фаза. Backend-фичи (bulk, generic prop, catalog, wire-value фиксы) — в проде.
+
 ### Заметки sony-research (2026-07-04) — что нужно железо
 - **Два механизма:** PASM-режим `0x500E` (ZV-E10 II, FX30 в P/A/S/M) vs per-parameter cinema-тоглы
   (FX6/Z200/FX30 Cine): iris `0xD001` UINT8 (0x01 Manual/0x02 Auto), gain `0xD01C` UINT8.

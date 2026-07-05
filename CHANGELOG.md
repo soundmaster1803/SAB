@@ -2,6 +2,36 @@
 
 ---
 
+## v1.1.0-beta — 2026-07-05 (Bulk control + full-property foundation + PTP3 wire-value fixes)
+
+Full session record: `docs/SESSION-LOG-2026-07.md`.
+
+### Added
+- **Bulk control** — `POST /api/cameras/bulk` applies one op to a group (`"all"` or `ids[]`)
+  with per-camera results (partial-failure). Ops: adjust, color-temp, shutter-set, mode,
+  focus-mode, focus-area, af, record, rec-settings. `rec-settings` validates format against
+  each camera's live supported list ("applied to all except <cam> — not supported").
+- **Generic property control** — `GET /api/sony/catalog`, `GET/POST /api/cameras/:id/prop`
+  (safeToWrite-gated). Foundation for controlling every camera property.
+- **PTP3 catalog** — `knowledge/sony/ptp3-catalog.json` (776 properties, 585 with enum values)
+  parsed from the Camera Control PTP 3 Reference; loader `src/sony/protocol/ptp3-catalog.ts`.
+- **Frontend bulk UI** — selection checkboxes on cards + `BulkBar` group toolbar.
+- **Cinema Auto/Manual** — iris (0xD001) / shutter (0xD013) / gain (0xD01C) via `setCineMode`.
+
+### Fixed
+- Dead UI routes wired: `/shutter-set` (direct shutter), `/focus-area`, `/mode` (WB, ISO).
+- **Confirmed wire values** from PTP3 Reference: WB Color-Temp 0x8006→0x8012;
+  focus-area XS/XL/lock-on; added AF-D (0x8008). Corrected datatypes (exposure-mode UINT32,
+  focus-area UINT16). Note: **CrSDK enum values ≠ raw PTP wire values** — use PTP3 Reference.
+- Live WB/Shutter Auto-Manual toggles (were hardcoded to Manual) now reflect real camera state.
+
+### Design (locked, implementation pending)
+- Operator console redesign approved — `docs/design/camera-ui-redesign.md` +
+  `camera-card-mockup.html`. Two-tier: compact uniform cards + comprehensive settings modal
+  with per-target apply and presets. English UI, SVG icons.
+
+---
+
 ## v0.18.0 — 2026-04-20 (Recording settings UI + Sony state expansion + docs overhaul)
 
 ### Added
