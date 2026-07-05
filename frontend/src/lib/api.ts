@@ -13,6 +13,18 @@ export function post(path: string, body?: object): Promise<Response> {
   })
 }
 
+export function patch(path: string, body: object): Promise<Response> {
+  return fetch(path, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+}
+
+export function del(path: string): Promise<Response> {
+  return fetch(path, { method: 'DELETE' })
+}
+
 export interface BulkResult {
   id: string
   ok: boolean

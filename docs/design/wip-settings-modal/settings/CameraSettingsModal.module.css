@@ -1,0 +1,643 @@
+/* ── CameraSettingsModal ───────────────────────────────────────────────────────
+ * Deep camera-settings modal (layer 2a): shell, tab bar, Exposure/Recording/Device
+ * panes and the shared apply-target footer. Ported from the `.overlay` / `.modal`
+ * block of docs/design/camera-card-mockup.html.
+ *
+ * Layout fix (was a bug in the mockup): the shell is a flex COLUMN where head /
+ * presetline / tabs / footer are flex:none and the body is flex:1; min-height:0;
+ * overflow-y:auto — so the tab row is never squeezed and only the body scrolls. */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 6, 9, 0.62);
+  backdrop-filter: blur(3px);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  z-index: 40;
+}
+
+.modal {
+  width: min(700px, 100%);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--edge-strong);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  animation: pop 0.16s ease;
+}
+
+@keyframes pop {
+  from {
+    transform: scale(0.97);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal {
+    animation: none;
+  }
+}
+
+/* head / presetline / tabs / footer never flex — only the body scrolls */
+.mhead,
+.presetline,
+.tabs,
+.mfoot {
+  flex: none;
+}
+
+.mhead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--edge);
+}
+
+.mt {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--t1);
+}
+
+.ms {
+  font-size: 12px;
+  color: var(--t2);
+  margin-top: 1px;
+}
+
+.closeBtn {
+  width: 28px;
+  height: 28px;
+  margin-left: auto;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--t2);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.closeBtn:hover {
+  background: var(--panel-2);
+  border-color: var(--edge);
+  color: var(--t1);
+}
+
+/* ── Preset line (stub buttons for now) ───────────────────────────────────────── */
+.presetline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--edge);
+  font-size: 12px;
+}
+
+.pl {
+  font-size: 9.5px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+
+.cur {
+  font-weight: 700;
+  color: var(--t1);
+}
+
+.presetSp {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+}
+
+/* ── Tabs ─────────────────────────────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 10px 12px 0;
+  overflow-x: auto;
+}
+
+.tabs::-webkit-scrollbar {
+  height: 0;
+}
+
+.tab {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--t2);
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 9px 9px 0 0;
+  padding: 9px 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: var(--t1);
+}
+
+.tab.sel {
+  color: var(--t1);
+  background: var(--panel-2);
+  border-color: var(--edge);
+}
+
+/* ── Body (the only scroll region) ────────────────────────────────────────────── */
+.mbody {
+  padding: 16px;
+  overflow-y: auto;
+  background: var(--panel-2);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.pane {
+  display: grid;
+  gap: 12px;
+}
+
+/* ── Fields ───────────────────────────────────────────────────────────────────── */
+.field {
+  display: grid;
+  grid-template-columns: 118px 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+.fieldLabel {
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+
+.select,
+.tin {
+  width: 100%;
+  font: inherit;
+  font-size: 13px;
+  color: var(--t1);
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.select:focus,
+.tin:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.selfake {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.selfakeSpread {
+  justify-content: space-between;
+}
+
+.row2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.val2 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--t1);
+  min-width: 64px;
+  font-variant-numeric: tabular-nums;
+}
+
+.stepper2 {
+  display: flex;
+  gap: 5px;
+  margin-left: auto;
+}
+
+.step {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  border: 1px solid var(--edge);
+  background: var(--panel);
+  color: var(--t1);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.step:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.step:active:not(:disabled) {
+  transform: scale(0.9);
+}
+
+.step:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* M/A pill */
+.am {
+  display: inline-flex;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  overflow: hidden;
+  height: 24px;
+  flex: none;
+}
+
+.am button {
+  font-size: 10px;
+  font-weight: 800;
+  width: 28px;
+  border: 0;
+  background: transparent;
+  color: var(--t3);
+  cursor: pointer;
+}
+
+.am button.sel {
+  background: var(--accent);
+  color: #04121f;
+}
+
+.am button:disabled {
+  cursor: default;
+}
+
+.sec {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--t3);
+  border-top: 1px solid var(--edge);
+  padding-top: 11px;
+}
+
+.note {
+  font-size: 11.5px;
+  color: var(--t3);
+  grid-column: 1 / -1;
+  margin-top: -4px;
+}
+
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 3px;
+  flex: 1;
+  min-width: 80px;
+  background: linear-gradient(90deg, var(--accent) var(--v, 50%), var(--edge) var(--v, 50%));
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--accent);
+  cursor: pointer;
+}
+
+.sliderVal {
+  color: var(--t2);
+  font-variant-numeric: tabular-nums;
+  min-width: 34px;
+  text-align: right;
+}
+
+.afbtn {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 6px 13px;
+  border-radius: 7px;
+  border: 1px solid var(--ok);
+  background: transparent;
+  color: var(--ok);
+  cursor: pointer;
+  flex: none;
+}
+
+.afbtn:hover {
+  background: rgba(48, 209, 88, 0.1);
+}
+
+.staticVal {
+  font-size: 12px;
+  color: var(--t2);
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────────── */
+.btn {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--t1);
+  background: var(--panel-2);
+  border: 1px solid var(--edge);
+  border-radius: 9px;
+  padding: 8px 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.btn.prim {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #04121f;
+}
+
+.btn.danger {
+  color: var(--prog);
+  border-color: var(--edge);
+}
+
+.btn.danger:hover:not(:disabled) {
+  border-color: var(--prog);
+}
+
+/* ── Format card (Recording tab) ──────────────────────────────────────────────── */
+.formatCard {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+}
+
+.formatRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.formatRow .select {
+  width: auto;
+  flex: 1;
+  min-width: 90px;
+}
+
+.confirmBox {
+  display: grid;
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid var(--prog);
+  border-radius: 9px;
+  background: rgba(255, 69, 58, 0.08);
+}
+
+.confirmText {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--t1);
+}
+
+.confirmBtns {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* ── Placeholder (Look / Audio / All properties — later tasks) ────────────────── */
+.placeholder {
+  display: grid;
+  gap: 8px;
+  place-items: center;
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--t3);
+}
+
+.placeholderTag {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 4px 9px;
+}
+
+.placeholderText {
+  font-size: 13px;
+  color: var(--t2);
+  max-width: 340px;
+}
+
+/* ── Footer ───────────────────────────────────────────────────────────────────── */
+.mfoot {
+  border-top: 1px solid var(--edge);
+  padding: 13px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  background: var(--panel);
+}
+
+.targets {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+}
+
+.tglbl {
+  font-size: 10px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.seg button {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--t2);
+  background: transparent;
+  border: 0;
+  padding: 7px 12px;
+  cursor: pointer;
+}
+
+.seg button.sel {
+  background: var(--accent);
+  color: #04121f;
+}
+
+.picklist {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 6px 10px;
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--t2);
+  user-select: none;
+  background: transparent;
+}
+
+.chip.on {
+  border-color: var(--accent);
+  color: var(--t1);
+  background: var(--accent-dim);
+}
+
+.chipBox {
+  width: 13px;
+  height: 13px;
+  border-radius: 4px;
+  border: 1.5px solid var(--edge-strong);
+  display: inline-grid;
+  place-items: center;
+  color: transparent;
+}
+
+.chip.on .chipBox {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #04121f;
+}
+
+/* ── Report ───────────────────────────────────────────────────────────────────── */
+.report {
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.reportHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  background: var(--panel-2);
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--t1);
+}
+
+.reportHeadOk {
+  color: var(--ok);
+  display: inline-flex;
+}
+
+.reportList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 132px;
+  overflow-y: auto;
+}
+
+.reportItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  border-top: 1px solid var(--edge);
+}
+
+.reportItem .nm {
+  font-weight: 600;
+  color: var(--t1);
+}
+
+.reportItem .why {
+  color: var(--warn);
+  margin-left: auto;
+  text-align: right;
+}
+
+.reportItem .yes {
+  color: var(--ok);
+  margin-left: auto;
+  display: inline-flex;
+}
+
+.factions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.factions .spacer {
+  margin-left: auto;
+}
+
+/* ── Phone: full-screen modal ─────────────────────────────────────────────────── */
+@media (max-width: 520px) {
+  .overlay {
+    padding: 0;
+  }
+  .modal {
+    max-height: 100vh;
+    height: 100vh;
+    border-radius: 0;
+    width: 100%;
+  }
+  .field {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+  .fieldLabel {
+    color: var(--t2);
+  }
+}
