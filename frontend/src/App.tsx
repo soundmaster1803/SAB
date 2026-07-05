@@ -3,7 +3,6 @@ import { useWsStore } from './stores/ws'
 import { Header } from './components/Header'
 import { CameraGrid } from './panels/cameras/CameraGrid'
 import { BulkBar } from './panels/cameras/BulkBar'
-import { DebugModal } from './panels/cameras/DebugModal'
 import { AddCameraWizard } from './panels/cameras/AddCameraWizard'
 import { AtemBar } from './panels/atem/AtemBar'
 import { LogPanel } from './panels/logs/LogPanel'
@@ -11,11 +10,6 @@ import { LogPanel } from './panels/logs/LogPanel'
 function App() {
   const connect = useWsStore((s) => s.connect)
   useEffect(() => { connect() }, [connect])
-
-  // Debug modal
-  const [debugCamId, setDebugCamId] = useState<string | null>(null)
-  const openDebug  = useCallback((id: string) => setDebugCamId(id), [])
-  const closeDebug = useCallback(() => setDebugCamId(null), [])
 
   // Add Camera wizard
   const [wizardOpen, setWizardOpen] = useState(false)
@@ -44,12 +38,11 @@ function App() {
 
       <main style={{ padding: '16px' }}>
         <BulkBar />
-        <CameraGrid onSettings={openDebug} />
+        <CameraGrid />
       </main>
 
       <AtemBar />
 
-      <DebugModal     camId={debugCamId} onClose={closeDebug} />
       <AddCameraWizard open={wizardOpen} onClose={closeWizard} />
       <LogPanel        open={logsOpen}   onClose={closeLogs} />
     </>

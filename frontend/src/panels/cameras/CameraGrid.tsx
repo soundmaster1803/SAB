@@ -1,29 +1,20 @@
 /**
- * CameraGrid — responsive grid of compact camera cards.
+ * CameraGrid — responsive grid of compact camera cards + the settings modal.
  *
- * Reads the live camera list from useCamerasStore (populated by WS state messages).
- * Shows an empty state placeholder when no cameras are paired.
- *
- * Renders the redesigned CompactCameraCard (layer 1). The Settings button opens
- * the deep-settings modal — a later layer; for now `onSettings` is a placeholder.
- * The legacy CameraCard remains in the tree but is no longer rendered here.
+ * Reads the live camera list from useCamerasStore. Each card's Settings button
+ * opens the comprehensive CameraSettingsModal for that camera. The legacy
+ * CameraCard remains in the tree but is no longer rendered here.
  */
+import { useState } from 'react'
 import { useCamerasStore, selectCameraList } from '../../stores/cameras'
 import { CompactCameraCard } from './CompactCameraCard'
+import { CameraSettingsModal } from './settings/CameraSettingsModal'
 import styles from './CameraGrid.module.css'
 
-interface Props {
-  /**
-   * Opens deep settings for a camera. The real settings modal is a later layer;
-   * until then App wires this to the debug modal. Falls back to a no-op.
-   */
-  onSettings?: (id: string) => void
-}
-
-export function CameraGrid({ onSettings }: Props) {
+export function CameraGrid() {
   const cameras = useCamerasStore(selectCameraList)
-
-  const handleSettings = onSettings ?? ((id: string) => console.info('[CameraGrid] open settings for', id))
+  const [settingsId, setSettingsId] = useState<string | null>(null)
+  const settingsCam = cameras.find((c) => c.id === settingsId) ?? null
 
   if (cameras.length === 0) {
     return (
@@ -35,10 +26,13 @@ export function CameraGrid({ onSettings }: Props) {
   }
 
   return (
-    <div className={styles.grid}>
-      {cameras.map((cam) => (
-        <CompactCameraCard key={cam.id} cam={cam} onSettings={handleSettings} />
-      ))}
-    </div>
+    <>
+      <div className={styles.grid}>
+        {cameras.map((cam) => (
+          <CompactCameraCard key={cam.id} cam={cam} onSettings={setSettingsId} />
+        ))}
+      </div>
+      <CameraSettingsModal cam={settingsCam} onClose={() => setSettingsId(null)} />
+    </>
   )
 }

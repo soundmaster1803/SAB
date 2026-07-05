@@ -11,7 +11,7 @@
  * chosen target — the "dial one camera, push the look to all" flow.
  */
 import { useEffect, useState } from 'react'
-import type { CameraUIState } from '../../../types/ws'
+
 import type { ApplyAction, ApplyTarget, TabProps } from './types'
 import { Field, Sec, Note, StepRow, Select } from './parts'
 import styles from './CameraSettingsModal.module.css'
