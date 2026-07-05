@@ -48,8 +48,10 @@ export function CameraSettingsModal({ cam, onClose }: Props) {
   const tabApiRef = useRef<TabApi | null>(null)
   const targetRef = useRef<ApplyTarget>('one')
   const overrideRef = useRef<ApplyTarget | null>(null)
+  const checkedRef = useRef<Set<string>>(checked)
   const pendingRef = useRef<Array<Promise<{ label: string; results: BulkResult[] } | null>> | null>(null)
   targetRef.current = target
+  checkedRef.current = checked
 
   // Reset when the camera changes / modal reopens.
   useEffect(() => {
@@ -90,7 +92,7 @@ export function CameraSettingsModal({ cam, onClose }: Props) {
       pendingRef.current?.push(p.then(() => null))
       return
     }
-    const ids = eff === 'all' ? 'all' : Array.from(checked)
+    const ids = eff === 'all' ? 'all' : Array.from(checkedRef.current)
     const { op, params, label } = action.bulk
     const p = bulk(op, params, ids as string[] | 'all').then((res) => (res ? { label, results: res.results } : null))
     if (pendingRef.current) pendingRef.current.push(p)

@@ -10,6 +10,7 @@
  * Close with Escape, backdrop click, or Done/Cancel buttons.
  */
 import { useEffect, useRef, useState } from 'react'
+import { Icon } from '../../components/Icon'
 import styles from './AddCameraWizard.module.css'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -208,7 +209,7 @@ export function AddCameraWizard({ open, onClose }: Props) {
           <>
             <h2 className={styles.heading}>Camera Added</h2>
             <div className={styles.resultBody}>
-              <div className={styles.successIcon}>✓</div>
+              <div className={styles.successIcon}><Icon name="check" size={26} /></div>
               <p className={styles.resultText}>
                 <strong>{name}</strong> is now connected and will appear in the camera grid.
               </p>
@@ -224,7 +225,7 @@ export function AddCameraWizard({ open, onClose }: Props) {
           <>
             <h2 className={styles.heading}>Pairing Failed</h2>
             <div className={styles.resultBody}>
-              <div className={styles.errorIcon}>✕</div>
+              <div className={styles.errorIcon}><Icon name="x" size={26} /></div>
               <p className={styles.resultText}>{error}</p>
             </div>
             <div className={styles.actions}>
