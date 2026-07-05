@@ -73,8 +73,24 @@ Found + fixed P1 bugs, laid out stages 0–7.
   double-clickable `SAB.command`. start builds UI + runs bridge on :7777 + opens browser;
   tested green.
 
+## 5c. Redesign COMPLETE + Demo + Presets + build (2026-07-05, later)
+- **Settings modal finished** (`bd3d93f`): all tabs (Exposure/Recording/Look/Audio/Device/All
+  properties) + apply-target footer (This/All/Selected) + per-camera report. `settings/` folder.
+- **Legacy UI removed** (`c338a0a`): old CameraCard/OfflineOverlay/RuntimeBadges/DebugModal.
+- **Demo Mode + RoomBar + Presets** (`1ebce9d`): `stores/demo` + `panels/demo/` (fake cameras,
+  no hardware needed); `components/RoomBar` replaced the legacy Header (SVG icons, Demo toggle);
+  `panels/presets/PresetsModal` + backend `routes/presets.ts` (file-backed CRUD, apply-to-all).
+  Removed legacy Header/BulkBar/selection store.
+- **Review fix** (`ab586f3`): settings Apply reads the live "Selected" set via ref (was stale);
+  wizard glyphs → SVG.
+- **Build**: `release/SAB-1.1.0-beta-universal.dmg` (196 MB, full new design) → collected into
+  `releases/v1.1.0-beta/`. Launcher `scripts/sab.sh` runs the production bridge.
+- **GitHub**: pushed `main` + tag `v1.1.0-beta` to soundmaster1803/SAB. Windows exe builds via
+  `.github/workflows/build.yml` — NOT yet pushed (token lacks `workflow` scope); enable per
+  `docs/CI-SETUP.md`. Remaining legacy-styled surface: the AtemBar (functional; ATEM info now
+  also on cards).
+
 ## 6. Where to look next (implementation TODO)
-0. **Finish the settings modal** — resume from `docs/design/wip-settings-modal/` (see its README).
 1. Implement the redesign in React by layers: compact `CameraCard` → `CameraSettingsModal`
    (tabs) → `PresetsModal`. Verify build each layer.
 2. New backend: bulk ops for audio/look/exposure props; preset storage + apply-config.
