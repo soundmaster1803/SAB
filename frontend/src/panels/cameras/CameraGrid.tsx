@@ -1,22 +1,29 @@
 /**
- * CameraGrid — responsive grid of CameraCards.
+ * CameraGrid — responsive grid of compact camera cards.
  *
  * Reads the live camera list from useCamerasStore (populated by WS state messages).
  * Shows an empty state placeholder when no cameras are paired.
  *
- * The `onDebug` callback is threaded down to each CameraCard.
- * F4 will supply the real debug modal handler; until then it is optional.
+ * Renders the redesigned CompactCameraCard (layer 1). The Settings button opens
+ * the deep-settings modal — a later layer; for now `onSettings` is a placeholder.
+ * The legacy CameraCard remains in the tree but is no longer rendered here.
  */
 import { useCamerasStore, selectCameraList } from '../../stores/cameras'
-import { CameraCard } from './CameraCard'
+import { CompactCameraCard } from './CompactCameraCard'
 import styles from './CameraGrid.module.css'
 
 interface Props {
-  onDebug?: (id: string) => void
+  /**
+   * Opens deep settings for a camera. The real settings modal is a later layer;
+   * until then App wires this to the debug modal. Falls back to a no-op.
+   */
+  onSettings?: (id: string) => void
 }
 
-export function CameraGrid({ onDebug }: Props) {
+export function CameraGrid({ onSettings }: Props) {
   const cameras = useCamerasStore(selectCameraList)
+
+  const handleSettings = onSettings ?? ((id: string) => console.info('[CameraGrid] open settings for', id))
 
   if (cameras.length === 0) {
     return (
@@ -30,7 +37,7 @@ export function CameraGrid({ onDebug }: Props) {
   return (
     <div className={styles.grid}>
       {cameras.map((cam) => (
-        <CameraCard key={cam.id} cam={cam} onDebug={onDebug} />
+        <CompactCameraCard key={cam.id} cam={cam} onSettings={handleSettings} />
       ))}
     </div>
   )

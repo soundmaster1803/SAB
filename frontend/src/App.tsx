@@ -44,7 +44,7 @@ function App() {
 
       <main style={{ padding: '16px' }}>
         <BulkBar />
-        <CameraGrid onDebug={openDebug} />
+        <CameraGrid onSettings={openDebug} />
       </main>
 
       <AtemBar />

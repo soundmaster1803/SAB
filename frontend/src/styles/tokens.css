@@ -23,6 +23,20 @@
   --t2: rgba(255, 255, 255, 0.5);
   --t3: rgba(255, 255, 255, 0.25);
 
+  /* ── Control-room surfaces (redesign v1.1) ───────────────────────────────
+   * Semantic aliases used by the new operator-console components. Kept
+   * additive so legacy components keep working until fully swapped. */
+  --panel:       #14181e;
+  --panel-2:     #1b2027;
+  --panel-3:     #222932;
+  --edge:        rgba(255, 255, 255, 0.08);
+  --edge-strong: rgba(255, 255, 255, 0.16);
+  --accent-dim:  rgba(0, 122, 255, 0.14);
+  --prog: #ff453a;   /* program / on-air / recording */
+  --prev: #30d158;   /* preview */
+  --warn: #ff9f0a;   /* warning */
+  --ok:   #30d158;   /* good / linked */
+
   /* ── Layout ───────────────────────────────────────────────────────────── */
   --header-h:      52px;
   --atem-bar-h:    180px;
