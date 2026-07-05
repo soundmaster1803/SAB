@@ -1,0 +1,52 @@
+.overlay {
+  position: fixed; inset: 0; z-index: 30;
+  background: rgba(4, 6, 9, 0.62);
+  backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+  display: grid; place-items: center; padding: 20px;
+}
+.modal {
+  width: min(560px, 100%); max-height: 88vh; display: flex; flex-direction: column;
+  background: var(--panel); border: 1px solid var(--edge-strong); border-radius: 16px;
+  overflow: hidden; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+.head { display: flex; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--edge); }
+.title { font-size: 15px; font-weight: 700; }
+.close {
+  margin-left: auto; width: 28px; height: 28px; border-radius: 7px; border: 1px solid transparent;
+  background: transparent; color: var(--t2); cursor: pointer; display: grid; place-items: center;
+}
+.close:hover { background: var(--panel-2); border-color: var(--edge); color: var(--t1); }
+
+.body { padding: 16px; overflow-y: auto; background: var(--panel-2); display: grid; gap: 10px; }
+.empty { color: var(--t3); font-size: 13px; text-align: center; padding: 14px; }
+
+.row {
+  display: flex; align-items: center; gap: 11px; flex-wrap: wrap;
+  padding: 11px 12px; background: var(--panel); border: 1px solid var(--edge); border-radius: 10px;
+}
+.info { min-width: 0; flex: 1; }
+.pn { font-weight: 650; font-size: 13.5px; }
+.pd { font-size: 11.5px; color: var(--t2); margin-top: 1px; }
+.actions { display: flex; gap: 6px; }
+
+.btn {
+  font: inherit; font-size: 12px; font-weight: 600; color: var(--t1); background: var(--panel-2);
+  border: 1px solid var(--edge); border-radius: 8px; padding: 7px 11px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+}
+.btn:hover { border-color: var(--accent); }
+.btn:disabled { opacity: .4; cursor: default; }
+.prim { background: var(--accent); border-color: var(--accent); color: #04121f; }
+.danger { color: var(--prog); }
+
+.sec {
+  font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--t3);
+  border-top: 1px solid var(--edge); padding-top: 11px; margin-top: 4px;
+}
+.saveRow { display: flex; gap: 8px; }
+.input {
+  flex: 1; font: inherit; font-size: 13px; color: var(--t1); background: var(--panel);
+  border: 1px solid var(--edge); border-radius: 8px; padding: 8px 10px;
+}
+.note { font-size: 11.5px; color: var(--t3); }
+.status { font-size: 12px; color: var(--accent); font-weight: 600; }

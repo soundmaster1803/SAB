@@ -3,6 +3,7 @@ import type { WsMessage } from '../types/ws'
 import { useCamerasStore } from './cameras'
 import { useAtemStore } from './atem'
 import { useLogsStore } from './logs'
+import { useDemoStore } from './demo'
 
 export type WsStatus = 'connecting' | 'connected' | 'disconnected'
 
@@ -23,6 +24,8 @@ function getWsUrl(): string {
 
 function dispatch(msg: WsMessage): void {
   if (msg.type === 'state') {
+    // Demo mode owns the stores — don't let real WS state overwrite the fakes.
+    if (useDemoStore.getState().enabled) return
     useCamerasStore.getState().setCameras(msg.cameras)
     useAtemStore.getState().setAtemState({
       atemConnected: msg.atemConnected,

@@ -11,6 +11,7 @@ import { createBroadcaster } from './ws/broadcaster';
 import { createStatusRoutes } from './routes/status';
 import { createCameraRoutes } from './routes/cameras';
 import { createSonyPropRoutes } from './routes/sony-props';
+import { createPresetRoutes } from './routes/presets';
 import { createAtemRoutes } from './routes/atem';
 import { APP_VERSION } from '../version';
 
@@ -57,6 +58,7 @@ export function startServer(manager: CameraManager, atemListener: ATEMListener, 
 
   app.use(createCameraRoutes({ manager, atemListener, getConfig, setConfig }));
   app.use(createSonyPropRoutes({ manager }));
+  app.use(createPresetRoutes());
   app.use(createAtemRoutes({ atemListener, getConfig, setConfig }));
   app.use(createStatusRoutes({ manager, atemListener, getConfig }));
 

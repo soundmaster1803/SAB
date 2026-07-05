@@ -53,3 +53,6 @@ CameraRemoteCommand-2.02.00/
 # SAB launcher runtime
 .sab.pid
 sab-run.log
+
+# Runtime preset storage
+presets.json
