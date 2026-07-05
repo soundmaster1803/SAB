@@ -57,7 +57,24 @@ Found + fixed P1 bugs, laid out stages 0–7.
   per-tab apply targets (This/All/Selected) with honest report → **presets** (save/load full
   config, apply to all). English, SVG icons only.
 
+## 5b. UI redesign implementation — IN PROGRESS (2026-07-05)
+- **Layer 1 SHIPPED** (`05e6892`): compact uniform card. New files:
+  `frontend/src/components/Icon.tsx` (SVG icon set, no emoji), token additions in
+  `styles/tokens.css`, `panels/cameras/CompactCameraCard.{tsx,module.css}`,
+  `QuickControl.{tsx,module.css}`. `CameraGrid`/`App` render it; old `CameraCard.tsx`
+  left in place (not rendered). Wired to adjust/color-temp/mode/record/connect.
+- **Backend bulk `prop` op SHIPPED** (`77e6a3d`): apply any catalog property to a group
+  (for upcoming Look/Audio/All tabs).
+- **Layer 2 (settings modal) — PARKED, unfinished**: agent got cut off mid-build. WIP moved
+  to `docs/design/wip-settings-modal/` (Exposure tab + shell CSS + helpers done; main modal
+  component, Recording/Device/Look/Audio/All tabs, footer, and wiring NOT done). See that
+  folder's README to resume. `lib/api.ts` gained `patch()`/`del()` helpers (kept, committed).
+- **Launcher SHIPPED** (`2355124`): `scripts/sab.sh {start|stop|restart|status}` +
+  double-clickable `SAB.command`. start builds UI + runs bridge on :7777 + opens browser;
+  tested green.
+
 ## 6. Where to look next (implementation TODO)
+0. **Finish the settings modal** — resume from `docs/design/wip-settings-modal/` (see its README).
 1. Implement the redesign in React by layers: compact `CameraCard` → `CameraSettingsModal`
    (tabs) → `PresetsModal`. Verify build each layer.
 2. New backend: bulk ops for audio/look/exposure props; preset storage + apply-config.
